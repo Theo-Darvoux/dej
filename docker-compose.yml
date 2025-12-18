@@ -1,0 +1,56 @@
+name: mcint
+
+services:
+
+  proxy:
+    image: nginx:mainline-alpine
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:8080" #Remplacer le premier 8080 par le port souhaité sur la VM, pas default 80 si ya aucun autre service sur la VM mais si ya d'autre truc, faudra ajouter un revproxy et parametrer pour envoyer vers le bon port
+      # portInsideCt:portOutsideCt
+    depends_on:
+      - db
+      - backend
+      - frontend
+    restart: unless-stopped
+
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: mcint_user
+      POSTGRES_PASSWORD: burgerkintthebest
+      POSTGRES_DB: mcint_db
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data ??????
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  frontend:
+    build:
+        context: ./frontend
+        dockerfile: Dockerfile
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend/src
+          target: /app/src
+  
+  
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./backend/src
+          target: /app/src
+
+
+  
