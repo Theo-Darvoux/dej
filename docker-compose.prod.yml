@@ -35,14 +35,14 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.prod
+      dockerfile: DockerFile.prod
     restart: unless-stopped
     logging: *default-logging
 
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.prod
+      dockerfile: DockerFile.prod
     depends_on:
       - db
     restart: unless-stopped
