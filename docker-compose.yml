@@ -45,6 +45,8 @@ services:
       dockerfile: DockerFile
     depends_on:
       - db
+    ports:
+      - "3000:3000"
     restart: unless-stopped
     develop:
       watch:
@@ -52,5 +54,13 @@ services:
           path: ./backend/src
           target: /app/src
 
-
+  # Mailhog SMTP Server (Email testing - keep for development)
+  mail:
+    image: mailhog/mailhog:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP port
+      - "8025:8025"  # Web UI
+    logging:
+      driver: none  # Disable logging to reduce noise
   
