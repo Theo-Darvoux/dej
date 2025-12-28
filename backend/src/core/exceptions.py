@@ -47,7 +47,7 @@ class ReservationNotAllowedException(HTTPException):
 
 class AdminException(HTTPException):#a renomer TODO
     """Accès admin non autorisé"""
-    def __init__(self, detail: str = "Vous n'êtes pas admin"):
+    def __init__(self, detail: str = "Vous devez être admin"):
         super().__init__(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=detail

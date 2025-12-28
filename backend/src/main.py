@@ -1,21 +1,46 @@
 from fastapi import FastAPI
-from starlette.responses import JSONResponse
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-from pydantic import EmailStr, BaseModel
-from typing import List
+from fastapi.middleware.cors import CORSMiddleware
 
-from mail import send_test_email
+from src.auth.router import router as auth_router
+from src.users.router import router as users_router
+from src.reservations.router import router as reservations_router
+from src.admin.router import router as admin_router
+from src.core.config import settings
+from src.db.base import Base
+from src.db.session import engine
 
-class EmailSchema(BaseModel):
-    email: List[EmailStr]
+# Importer les modèles pour que SQLAlchemy les enregistre
+from src.users.models import User
+from src.reservations.models import Reservation
 
+# Créer les tables (à remplacer par Alembic en prod)
+Base.metadata.create_all(bind=engine)
 
-app = FastAPI(root_path="/api")
+app = FastAPI(
+    title="MC INT API",
+    description="API pour réservations MC INT avec auth email/code, BDE check et paiement HelloAsso",
+    version="1.0.0",
+    root_path="/api"
+)
 
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.FRONTEND_URL, "http://localhost:4200"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+# Routes
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(users_router, prefix="/users", tags=["users"])
+app.include_router(reservations_router, prefix="/reservations", tags=["reservations"])
+app.include_router(admin_router, prefix="/admin", tags=["admin"])
+77
 
-@app.post("/email")
-async def simple_send(email: EmailSchema) -> JSONResponse:
-    for email in email.email:
-        await send_test_email(email)
-    return JSONResponse(status_code=200, content={"message": "Emails sent"})
+@app.get("/")
+async def root():
+    """Health check"""
+    return {"status": "ok", "message": "MC INT API running"}
+

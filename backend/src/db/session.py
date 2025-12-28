@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from src.core.config import settings
+from typing import Generator
 
 # Créer l'engine
 engine = create_engine(
@@ -18,7 +19,7 @@ SessionLocal = sessionmaker(
 )
 
 
-def get_db() -> Session:
+def get_db() -> Generator[Session, None, None]:
     """Dépendance FastAPI pour injecter une session DB"""
     db = SessionLocal()
     try:
