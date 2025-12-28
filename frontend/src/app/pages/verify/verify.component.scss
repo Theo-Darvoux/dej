@@ -1,0 +1,330 @@
+$primary-color: #dc143c;
+$secondary-color: #ffc72c;
+$accent-color: #ff6b35;
+$dark-color: #1a1a1a;
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes blobAnimation {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+.verify-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  position: relative;
+  background: linear-gradient(135deg, #fff5f7 0%, #fff9e6 100%);
+  overflow: hidden;
+}
+
+.verify-card {
+  background: white;
+  border-radius: 30px;
+  padding: 50px;
+  max-width: 450px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(220, 20, 60, 0.1);
+  animation: fadeInUp 0.8s ease-out;
+  position: relative;
+  z-index: 10;
+
+  @media (max-width: 768px) {
+    padding: 40px 30px;
+    border-radius: 20px;
+  }
+}
+
+.header {
+  position: relative;
+  margin-bottom: 40px;
+  animation: slideInRight 0.8s ease-out 0.1s both;
+
+  .back-btn {
+    background: none;
+    border: none;
+    color: $primary-color;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      color: $accent-color;
+      transform: translateX(-5px);
+    }
+  }
+
+  h1 {
+    font-size: 32px;
+    margin: 0 0 5px;
+    color: $dark-color;
+    font-weight: 700;
+  }
+
+  .email-display {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+  }
+}
+
+.instruction {
+  text-align: center;
+  color: #666;
+  margin-bottom: 40px;
+  font-size: 16px;
+  animation: slideInRight 0.8s ease-out 0.15s both;
+}
+
+.verify-form {
+  animation: slideInRight 0.8s ease-out 0.2s both;
+}
+
+.code-inputs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 30px;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+
+  @media (max-width: 400px) {
+    gap: 8px;
+  }
+}
+
+.code-input {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  color: $primary-color;
+  transition: all 0.3s ease;
+  font-family: 'Courier New', monospace;
+
+  &:focus {
+    outline: none;
+    border-color: $primary-color;
+    box-shadow: 0 0 0 4px rgba(220, 20, 60, 0.1);
+    background: #fafafa;
+    animation: pulse 0.3s ease-out;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: $accent-color;
+  }
+
+  &:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &:not(:empty) {
+    animation: pulse 0.2s ease-out;
+  }
+}
+
+.btn {
+  width: 100%;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, $primary-color, $accent-color);
+  color: white;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  &:hover:not(:disabled)::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(220, 20, 60, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-message {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #fff3f3;
+  border-left: 4px solid #e74c3c;
+  color: #c0392b;
+  border-radius: 4px;
+  font-size: 14px;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.success-message {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #f0fdf4;
+  border-left: 4px solid #22c55e;
+  color: #166534;
+  border-radius: 4px;
+  font-size: 14px;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.resend-section {
+  margin-top: 30px;
+  text-align: center;
+  animation: slideInRight 0.8s ease-out 0.25s both;
+
+  p {
+    color: #666;
+    margin: 0 0 10px;
+    font-size: 14px;
+  }
+
+  .resend-btn {
+    background: none;
+    border: 2px solid $primary-color;
+    color: $primary-color;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+
+    &:hover {
+      background: $primary-color;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(220, 20, 60, 0.2);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+}
+
+.decoration {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.blob {
+  position: absolute;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 107, 53, 0.1), rgba(220, 20, 60, 0.05));
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  filter: blur(40px);
+  animation: blobAnimation 8s infinite;
+
+  &-1 {
+    width: 400px;
+    height: 400px;
+    top: -200px;
+    left: -200px;
+    animation-delay: 0s;
+  }
+
+  &-2 {
+    width: 300px;
+    height: 300px;
+    top: 50%;
+    right: -150px;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 199, 44, 0.1), rgba(220, 20, 60, 0.05));
+    animation-delay: 2s;
+  }
+
+  &-3 {
+    width: 350px;
+    height: 350px;
+    bottom: -100px;
+    left: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 107, 53, 0.08), rgba(255, 199, 44, 0.05));
+    animation-delay: 4s;
+  }
+}

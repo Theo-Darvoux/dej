@@ -1,0 +1,82 @@
+<div class="dashboard-wrapper">
+  <header class="header">
+    <div class="header-content">
+      <h1>MC INT</h1>
+      <button class="logout-btn" (click)="logout()">Déconnexion</button>
+    </div>
+  </header>
+
+  <main class="dashboard-main">
+    <div class="dashboard-hero">
+      <div class="hero-content">
+        <h2>Mes Réservations</h2>
+        <p>Gérez vos réservations</p>
+      </div>
+      <button class="btn btn-primary" (click)="newReservation()">
+        + Nouvelle réservation
+      </button>
+    </div>
+
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Chargement...</p>
+    </div>
+
+    <div *ngIf="!loading && error" class="error-message">
+      {{ error }}
+    </div>
+
+    <div *ngIf="!loading && reservations.length === 0" class="empty-state">
+      <div class="empty-icon">📦</div>
+      <h3>Aucune réservation</h3>
+      <p>Vous n'avez pas encore de réservation. Créez-en une !</p>
+      <button class="btn btn-primary" (click)="newReservation()">
+        Créer une réservation
+      </button>
+    </div>
+
+    <div *ngIf="!loading && reservations.length > 0" class="reservations-grid">
+      <div *ngFor="let reservation of reservations" class="reservation-item">
+        <div class="reservation-header">
+          <h3>{{ reservation.date_reservation }}</h3>
+          <span class="time">{{ reservation.heure_reservation }}</span>
+        </div>
+
+        <div class="reservation-details">
+          <div class="detail">
+            <span class="label">Adresse:</span>
+            <span class="value">
+              {{ reservation.adresse || 
+                 (reservation.numero_immeuble + ' - Chambre ' + reservation.numero_chambre) }}
+            </span>
+          </div>
+          <div class="detail">
+            <span class="label">Statut:</span>
+            <span class="status-badge" [ngClass]="'status-' + reservation.status">
+              {{ reservation.status }}
+            </span>
+          </div>
+        </div>
+
+        <div class="reservation-actions">
+          <a [href]="reservation.payment_link" target="_blank" 
+             class="btn btn-small btn-secondary"
+             *ngIf="reservation.status === 'pending'">
+            Payer
+          </a>
+          <button class="btn btn-small btn-danger" 
+                  (click)="cancelReservation(reservation.id)"
+                  *ngIf="reservation.status !== 'cancelled'">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="decoration">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+</div>
