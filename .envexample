@@ -1,0 +1,32 @@
+# Database
+DATABASE_URL=postgresql://user:MOTDEPASSE@postgres:5432/mcint_db
+POSTGRES_USER=user
+POSTGRES_PASSWORD=MOTDEPASSE
+POSTGRES_DB=mcint_db
+PORT_DB=5432
+
+# JWT
+JWT_SECRET_KEY=change-this-to-a-secure-random-key-in-production
+
+# BDE API
+BDE_API_URL=https://gestion.bde-imtbs-tsp.fr
+BDE_API_KEY=your-bde-api-key-here
+
+# Email (Mailhog for dev, SMTP for prod)
+MAIL_USERNAME=username
+MAIL_PASSWORD=password
+MAIL_FROM=noreply@mc-int.fr
+MAIL_FROM_NAME=MC INT
+MAIL_PORT=1025
+MAIL_SERVER=mail
+MAIL_STARTTLS=false
+MAIL_SSL_TLS=false
+MAIL_USE_CREDENTIALS=false
+MAIL_VALIDATE_CERTS=false
+
+# Frontend
+FRONTEND_URL=http://frontend:8080
+
+# HelloAsso (à compléter avec la doc)
+HELLOASSO_API_KEY=your-helloasso-api-key
+HELLOASSO_API_URL=https://api.helloasso.com/v5

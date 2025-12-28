@@ -1,0 +1,67 @@
+# Environment variables (IMPORTANT: ne jamais commit)
+.env
+.env.*
+!.env.example
+!.env.prod.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Database
+*.db
+*.sqlite3
+data/postgres/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker
+docker-compose.override.ymlvironment variables (IMPORTANT: ne jamais commit)
+  .env
++ .env.*
++ !.env.example
++ !.env.prod.example
++ 
++ # Python
+  .venv/
++ __pycache__/
++ *.pyc
++ *.pyo
++ *.pyd
++ .Python
++ 
++ # Database
++ *.db
++ *.sqlite3
++ data/postgres/
++ 
++ # IDE
++ .vscode/
++ .idea/
++ *.swp
++ *.swo
++ 
++ # OS
++ .DS_Store
++ Thumbs.db
++ 
++ # Logs
++ *.log
++ 
++ # Docker
++ docker-compose.override.yml
