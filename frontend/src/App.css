@@ -1,42 +1,88 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  min-height: 100vh;
+  background: #ffffff;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.page {
+  min-height: 100vh;
+  background: radial-gradient(circle at 20% 20%, rgba(148, 163, 184, 0.12), transparent 32%),
+    radial-gradient(circle at 80% 0%, rgba(14, 165, 233, 0.08), transparent 28%), #ffffff;
+  color: #0f172a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px 12px 64px;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.screen-layout {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  background: #ffffff;
+  height: 100%;
+}
+
+.screen-content {
+  padding: 32px 32px 40px;
+  display: grid;
+  gap: 22px;
+  overflow: auto;
+}
+
+.content__header {
+  display: grid;
+  gap: 8px;
+}
+
+.eyebrow {
+  margin: 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.title {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+  align-content: start;
+}
+
+@media (max-width: 1100px) {
+  .screen-layout {
+    grid-template-columns: 220px 1fr;
   }
-  to {
-    transform: rotate(360deg);
+
+  .screen-content {
+    padding: 24px;
+  }
+
+  .title {
+    font-size: 32px;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+@media (max-width: 780px) {
+  .screen-layout {
+    grid-template-columns: 1fr;
   }
 }
 
-.card {
-  padding: 2em;
-}
+@media (max-width: 600px) {
+  .screen-content {
+    padding: 18px;
+  }
 
-.read-the-docs {
-  color: #888;
+  .menu-grid {
+    grid-template-columns: 1fr;
+  }
 }
