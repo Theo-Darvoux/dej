@@ -62,6 +62,36 @@
   margin-bottom: 8px;
 }
 
+.menu-card__footer {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.menu-card__price {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.menu-card__add {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(22, 163, 74, 0.24);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.menu-card__add:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(22, 163, 74, 0.28);
+}
+
 @media (max-width: 700px) {
   .menu-card {
     grid-template-columns: 1fr;

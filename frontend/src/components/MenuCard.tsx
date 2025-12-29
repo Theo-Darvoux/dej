@@ -5,9 +5,11 @@ type MenuCardProps = {
   subtitle: string
   tag?: string
   accent?: string
+  price: string
+  onAdd: () => void
 }
 
-const MenuCard = ({ title, subtitle, tag, accent }: MenuCardProps) => {
+const MenuCard = ({ title, subtitle, tag, accent, price, onAdd }: MenuCardProps) => {
   return (
     <article className="menu-card">
       <div className="menu-card__thumb" aria-hidden>
@@ -22,6 +24,12 @@ const MenuCard = ({ title, subtitle, tag, accent }: MenuCardProps) => {
         ) : null}
         <h3>{title}</h3>
         <p>{subtitle}</p>
+        <div className="menu-card__footer">
+          <span className="menu-card__price">{price}</span>
+          <button className="menu-card__add" onClick={onAdd}>
+            Ajouter
+          </button>
+        </div>
       </div>
     </article>
   )
