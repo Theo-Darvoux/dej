@@ -1,8 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import './App.css'
-import Sidebar from './components/Sidebar'
-import Borne from './components/Borne'
-import MenuCard from './components/MenuCard'
+import Sidebar from './components/sidebar/Sidebar'
+import Borne from './components/borne/Borne'
+import MenuCard from './components/menucard/MenuCard'
+import RequestPopup from './components/popup/request/RequestPopup'
+import CodePopup from './components/popup/code/CodePopup'
+import AptPopup from './components/popup/apartment/AptPopup'
+import InfoPopup from './components/popup/info/InfoPopup'
 
 type Category = {
   id: string
@@ -10,6 +14,7 @@ type Category = {
 }
 
 type MenuItem = {
+  id?: number
   title: string
   subtitle: string
   tag?: string
@@ -18,49 +23,77 @@ type MenuItem = {
 }
 
 type CartItem = {
+  id?: number
   title: string
   price: string
 }
 
-const categories: Category[] = [
-  { id: 'offres', title: 'Les offres' },
-  { id: 'moment', title: 'En ce moment' },
-  { id: 'absinthe', title: 'Spcecial Absinthe' },
-  { id: 'poulet', title: 'scpecial poulet' },
-]
-
-const menuByCategory: Record<string, MenuItem[]> = {
-  offres: [
-    { title: 'Menu Golden Ligue 1 McDonald’s', subtitle: 'Petit dej', tag: 'Signature', accent: '#f59e0b', price: '12,90 €' },
-    { title: 'Menu Duo Golden Ligue 1 McDonald’s', subtitle: 'Petit dej', tag: 'Duo', accent: '#6366f1', price: '19,50 €' },
-  ],
-  moment: [
-    { title: 'Menu Golden Ligue 1 McDonald’s', subtitle: 'Petit dej', tag: 'En vedette', accent: '#0ea5e9', price: '12,90 €' },
-    { title: 'Menu Happy Doggy', subtitle: 'Petit dej', tag: 'Nouveau', accent: '#22c55e', price: '9,40 €' },
-  ],
-  absinthe: [
-    { title: 'Spcecial Absinthe', subtitle: 'Biere', tag: 'Edition limitée', accent: '#16a34a', price: '6,00 €' },
-    { title: 'Absinthe Twist', subtitle: 'Biere', tag: 'Mix', accent: '#10b981', price: '6,50 €' },
-  ],
-  poulet: [
-    { title: 'scpecial poulet', subtitle: 'Poulet', tag: 'Croustillant', accent: '#ef4444', price: '10,90 €' },
-    { title: 'Poulet Grillé', subtitle: 'Poulet', tag: 'Grill', accent: '#f97316', price: '9,90 €' },
-  ],
-}
-
 function App() {
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(categories[0].id)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [menuByCategory, setMenuByCategory] = useState<Record<string, MenuItem[]>>({})
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [isRequestOpen, setIsRequestOpen] = useState(false)
+  const [isCodeOpen, setIsCodeOpen] = useState(false)
+  const [isAptOpen, setIsAptOpen] = useState(false)
+  const [isInfoOpen, setIsInfoOpen] = useState(false)
+
+  // Fetch categories au chargement
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/menu/categories')
+        const data = await response.json()
+        setCategories(data)
+        if (data.length > 0) {
+          setSelectedCategoryId(data[0].id)
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des catégories:', error)
+      }
+    }
+    fetchCategories()
+  }, [])
+
+  // Fetch items quand la catégorie change
+  useEffect(() => {
+    if (!selectedCategoryId) return
+
+    const fetchMenuItems = async () => {
+      try {
+        const response = await fetch(`/api/menu/items?category_id=${selectedCategoryId}`)
+        const data = await response.json()
+        setMenuByCategory((prev) => ({
+          ...prev,
+          [selectedCategoryId]: data,
+        }))
+      } catch (error) {
+        console.error('Erreur lors du chargement des items:', error)
+      }
+    }
+    fetchMenuItems()
+  }, [selectedCategoryId])
 
   const currentCategory = useMemo(
     () => categories.find((c) => c.id === selectedCategoryId) ?? categories[0],
-    [selectedCategoryId],
+    [categories, selectedCategoryId],
   )
 
-  const currentMenus = menuByCategory[currentCategory.id] ?? []
+  const currentMenus = menuByCategory[selectedCategoryId] ?? []
+
+  const totalAmount = useMemo(() => {
+    const sum = cartItems.reduce((acc, item) => {
+      const price = parseFloat(item.price.replace(',', '.').replace(' €', ''))
+      return acc + price
+    }, 0)
+    return sum.toFixed(2).replace('.', ',') + ' €'
+  }, [cartItems])
 
   const handleAddToCart = (item: MenuItem) => {
-    setCartItems((prev) => [...prev, { title: item.title, price: item.price }])
+    setCartItems((prev) => {
+      if (prev.length >= 3) return prev
+      return [...prev, { id: item.id, title: item.title, price: item.price }]
+    })
   }
 
   const handleRemoveFromCart = (index: number) => {
@@ -71,18 +104,18 @@ function App() {
     <div className="page">
       <Borne>
         <div className="screen-layout">
-          <Sidebar categories={categories} selectedId={currentCategory.id} onSelect={setSelectedCategoryId} />
+          <Sidebar categories={categories} selectedId={currentCategory?.id || ''} onSelect={setSelectedCategoryId} />
 
           <main className="screen-content">
             <header className="content__header">
               <p className="eyebrow">Mes offres</p>
-              <h1 className="title">{currentCategory.title}</h1>
+              <h1 className="title">{currentCategory?.title || 'Chargement...'}</h1>
             </header>
 
             <div className="menu-grid">
-              {currentMenus.map((item) => (
+              {currentMenus.map((item, idx) => (
                 <MenuCard
-                  key={item.title}
+                  key={`${item.id}-${idx}`}
                   title={item.title}
                   subtitle={item.subtitle}
                   tag={item.tag}
@@ -103,7 +136,7 @@ function App() {
                   <div className="cart__empty">Aucun article dans le panier</div>
                 ) : (
                   cartItems.map((item, idx) => (
-                    <div key={`${item.title}-${idx}`} className="cart__row">
+                    <div key={`${item.id}-${idx}`} className="cart__row">
                       <span className="cart__title">{item.title}</span>
                       <div className="cart__actions">
                         <span className="cart__price">{item.price}</span>
@@ -120,10 +153,58 @@ function App() {
                 )}
               </div>
               <div className="cart__footer">
-                <button className="cart__cta">Commander</button>
+                <button
+                  className="cart__cta"
+                  onClick={() => setIsRequestOpen(true)}
+                  disabled={cartItems.length === 0}
+                >
+                  Commander
+                </button>
               </div>
             </div>
           </main>
+          <RequestPopup
+            open={isRequestOpen}
+            onClose={() => setIsRequestOpen(false)}
+            onRequestCode={() => {
+              setIsRequestOpen(false)
+              setIsCodeOpen(true)
+            }}
+            step={1}
+            total={4}
+          />
+          <CodePopup
+            open={isCodeOpen}
+            onClose={() => setIsCodeOpen(false)}
+            onContinue={() => {
+              setIsCodeOpen(false)
+              setIsAptOpen(true)
+            }}
+            step={2}
+            total={4}
+          />
+          <AptPopup
+            open={isAptOpen}
+            onClose={() => setIsAptOpen(false)}
+            onContinue={() => {
+              setIsAptOpen(false)
+              setIsInfoOpen(true)
+            }}
+            step={3}
+            total={4}
+          />
+          <InfoPopup
+            open={isInfoOpen}
+            onClose={() => setIsInfoOpen(false)}
+            onPaymentSuccess={() => {
+              setIsInfoOpen(false)
+              alert('Paiement réussi ! Commande confirmée.')
+              setCartItems([])
+            }}
+            step={4}
+            total={4}
+            amount={totalAmount}
+          />
         </div>
       </Borne>
     </div>

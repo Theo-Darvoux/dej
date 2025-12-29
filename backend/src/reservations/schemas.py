@@ -14,14 +14,23 @@ class BatimentMaisel(str, Enum):
     U6 = "U6"
     U7 = "U7"
 
+
+class ReservationItemCreate(BaseModel):
+    """Item de commande dans une réservation"""
+    menu_item_id: int
+    quantity: int = 1
+
+
 class ReservationCreateRequest(BaseModel):
-    """Création d'une réservation"""
+    """Création d'une réservation avec items menu"""
     date_reservation: str  # Format: YYYY-MM-DD
     heure_reservation: str  # Format: HH:MM
     habite_residence: bool
     numero_chambre: Optional[str] = None  # Si habite_residence=True
     numero_immeuble: Optional[str] = None  # Si habite_residence=True
     adresse: Optional[str] = None  # Si habite_residence=False
+    phone: Optional[str] = None  # Téléphone pour livraison
+    items: list[ReservationItemCreate] = []  # Items du panier
 
 
 

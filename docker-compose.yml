@@ -30,7 +30,7 @@ services:
   frontend:
     build:
         context: ./frontend
-        dockerfile: DockerFile
+        dockerfile: Dockerfile
     restart: unless-stopped
     develop:
       watch:
@@ -42,7 +42,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: DockerFile
+      dockerfile: Dockerfile
     env_file:
       - .env
     depends_on:
@@ -63,4 +63,12 @@ services:
       - "8025:8025"  # Web UI
     logging:
       driver: none  # Disable logging to reduce noise
+
+  # Stripe Mock API (Payment testing - keep for development)
+  stripe-mock:
+    image: stripe/stripe-mock:latest
+    restart: unless-stopped
+    ports:
+      - "12111:12111"  # HTTP API
+      - "12112:12112"  # HTTPS API
   

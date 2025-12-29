@@ -35,11 +35,14 @@ async def create_reservation(
     current_user = Depends(get_current_user_from_cookie)
 ):
     """
-    Étape 3: Création de la réservation
+    Étape 3: Création de la réservation avec items menu
     - L'utilisateur doit être authentifié (cookie)
     - Email vérifié et cotisant BDE
-    - Rentre les infos du formulaire (date, heure, chambre/adresse)
+    - Rentre les infos du formulaire + items du panier
     """
+    # Convertir items en dict pour le service
+    items_data = [item.model_dump() for item in request.items] if request.items else []
+    
     reservation = service.create_reservation(
         user_id=current_user.id,
         date_reservation=request.date_reservation,
@@ -48,27 +51,29 @@ async def create_reservation(
         numero_chambre=request.numero_chambre,
         numero_immeuble=request.numero_immeuble,
         adresse=request.adresse,
+        phone=request.phone,
+        items=items_data,
         db=db
     )
     
     return schemas.ReservationResponse.model_validate(reservation)
 
 
-@router.post("/{reservation_id}/payment-intent", response_model=schemas.PaymentIntentResponse)
-async def create_payment_intent(
+@router.post("/{reservation_id}/payment", response_model=schemas.PaymentConfirmResponse)
+async def process_payment(
     reservation_id: int,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_from_cookie)
 ):
     """
-    Étape 4: Créer un intent de paiement HelloAsso
+    Étape 4: Traiter le paiement via Stripe Mock
     - Vérifie que la réservation existe et appartient à l'utilisateur
-    - Appelle HelloAsso pour créer le paiement
-    - Retourne l'URL de redirection
-    
-    TODO: À implémenter avec la doc HelloAsso
+    - Appelle Stripe Mock pour créer le payment intent
+    - Met à jour le payment_status
     """
-    from reservations.models import Reservation
+    from src.reservations.models import Reservation
+    from datetime import datetime, timezone
+    import httpx
     
     reservation = db.query(Reservation).filter(
         Reservation.id == reservation_id,
@@ -87,50 +92,38 @@ async def create_payment_intent(
             detail="Paiement déjà effectué"
         )
     
-    # TODO: Implémenter appel HelloAsso avec la doc
-    # Pour l'instant, retour mock
-    return schemas.PaymentIntentResponse(
-        intent_id="MOCK_INTENT_ID",
-        redirect_url="https://helloasso.com/checkout/mock"
-    )
-
-
-@router.post("/{reservation_id}/payment-confirm", response_model=schemas.PaymentConfirmResponse)
-async def confirm_payment(
-    reservation_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_from_cookie)
-):
-    """
-    Étape 5: Page de validation après paiement
-    - Webhook ou retour HelloAsso met à jour payment_status
-    - Cette route récupère juste le statut pour affichage
-    
-    TODO: À implémenter avec la doc HelloAsso (webhooks)
-    """
-    from reservations.models import Reservation
-    from datetime import datetime
-    
-    reservation = db.query(Reservation).filter(
-        Reservation.id == reservation_id,
-        Reservation.user_id == current_user.id
-    ).first()
-    
-    if not reservation:
+    # Appeler Stripe Mock
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://stripe-mock:12111/v1/payment_intents",
+                data={
+                    "amount": int(reservation.total_amount * 100),  # Convertir en centimes
+                    "currency": "eur",
+                    "payment_method_types[]": "card"
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"}
+            )
+            
+            if response.status_code == 200:
+                payment_data = response.json()
+                reservation.payment_status = "completed"
+                reservation.payment_intent_id = payment_data.get("id", "STRIPE_MOCK_INTENT")
+                reservation.payment_date = datetime.now(timezone.utc)
+                db.commit()
+                
+                return schemas.PaymentConfirmResponse(
+                    message="Paiement confirmé",
+                    reservation_id=reservation.id,
+                    payment_status=reservation.payment_status
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Erreur lors du paiement"
+                )
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Réservation non trouvée"
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Erreur de connexion au service de paiement: {str(e)}"
         )
-    
-    # TODO: Implémenter vérification HelloAsso
-    # Pour l'instant, mock: marquer comme payé
-    if reservation.payment_status == "pending":
-        reservation.payment_status = "completed"
-        reservation.payment_date = datetime.now(datetime.timezone.utc)
-        db.commit()
-    
-    return schemas.PaymentConfirmResponse(
-        message="Paiement confirmé",
-        reservation_id=reservation.id,
-        payment_status=reservation.payment_status
-    )
