@@ -8,4 +8,3 @@ def import_models():
     """Import all models for Alembic autogenerate discovery."""
     from src.users.models import User  # noqa: F401
     from src.menu.models import Category, MenuItem  # noqa: F401
-    from src.reservations.models import Reservation, ReservationItem  # noqa: F401

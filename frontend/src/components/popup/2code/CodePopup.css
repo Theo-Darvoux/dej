@@ -5,15 +5,15 @@
     place-items: center;
     background: rgba(15, 23, 42, .25);
     backdrop-filter: blur(2px);
-    z-index: 8
+    z-index: 6
 }
 
 .popup-panel {
     position: relative;
     width: 80%;
     height: 80%;
-    max-width: 950px;
-    max-height: 720px;
+    max-width: 900px;
+    max-height: 680px;
     background: #fff;
     border-radius: 18px;
     box-shadow: 0 22px 60px rgba(15, 23, 42, .32);
@@ -36,7 +36,7 @@
 
 .popup__progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #22c55e, #10b981);
+    background: linear-gradient(90deg, #22c55e, #16a34a);
     transition: width .2s ease
 }
 
@@ -62,41 +62,13 @@
     font-size: 15px
 }
 
-.payment__card {
-    display: grid;
-    gap: 12px;
-    padding: 16px;
-    background: #f8fafc;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0
-}
-
-.payment__row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px
-}
-
-.payment__error {
-    color: #ef4444;
-    font-weight: 700;
-    margin: 0
-}
-
-.payment__notice {
-    margin: 0;
-    color: #94a3b8;
-    font-size: 13px;
-    text-align: center
-}
-
 .popup__cta {
     margin-top: 6px;
     background: linear-gradient(135deg, #22c55e, #16a34a);
     color: #fff;
     border: none;
     border-radius: 12px;
-    padding: 14px 18px;
+    padding: 12px 18px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: .03em;
@@ -108,12 +80,6 @@
 .popup__cta:hover {
     transform: translateY(-1px);
     box-shadow: 0 16px 36px rgba(22, 163, 74, .32)
-}
-
-.popup__cta:disabled {
-    opacity: .5;
-    cursor: not-allowed;
-    transform: none
 }
 
 .popup__close {

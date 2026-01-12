@@ -46,9 +46,14 @@ class User(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
-    # Choix de commande
-    menu = Column(String, nullable=True)
-    boisson = Column(String, nullable=True)
-    bonus = Column(String, nullable=True)
+    # Choix de commande - ForeignKey vers MenuItem
+    menu_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True)
+    boisson_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True)
+    bonus_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True)
+    
+    # Relations
+    menu_item = relationship("MenuItem", foreign_keys=[menu_id])
+    boisson_item = relationship("MenuItem", foreign_keys=[boisson_id])
+    bonus_item = relationship("MenuItem", foreign_keys=[bonus_id])
     
 

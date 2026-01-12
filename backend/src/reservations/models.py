@@ -1,0 +1,1 @@
+# ReservationItem table has been merged into User model

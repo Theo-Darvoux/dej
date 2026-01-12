@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Cookie
 from sqlalchemy.orm import Session
-from typing import Optional, List
+from typing import Optional
+from datetime import datetime, date, time
 
 from src.db.session import get_db
 from src.reservations import schemas, service
 from src.auth.service import get_user_by_token
 from src.core.exceptions import UserNotVerifiedException
+from src.menu.models import MenuItem
 
 router = APIRouter()
 
@@ -28,35 +30,196 @@ def get_current_user_from_cookie(
     return user
 
 
-@router.post("/", response_model=schemas.ReservationResponse)
+@router.post("/", response_model=dict)
 async def create_reservation(
     request: schemas.ReservationCreateRequest,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_from_cookie)
 ):
     """
-    Étape 3: Création de la réservation avec items menu
-    - L'utilisateur doit être authentifié (cookie)
-    - Email vérifié et cotisant BDE
-    - Rentre les infos du formulaire + items du panier
+    Étape 3: Création de la réservation avec validations strictes
+    - Date: 7 février 2026
+    - Heure: entre 7h et 18h
+    - Numéro chambre: entre 1000 et 6999
+    - Items menu vérifiés en DB
     """
-    # Convertir items en dict pour le service
-    items_data = [item.model_dump() for item in request.items] if request.items else []
     
-    reservation = service.create_reservation(
-        user_id=current_user.id,
-        date_reservation=request.date_reservation,
-        heure_reservation=request.heure_reservation,
-        habite_residence=request.habite_residence,
-        numero_chambre=request.numero_chambre,
-        numero_immeuble=request.numero_immeuble,
-        adresse=request.adresse,
-        phone=request.phone,
-        items=items_data,
-        db=db
-    )
+    # VALIDATION 1: Date de réservation doit être le 7 février 2026
+    try:
+        reservation_date = date.fromisoformat(request.date_reservation)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Format de date invalide (attendu: YYYY-MM-DD)"
+        )
     
-    return schemas.ReservationResponse.model_validate(reservation)
+    if reservation_date != date(2026, 2, 7):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La réservation doit être pour le 7 février 2026"
+        )
+    
+    # VALIDATION 2: Heure de réservation entre 7h et 18h, par tranches de 1h (minutes = 00)
+    try:
+        reservation_time = time.fromisoformat(request.heure_reservation)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Format d'heure invalide (attendu: HH:MM)"
+        )
+    
+    if not (time(7, 0) <= reservation_time <= time(18, 0)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="L'heure de réservation doit être entre 7h00 et 18h00"
+        )
+    # Tranche d'1h: minutes doivent être 00
+    if reservation_time.minute != 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="L'heure doit être sélectionnée par tranches d'1h (minutes = 00)"
+        )
+    
+    # VALIDATION 3: Numéro de chambre si habite résidence
+    if request.habite_residence:
+        if not request.numero_chambre:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Le numéro de chambre est requis pour les résidents"
+            )
+        
+        try:
+            num_chambre = int(request.numero_chambre)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Le numéro de chambre doit être un nombre"
+            )
+        
+        if not (1000 <= num_chambre <= 6999):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Le numéro de chambre doit être entre 1000 et 6999"
+            )
+    else:
+        # Si pas résident, adresse requise
+        if not request.adresse:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="L'adresse est requise pour les non-résidents"
+            )
+    
+    # VALIDATION 4: Vérifier que les items menu existent et correspondent au bon type
+    menu_item = None
+    boisson_item = None
+    bonus_item = None
+    
+    if request.menu:
+        menu_item = db.query(MenuItem).filter(MenuItem.name == request.menu).first()
+        if not menu_item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Menu '{request.menu}' non trouvé"
+            )
+        if menu_item.item_type != "menu":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"L'item '{request.menu}' n'est pas un menu"
+            )
+    
+    if request.boisson:
+        boisson_item = db.query(MenuItem).filter(MenuItem.name == request.boisson).first()
+        if not boisson_item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Boisson '{request.boisson}' non trouvée"
+            )
+        if boisson_item.item_type != "boisson":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"L'item '{request.boisson}' n'est pas une boisson"
+            )
+    
+    if request.bonus:
+        bonus_item = db.query(MenuItem).filter(MenuItem.name == request.bonus).first()
+        if not bonus_item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Bonus '{request.bonus}' non trouvé"
+            )
+        if bonus_item.item_type != "bonus":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"L'item '{request.bonus}' n'est pas un bonus"
+            )
+    
+    # Vérification que l'utilisateur est bien vérifié et cotisant
+    if not current_user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email non vérifié"
+        )
+    
+    if not current_user.is_cotisant:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous n'êtes pas cotisant BDE actif"
+        )
+    
+    # Mettre à jour l'utilisateur avec les données validées
+    current_user.date_reservation = reservation_date
+    current_user.heure_reservation = reservation_time
+    current_user.habite_residence = request.habite_residence
+    current_user.phone = request.phone
+    
+    if request.habite_residence:
+        current_user.numero_if_maisel = int(request.numero_chambre)
+        current_user.adresse = None
+    else:
+        current_user.adresse = request.adresse
+        current_user.numero_if_maisel = None
+    
+    # Stocker les IDs des items (nouveaux champs ForeignKey)
+    current_user.menu_id = menu_item.id if menu_item else None
+    current_user.boisson_id = boisson_item.id if boisson_item else None
+    current_user.bonus_id = bonus_item.id if bonus_item else None
+    
+    # Calculer le montant total
+    total = 0.0
+    if menu_item:
+        total += menu_item.price
+    if boisson_item:
+        total += boisson_item.price
+    if bonus_item:
+        total += bonus_item.price
+    
+    current_user.total_amount = total
+    current_user.status = "confirmed"
+    current_user.payment_status = "pending"
+    current_user.updated_at = datetime.utcnow()
+    
+    try:
+        db.commit()
+        db.refresh(current_user)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la création de la réservation: {str(e)}"
+        )
+    
+    return {
+        "message": "Réservation créée avec succès",
+        "user_id": current_user.id,
+        "status": current_user.status,
+        "payment_status": current_user.payment_status,
+        "date_reservation": str(current_user.date_reservation),
+        "heure_reservation": str(current_user.heure_reservation),
+        "menu": menu_item.name if menu_item else None,
+        "boisson": boisson_item.name if boisson_item else None,
+        "bonus": bonus_item.name if bonus_item else None,
+        "total_amount": current_user.total_amount,
+    }
 
 
 @router.post("/{reservation_id}/payment", response_model=schemas.PaymentConfirmResponse)

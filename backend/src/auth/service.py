@@ -88,14 +88,24 @@ async def verify_code(email: str, code: str, db: Session) -> tuple[int, bool]:
     
     # Vérifier avec BDE API
     #is_cotisant = await verify_with_bde(email) #TODO
-    is_cotisant = True  # TODO: a enlever juste pour tester
+    is_cotisant = True  # TODO: Supprimer cette ligne après intégration BDE
+
+    # Extraire prénom/nom depuis l'email (format prenom.nom@...)
+    try:
+        local_part = email.split("@")[0]
+        parts = [p for p in local_part.replace("_", ".").replace("-", ".").split(".") if p]
+        if len(parts) >= 2:
+            prenom_raw, nom_raw = parts[0], parts[1]
+            user.prenom = prenom_raw.strip().capitalize()
+            user.nom = nom_raw.strip().capitalize()
+    except Exception:
+        # Ne bloque pas la vérification si parsing échoue
+        pass
 
     # Marquer email comme vérifié
     user.email_verified = True
     user.is_cotisant = is_cotisant
     user.cotisant_checked_at = datetime.now(timezone.utc)
-    user.verification_code = None  # Nettoyer le code TODO
-    user.code_created_at = None
     
     try:
         db.commit()
