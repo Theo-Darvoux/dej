@@ -6,17 +6,22 @@ from src.users.router import router as users_router
 from src.reservations.router import router as reservations_router
 from src.admin.router import router as admin_router
 from src.menu.router import router as menu_router
+from src.print.router import router as print_router
 from src.core.config import settings
 from src.db.base import Base
 from src.db.session import engine
+from src.db.init_db import init_db
+from src.db.init_menu import init_menu_data
 
 # Importer les modèles pour que SQLAlchemy les enregistre
 from src.users.models import User
-from src.reservations.models import Reservation, ReservationItem
 from src.menu.models import Category, MenuItem
 
 # Créer les tables (à remplacer par Alembic en prod)
 Base.metadata.create_all(bind=engine)
+
+init_db()  # Lance au démarrage de l'app
+init_menu_data()
 
 app = FastAPI(
     title="MC INT API",
@@ -40,7 +45,9 @@ app.include_router(users_router, prefix="/users", tags=["users"])
 app.include_router(reservations_router, prefix="/reservations", tags=["reservations"])
 app.include_router(admin_router, prefix="/admin", tags=["admin"])
 app.include_router(menu_router, prefix="/menu", tags=["menu"])
-77
+app.include_router(print_router, prefix="/print", tags=["print"])
+
+
 
 @app.get("/")
 async def root():

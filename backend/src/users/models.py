@@ -1,8 +1,8 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Date, Integer, String, Boolean, DateTime, ForeignKey, Time, Enum as SAEnum, Float
 from sqlalchemy.orm import relationship
 from src.db.base import Base
 from datetime import datetime, timezone
-
+from src.reservations.schemas import BatimentMaisel
 
 class User(Base):
     __tablename__ = "users"
@@ -21,15 +21,34 @@ class User(Base):
     is_cotisant = Column(Boolean, default=False)  # Vérifié via BDE API
     cotisant_checked_at = Column(DateTime, nullable=True)  # Dernière vérif BDE
     
+    # Détails réservation
+    date_reservation = Column(Date, nullable=True)
+    heure_reservation = Column(Time, nullable=True)
+    
+    # Logement
+    habite_residence = Column(Boolean, nullable=True)
+    adresse_if_maisel = Column(SAEnum(BatimentMaisel, name="maisel_batiment_enum"), nullable=True)
+    numero_if_maisel = Column(Integer, nullable=True)
+    adresse = Column(String, nullable=True)
+    
+    # Contact et commande
+    phone = Column(String, nullable=True)
+    total_amount = Column(Float, nullable=False, default=0.0)
+    
     # Paiement
     payment_status = Column(String, default="pending")  # pending, completed, failed
+    payment_intent_id = Column(String, nullable=True)
     payment_date = Column(DateTime, nullable=True)
     
     # Métadonnées
     user_type = Column(String, nullable=True)  # None (normal), "Listeux", "admin"
+    status = Column(String, default="confirmed")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
-    # Relations
-    reservations = relationship("Reservation", back_populates="user")
+    # Choix de commande
+    menu = Column(String, nullable=True)
+    boisson = Column(String, nullable=True)
+    bonus = Column(String, nullable=True)
+    
 

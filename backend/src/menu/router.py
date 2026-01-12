@@ -5,13 +5,16 @@ from ..db.session import get_db
 from .models import Category, MenuItem
 from .schemas import CategoryResponse, MenuItemResponse
 
-router = APIRouter(prefix="/menu", tags=["menu"])
+router = APIRouter(tags=["menu"])
 
 
 @router.get("/categories", response_model=list[CategoryResponse])
 def get_categories(db: Session = Depends(get_db)):
     """Get all active menu categories."""
     categories = db.query(Category).filter(Category.active == True).order_by(Category.display_order).all()
+    
+    if not categories:
+        categories = db.query(Category).order_by(Category.display_order).all()
     
     return [
         CategoryResponse(
@@ -25,7 +28,7 @@ def get_categories(db: Session = Depends(get_db)):
 @router.get("/items", response_model=list[MenuItemResponse])
 def get_menu_items(category_id: int | None = None, db: Session = Depends(get_db)):
     """Get all available menu items, optionally filtered by category."""
-    query = db.query(MenuItem).filter(MenuItem.available == True)
+    query = db.query(MenuItem)
     
     if category_id:
         query = query.filter(MenuItem.category_id == category_id)
@@ -38,6 +41,7 @@ def get_menu_items(category_id: int | None = None, db: Session = Depends(get_db)
             subtitle=item.description or "",
             tag=item.tag,
             accent=item.accent_color,
+            item_type=item.item_type,
             price=f"{item.price:.2f} €".replace(".", ",")
         )
         for item in items

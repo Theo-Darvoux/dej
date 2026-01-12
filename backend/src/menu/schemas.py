@@ -13,6 +13,7 @@ class MenuItemResponse(BaseModel):
     subtitle: str
     tag: str | None = None
     accent: str | None = None
+    item_type: str
     price: str
 
     model_config = {"from_attributes": True}

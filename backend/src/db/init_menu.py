@@ -9,117 +9,97 @@ from src.menu.models import Category, MenuItem
 
 
 def init_menu_data():
-    """Initialise les catégories et items du menu."""
+    """Initialise les catégories et items du menu une seule fois."""
     db = next(get_db())
     
     # Vérifier si des données existent déjà
     existing_categories = db.query(Category).count()
     if existing_categories > 0:
-        print(f"❌ {existing_categories} catégories existent déjà. Suppression et réinit...")
-        db.query(MenuItem).delete()
-        db.query(Category).delete()
-        db.commit()
+        print(f"✅ {existing_categories} catégories existent déjà. Skipping init...")
+        return
     
     # Créer les catégories
     categories_data = [
-        {"name": "Les offres", "display_order": 1},
-        {"name": "En ce moment", "display_order": 2},
-        {"name": "Spcecial Absinthe", "display_order": 3},
-        {"name": "scpecial poulet", "display_order": 4},
+        {"name": "Normal", "display_order": 1, "active": True},
+        {"name": "Vegetarien", "display_order": 2, "active": True},
+        {"name": "Sucre", "display_order": 3, "active": True},
+        {"name": "Boissons", "display_order": 4, "active": False},
+        {"name": "Upsell", "display_order": 5, "active": False},
     ]
     
     categories = {}
     for cat_data in categories_data:
-        category = Category(**cat_data, active=True)
+        category = Category(**cat_data)
         db.add(category)
         db.flush()
         categories[cat_data["name"]] = category.id
     
     # Créer les items pour "Les offres"
     menu_items = [
-        # Les offres
         {
-            "category_id": categories["Les offres"],
-            "name": "Menu Golden Ligue 1 McDonald's",
-            "description": "Petit dej",
-            "price": 12.90,
+            "category_id": categories["Normal"],
+            "name": "La base",
+            "description": "Pizza + ",
+            "price": 1,
             "tag": "Signature",
             "accent_color": "#f59e0b",
+            "item_type": "menu",
             "display_order": 1,
         },
         {
-            "category_id": categories["Les offres"],
-            "name": "Menu Duo Golden Ligue 1 McDonald's",
-            "description": "Petit dej",
-            "price": 19.50,
-            "tag": "Duo",
-            "accent_color": "#6366f1",
+            "category_id": categories["Vegetarien"],
+            "name": "La base",
+            "description": "Pizza + ",
+            "price": 1,
+            "tag": "Signature",
+            "accent_color": "#84f50b",
+            "item_type": "menu",
             "display_order": 2,
         },
-        
-        # En ce moment
         {
-            "category_id": categories["En ce moment"],
-            "name": "Menu Golden Ligue 1 McDonald's",
-            "description": "Petit dej",
-            "price": 12.90,
-            "tag": "En vedette",
-            "accent_color": "#0ea5e9",
-            "display_order": 1,
+            "category_id": categories["Sucre"],
+            "name": "La base",
+            "description": "Brioche + truc",
+            "price": 1,
+            "tag": "Signature",
+            "accent_color": "#0b59f5",
+            "item_type": "menu",
+            "display_order": 3,
         },
         {
-            "category_id": categories["En ce moment"],
-            "name": "Menu Happy Doggy",
-            "description": "Petit dej",
-            "price": 9.40,
-            "tag": "Nouveau",
-            "accent_color": "#22c55e",
-            "display_order": 2,
-        },
-        
-        # Spcecial Absinthe
-        {
-            "category_id": categories["Spcecial Absinthe"],
-            "name": "Spcecial Absinthe",
-            "description": "Biere",
-            "price": 6.00,
-            "tag": "Edition limitée",
-            "accent_color": "#16a34a",
-            "display_order": 1,
+            "category_id": categories["Boissons"],
+            "name": "Boisson fraîche",
+            "description": "Soda, eau ou jus",
+            "price": 0,
+            "tag": "Boisson",
+            "accent_color": "#0bc6f5",
+            "item_type": "boisson",
+            "display_order": 4,
         },
         {
-            "category_id": categories["Spcecial Absinthe"],
-            "name": "Absinthe Twist",
-            "description": "Biere",
-            "price": 6.50,
-            "tag": "Mix",
-            "accent_color": "#10b981",
-            "display_order": 2,
-        },
-        
-        # scpecial poulet
-        {
-            "category_id": categories["scpecial poulet"],
-            "name": "scpecial poulet",
-            "description": "Poulet",
-            "price": 10.90,
-            "tag": "Croustillant",
-            "accent_color": "#ef4444",
-            "display_order": 1,
+            "category_id": categories["Boissons"],
+            "name": "Café / Thé",
+            "description": "Boisson chaude",
+            "price": 0,
+            "tag": "Boisson",
+            "accent_color": "#0bc6f5",
+            "item_type": "boisson",
+            "display_order": 5,
         },
         {
-            "category_id": categories["scpecial poulet"],
-            "name": "Poulet Grillé",
-            "description": "Poulet",
-            "price": 9.90,
-            "tag": "Grill",
-            "accent_color": "#f97316",
-            "display_order": 2,
+            "category_id": categories["Upsell"],
+            "name": "Poulet grillé",
+            "description": "Option poulet pour clients éligibles",
+            "price": 0,
+            "tag": "Option",
+            "accent_color": "#9b5de5",
+            "item_type": "upsell",
+            "display_order": 6,
         },
     ]
     
     for item_data in menu_items:
-        menu_item = MenuItem(**item_data, available=True)
+        menu_item = MenuItem(**item_data)
         db.add(menu_item)
     
     db.commit()

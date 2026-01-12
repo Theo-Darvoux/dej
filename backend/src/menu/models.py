@@ -28,7 +28,7 @@ class MenuItem(Base):
     image_url: Mapped[str | None] = mapped_column(String, nullable=True)
     tag: Mapped[str | None] = mapped_column(String, nullable=True)
     accent_color: Mapped[str | None] = mapped_column(String, nullable=True)
-    available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    item_type: Mapped[str] = mapped_column(String, nullable=False, default="menu")
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     # Relationship
