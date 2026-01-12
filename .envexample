@@ -27,6 +27,10 @@ MAIL_VALIDATE_CERTS=false
 # Frontend
 FRONTEND_URL=http://frontend:8080
 
-# HelloAsso (à compléter avec la doc)
-HELLOASSO_API_KEY=your-helloasso-api-key
-HELLOASSO_API_URL=https://api.helloasso.com/v5
+# HelloAsso
+HELLOASSO_CLIENT_ID=a_add
+HELLOASSO_CLIENT_SECRET=a_add
+
+
+HELLOASSO_URL_TOKEN=https://api.helloasso.com/oauth2
+HELLOASSO_API=https://api.helloasso.com/v5

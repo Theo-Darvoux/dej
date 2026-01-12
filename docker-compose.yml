@@ -63,12 +63,3 @@ services:
       - "8025:8025"  # Web UI
     logging:
       driver: none  # Disable logging to reduce noise
-
-  # Stripe Mock API (Payment testing - keep for development)
-  stripe-mock:
-    image: stripe/stripe-mock:latest
-    restart: unless-stopped
-    ports:
-      - "12111:12111"  # HTTP API
-      - "12112:12112"  # HTTPS API
-  
