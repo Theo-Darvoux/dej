@@ -20,10 +20,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Copy the project source code
 COPY . .
 
-# Install the project itself
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev
-
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
