@@ -7,6 +7,7 @@ from src.reservations.router import router as reservations_router
 from src.admin.router import router as admin_router
 from src.menu.router import router as menu_router
 from src.print.router import router as print_router
+from src.payments.router import router as payments_router
 from src.core.config import settings
 from src.db.base import Base
 from src.db.session import engine
@@ -46,6 +47,7 @@ app.include_router(reservations_router, prefix="/reservations", tags=["reservati
 app.include_router(admin_router, prefix="/admin", tags=["admin"])
 app.include_router(menu_router, prefix="/menu", tags=["menu"])
 app.include_router(print_router, prefix="/print", tags=["print"])
+app.include_router(payments_router, tags=["payments"])
 
 
 

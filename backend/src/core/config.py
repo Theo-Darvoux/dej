@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     HELLOASSO_CLIENT_SECRET: str = os.getenv("HELLOASSO_CLIENT_SECRET", "")
     HELLOASSO_URL_TOKEN: str = os.getenv("HELLOASSO_URL_TOKEN", "https://api.helloasso.com/oauth2")
     HELLOASSO_API: str = os.getenv("HELLOASSO_API", "https://api.helloasso.com/v5")
+    HELLOASSO_ORGANIZATION_SLUG: str = os.getenv("HELLOASSO_ORGANIZATION_SLUG", "")
+    # HTTPS URL for HelloAsso redirects (required by HelloAsso)
+    HELLOASSO_REDIRECT_BASE_URL: str = os.getenv("HELLOASSO_REDIRECT_BASE_URL", "")
     
     class Config:
         env_file = ".env"

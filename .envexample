@@ -30,7 +30,9 @@ FRONTEND_URL=http://frontend:8080
 # HelloAsso
 HELLOASSO_CLIENT_ID=a_add
 HELLOASSO_CLIENT_SECRET=a_add
-
+HELLOASSO_ORGANIZATION_SLUG=your-organization-slug
+# HTTPS URL required by HelloAsso for redirects (use ngrok in dev)
+HELLOASSO_REDIRECT_BASE_URL=https://your-domain.com
 
 HELLOASSO_URL_TOKEN=https://api.helloasso.com/oauth2
 HELLOASSO_API=https://api.helloasso.com/v5

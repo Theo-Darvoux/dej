@@ -31,16 +31,12 @@ const InfoPopup = ({
   step,
   total,
   amount,
-  onPaymentSuccess,
   onReservationDataChange,
   reservationData
 }: InfoPopupProps) => {
   const [phone, setPhone] = useState('')
   const [dateReservation, setDateReservation] = useState('')
   const [heureReservation, setHeureReservation] = useState('')
-  const [cardNumber, setCardNumber] = useState('')
-  const [expiry, setExpiry] = useState('')
-  const [cvc, setCvc] = useState('')
   const [showPayment, setShowPayment] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -84,41 +80,63 @@ const InfoPopup = ({
         const errorData = await reservationResponse.json().catch(() => ({}))
         throw new Error(errorData.detail || 'Erreur lors de l\'enregistrement de la réservation')
       }
+
+      const reservation = await reservationResponse.json()
+      // Store reservation ID for payment
+      localStorage.setItem('pending_reservation_id', reservation.id?.toString() || '')
+
       setShowPayment(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de réservation.')
     }
   }
 
-  const handlePayment = async () => {
+  const handlePayWithHelloAsso = async () => {
     setLoading(true)
     setError('')
 
     try {
-      const response = await fetch('http://stripe-mock:12111/v1/payment_intents', {
+      // Parse amount to centimes
+      const amountCentimes = Math.round(
+        parseFloat(amount.replace(',', '.').replace(' €', '')) * 100
+      )
+
+      // Get user info from reservationData or use defaults
+      const payerFirstName = 'Client'
+      const payerLastName = 'Mc-INT'
+      const payerEmail = localStorage.getItem('user_email') || 'client@mcint.fr'
+
+      // Create checkout intent
+      const response = await fetch('/api/payments/checkout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          amount: (parseFloat(amount.replace(',', '.').replace(' €', '')) * 100).toString(),
-          currency: 'eur',
-          'payment_method_types[]': 'card',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          amount: amountCentimes,
+          item_name: 'Commande Mc-INT',
+          payer_email: payerEmail,
+          payer_first_name: payerFirstName,
+          payer_last_name: payerLastName,
+          reservation_id: parseInt(localStorage.getItem('pending_reservation_id') || '0'),
         }),
       })
 
-      if (response.ok) {
-        setTimeout(() => {
-          setLoading(false)
-          onPaymentSuccess()
-        }, 1000)
-      } else {
-        throw new Error('Payment failed')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail || 'Erreur lors de la création du paiement')
       }
+
+      const data = await response.json()
+
+      // Store checkout intent ID for verification on return
+      localStorage.setItem('checkout_intent_id', data.checkout_intent_id)
+
+      // Redirect to HelloAsso
+      window.location.href = data.redirect_url
+
     } catch (err) {
       setLoading(false)
-      setError(err instanceof Error ? err.message : 'Erreur de paiement. Réessaye.')
-      console.error('Erreur:', err)
+      setError(err instanceof Error ? err.message : 'Erreur de paiement.')
     }
   }
 
@@ -189,54 +207,50 @@ const InfoPopup = ({
                 Montant total : <strong style={{ color: '#264027', fontSize: '1.2rem' }}>{amount}</strong>
               </p>
 
-              <div className="payment__card">
-                <label className="popup__label" htmlFor="card-number">Numéro de carte</label>
-                <input
-                  id="card-number"
-                  className="popup__input"
-                  type="text"
-                  placeholder="4242 4242 4242 4242"
-                  maxLength={19}
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
+              <div style={{
+                background: '#f5f5f5',
+                padding: '20px',
+                borderRadius: '12px',
+                marginTop: '16px',
+                textAlign: 'center'
+              }}>
+                <p style={{ margin: '0 0 16px 0', color: '#666' }}>
+                  Tu vas être redirigé vers HelloAsso pour effectuer ton paiement en toute sécurité.
+                </p>
+                <img
+                  src="https://www.helloasso.com/assets/img/logos/logo-helloasso.svg"
+                  alt="HelloAsso"
+                  style={{ height: '40px', marginBottom: '8px' }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                  }}
                 />
-
-                <div className="payment__row">
-                  <div>
-                    <label className="popup__label" htmlFor="card-expiry">Expiration</label>
-                    <input
-                      id="card-expiry"
-                      className="popup__input"
-                      type="text"
-                      placeholder="MM/YY"
-                      maxLength={5}
-                      value={expiry}
-                      onChange={(e) => setExpiry(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="popup__label" htmlFor="card-cvc">CVC</label>
-                    <input
-                      id="card-cvc"
-                      className="popup__input"
-                      type="text"
-                      placeholder="123"
-                      maxLength={3}
-                      value={cvc}
-                      onChange={(e) => setCvc(e.target.value)}
-                    />
-                  </div>
-                </div>
+                <p style={{ fontSize: '0.8rem', color: '#999', margin: 0 }}>
+                  100% gratuit pour les associations
+                </p>
               </div>
 
               {error && <p className="popup__error">{error}</p>}
 
-              <button className="popup__cta" onClick={handlePayment} disabled={loading}>
-                {loading ? '⏳ Traitement...' : `Payer ${amount}`}
+              <button
+                className="popup__cta"
+                onClick={handlePayWithHelloAsso}
+                disabled={loading}
+                style={{
+                  background: loading ? '#ccc' : '#264027',
+                  color: '#fff'
+                }}
+              >
+                {loading ? '⏳ Redirection...' : `Payer ${amount} avec HelloAsso`}
               </button>
 
-              <p className="payment__notice">
-                🔒 Mode développement : Paiement simulé
+              <p style={{
+                textAlign: 'center',
+                fontSize: '0.8rem',
+                color: '#757575',
+                marginTop: '16px'
+              }}>
+                🔒 Paiement sécurisé par HelloAsso
               </p>
             </>
           )}
