@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import './RequestPopup.css'
+import '../popup-shared.css'
 
 type RequestPopupProps = {
   open: boolean
@@ -45,35 +45,42 @@ const RequestPopup = ({ open, onClose, onRequestCode, step, total }: RequestPopu
   }
 
   if (!open) return null
-  
+
   return (
     <div className="popup-overlay">
       <div className="popup-panel">
         <button className="popup__close" aria-label="Fermer" onClick={onClose}>
           ×
         </button>
-        <div className="popup__progress"><div className="popup__progress-fill" style={{ width: `${Math.round((step / total) * 100)}%` }} /></div>
+        <div className="popup__progress">
+          <div className="popup__progress-fill" style={{ width: `${Math.round((step / total) * 100)}%` }} />
+        </div>
         <div className="popup__body">
-          <p className="eyebrow">Connexion</p>
-          <h2>Connecte-toi à mc-INT</h2>
-          <p className="popup__subtitle">Reçois ton mc-code par email pour finaliser ta commande.</p>
-          <label className="popup__label" htmlFor="popup-email">Email</label>
-          <input 
-            id="popup-email" 
-            className="popup__input" 
-            type="email" 
+          <p className="eyebrow">Étape {step} sur {total}</p>
+          <h2>Connecte-toi à Mc-INT 🍔</h2>
+          <p className="popup__subtitle">
+            Reçois ton code de vérification par email pour finaliser ta commande.
+          </p>
+
+          <label className="popup__label" htmlFor="popup-email">Adresse email</label>
+          <input
+            id="popup-email"
+            className="popup__input"
+            type="email"
             placeholder="ton.email@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}
           />
-          {error && <p style={{ color: '#ef4444', fontSize: '14px', marginTop: '8px' }}>{error}</p>}
-          <button 
-            className="popup__cta" 
+
+          {error && <p className="popup__error">{error}</p>}
+
+          <button
+            className="popup__cta"
             onClick={handleRequestCode}
             disabled={isLoading}
           >
-            {isLoading ? 'Envoi en cours...' : 'Recevoir mon mc-code'}
+            {isLoading ? 'Envoi en cours...' : 'Recevoir mon code'}
           </button>
         </div>
       </div>

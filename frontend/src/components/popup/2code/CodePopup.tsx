@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import './CodePopup.css'
+import '../popup-shared.css'
 
 type CodePopupProps = {
   open: boolean
@@ -46,36 +46,53 @@ const CodePopup = ({ open, onClose, onContinue, step, total, email }: CodePopupP
   }
 
   if (!open) return null
-  
+
   return (
     <div className="popup-overlay">
       <div className="popup-panel">
         <button className="popup__close" aria-label="Fermer" onClick={onClose}>
           ×
         </button>
-        <div className="popup__progress"><div className="popup__progress-fill" style={{ width: `${Math.round((step / total) * 100)}%` }} /></div>
+        <div className="popup__progress">
+          <div className="popup__progress-fill" style={{ width: `${Math.round((step / total) * 100)}%` }} />
+        </div>
         <div className="popup__body">
-          <p className="eyebrow">Vérification</p>
-          <h2>Saisis ton mc-code</h2>
-          <p className="popup__subtitle">Entre le code reçu par email pour continuer.</p>
-          <label className="popup__label" htmlFor="popup-code">Code</label>
-          <input 
-            id="popup-code" 
-            className="popup__input" 
-            type="text" 
-            placeholder="xxxx"
+          <p className="eyebrow">Étape {step} sur {total}</p>
+          <h2>Saisis ton code 🔐</h2>
+          <p className="popup__subtitle">
+            Entre le code reçu sur <strong>{email}</strong> pour continuer.
+          </p>
+
+          <label className="popup__label" htmlFor="popup-code">Code de vérification</label>
+          <input
+            id="popup-code"
+            className="popup__input"
+            type="text"
+            placeholder="XXXX"
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
             disabled={isLoading}
+            maxLength={6}
+            style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '8px' }}
           />
-          {error && <p style={{ color: '#ef4444', fontSize: '14px', marginTop: '8px' }}>{error}</p>}
-          <a className="popup__link" href="https://z.imt.fr/" target="_blank" rel="noopener noreferrer">Ouvrir z.imt.fr</a>
-          <button 
-            className="popup__cta" 
+
+          {error && <p className="popup__error">{error}</p>}
+
+          <a
+            className="popup__link"
+            href="https://z.imt.fr/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            📧 Ouvrir ma boîte mail (z.imt.fr)
+          </a>
+
+          <button
+            className="popup__cta"
             onClick={handleVerifyCode}
             disabled={isLoading}
           >
-            {isLoading ? 'Vérification...' : 'Continuer'}
+            {isLoading ? 'Vérification...' : 'Valider le code'}
           </button>
         </div>
       </div>

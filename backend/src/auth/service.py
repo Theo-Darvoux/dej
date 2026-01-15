@@ -131,7 +131,7 @@ async def get_tokens(user_id: int, email: str) -> TokenResponse:
 
 async def refresh_access_token(refresh_token: str, db: Session) -> TokenResponse:
     """Génère un nouveau access token à partir du refresh token"""
-    from core.security import decode_token
+    from src.core.security import decode_token
     
     token_data = decode_token(refresh_token)
     
@@ -165,7 +165,7 @@ async def refresh_access_token(refresh_token: str, db: Session) -> TokenResponse
 
 def get_user_by_token(token: str, db: Session) -> User:
     """Récupère l'utilisateur à partir d'un token JWT"""
-    from core.security import decode_token
+    from src.core.security import decode_token
     
     token_data = decode_token(token)
     user = db.query(User).filter(User.id == token_data.user_id).first()

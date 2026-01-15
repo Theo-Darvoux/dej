@@ -1,103 +1,195 @@
+/* Menu Card - McDonald's Kiosk Style */
+
 .menu-card {
-  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  background: var(--mcdo-white);
   border-radius: 16px;
-  padding: 16px;
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 16px;
-  background: #ffffff;
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
-  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.25s ease;
+  height: 100%;
 }
 
 .menu-card:hover {
-  transform: translateY(-2px);
-  border-color: #0f172a;
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.menu-card__thumb {
+.menu-card--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Image Section */
+.menu-card__image {
   position: relative;
-  background: linear-gradient(135deg, #f8fafc, #ffffff);
-  border-radius: 12px;
-  height: 120px;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  border: 1px solid #e2e8f0;
-}
-
-.menu-card__glow {
-  position: absolute;
-  inset: 8px;
-  filter: blur(28px);
-  opacity: 0.38;
-}
-
-.menu-card__plate {
-  position: relative;
-  font-size: 40px;
-}
-
-.menu-card__body h3 {
-  margin: 0 0 6px;
-  font-size: 18px;
-  line-height: 1.2;
-}
-
-.menu-card__body p {
-  margin: 0;
-  color: #475569;
-  font-weight: 500;
-}
-
-.menu-card__tag {
-  display: inline-flex;
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 12px;
-  margin-bottom: 8px;
+  justify-content: center;
+  overflow: hidden;
 }
 
+.menu-card__image-emoji {
+  font-size: 72px;
+  transition: transform 0.3s ease;
+}
+
+.menu-card:hover .menu-card__image-emoji {
+  transform: scale(1.1) rotate(-3deg);
+}
+
+.menu-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Badge (Promo, etc.) */
+.menu-card__badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--mcdo-red);
+  color: var(--mcdo-white);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.menu-card__badge--warning {
+  background: #f59e0b;
+}
+
+/* Out of Stock Overlay */
+.menu-card__out-of-stock {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mcdo-white);
+  font-weight: 800;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Content Section */
+.menu-card__content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 8px;
+}
+
+.menu-card__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--mcdo-black);
+  line-height: 1.3;
+  margin: 0;
+}
+
+.menu-card__subtitle {
+  font-size: 0.85rem;
+  color: var(--mcdo-grey);
+  line-height: 1.4;
+  margin: 0;
+  flex-grow: 1;
+}
+
+/* Footer with Price and Button */
 .menu-card__footer {
-  margin-top: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-top: 12px;
 }
 
 .menu-card__price {
+  font-size: 1.1rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--mcdo-black);
 }
 
-.menu-card__add {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #ffffff;
+/* CHOISIR Button */
+.menu-card__btn {
+  flex: 1;
+  background: var(--mcdo-yellow);
+  color: var(--mcdo-black);
   border: none;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 10px 20px rgba(22, 163, 74, 0.24);
-  transition: transform 140ms ease, box-shadow 140ms ease;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
 }
 
-.menu-card__add:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(22, 163, 74, 0.28);
+.menu-card__btn:hover {
+  background: var(--mcdo-yellow-hover);
+  transform: scale(1.02);
 }
 
-@media (max-width: 700px) {
-  .menu-card {
-    grid-template-columns: 1fr;
+.menu-card__btn:active {
+  transform: scale(0.98);
+}
+
+.menu-card__btn:disabled {
+  background: #ccc;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* Responsive - 2 columns on mobile */
+@media (max-width: 600px) {
+  .menu-card__image {
+    aspect-ratio: 1;
   }
 
-  .menu-card__thumb {
-    height: 160px;
+  .menu-card__image-emoji {
+    font-size: 56px;
+  }
+
+  .menu-card__content {
+    padding: 12px;
+  }
+
+  .menu-card__title {
+    font-size: 0.9rem;
+  }
+
+  .menu-card__subtitle {
+    font-size: 0.75rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .menu-card__footer {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .menu-card__price {
+    align-self: flex-start;
+  }
+
+  .menu-card__btn {
+    width: 100%;
+    padding: 10px;
   }
 }
