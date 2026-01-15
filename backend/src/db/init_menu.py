@@ -4,8 +4,9 @@ Exécuter avec: python -m src.db.init_menu
 """
 
 from sqlalchemy.orm import Session
+from datetime import time
 from src.db.session import get_db
-from src.menu.models import Category, MenuItem
+from src.menu.models import Category, MenuItem, MenuItemLimit
 
 
 def init_menu_data():
@@ -23,8 +24,8 @@ def init_menu_data():
         {"name": "Normal", "display_order": 1, "active": True},
         {"name": "Vegetarien", "display_order": 2, "active": True},
         {"name": "Sucre", "display_order": 3, "active": True},
-        {"name": "Boissons", "display_order": 4, "active": False},
-        {"name": "Upsell", "display_order": 5, "active": False},
+        {"name": "Boissons", "display_order": 4, "active": True},
+        {"name": "Upsell", "display_order": 5, "active": True},
     ]
     
     categories = {}
@@ -38,7 +39,7 @@ def init_menu_data():
     menu_items = [
         {
             "category_id": categories["Normal"],
-            "name": "La base",
+            "name": "le normal",
             "description": "Pizza + ",
             "price": 1,
             "tag": "Signature",
@@ -48,8 +49,8 @@ def init_menu_data():
         },
         {
             "category_id": categories["Vegetarien"],
-            "name": "La base",
-            "description": "Pizza + ",
+            "name": "le vege",
+            "description": "... ",
             "price": 1,
             "tag": "Signature",
             "accent_color": "#84f50b",
@@ -58,7 +59,7 @@ def init_menu_data():
         },
         {
             "category_id": categories["Sucre"],
-            "name": "La base",
+            "name": "le sucre",
             "description": "Brioche + truc",
             "price": 1,
             "tag": "Signature",
@@ -101,6 +102,44 @@ def init_menu_data():
     for item_data in menu_items:
         menu_item = MenuItem(**item_data)
         db.add(menu_item)
+        db.flush() # Ensure ID is generated and object is attached
+
+        # Exemples de limites
+        if menu_item.name == "le normal" and menu_item.item_type == "menu":
+             # Limite de 50 menus entre 12h et 14h
+             limit_lunch = MenuItemLimit(
+                 menu_item_id=menu_item.id,
+                 start_time=time(12, 0),
+                 end_time=time(14, 0),
+                 max_quantity=50,
+                 current_quantity=50 # Init avec max
+             )
+             db.add(limit_lunch)
+             
+             # Limite de 30 menus le soir 19h-21h
+             limit_dinner = MenuItemLimit(
+                 menu_item_id=menu_item.id,
+                 start_time=time(19, 0),
+                 end_time=time(21, 0),
+                 max_quantity=30,
+                 current_quantity=30 # Init avec max
+             )
+             db.add(limit_dinner)
+
+             # Set warning threshold
+             menu_item.low_stock_threshold = 90
+             db.add(menu_item)
+
+        elif menu_item.name == "Boisson fraîche":
+             # Pas de limite (infini) de 6h à 23h
+             limit_day = MenuItemLimit(
+                 menu_item_id=menu_item.id,
+                 start_time=time(6, 0),
+                 end_time=time(23, 0),
+                 max_quantity=None, # Infini
+                 current_quantity=None
+             )
+             db.add(limit_day)
     
     db.commit()
     

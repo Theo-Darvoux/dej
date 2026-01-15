@@ -35,14 +35,34 @@ def get_menu_items(category_id: int | None = None, db: Session = Depends(get_db)
     
     items = query.order_by(MenuItem.display_order).all()
     
-    return [
-        MenuItemResponse(
+    response = []
+    for item in items:
+        # Calculate availability: Sum of current_quantity for all limits
+        # None + anything = None (Infinity) logic
+        remaining = None
+        has_limits = len(item.limits) > 0
+        
+        if has_limits:
+            total_remaining = 0
+            is_infinite = False
+            for limit in item.limits:
+                if limit.current_quantity is None:
+                    is_infinite = True
+                    break
+                total_remaining += limit.current_quantity
+            
+            if not is_infinite:
+                remaining = total_remaining
+
+        response.append(MenuItemResponse(
             title=item.name,
             subtitle=item.description or "",
             tag=item.tag,
             accent=item.accent_color,
             item_type=item.item_type,
-            price=f"{item.price:.2f} €".replace(".", ",")
-        )
-        for item in items
-    ]
+            price=f"{item.price:.2f} €".replace(".", ","),
+            remaining_quantity=remaining,
+            low_stock_threshold=item.low_stock_threshold
+        ))
+        
+    return response

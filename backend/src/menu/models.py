@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Integer, String, Float, ForeignKey
+from sqlalchemy import Boolean, Integer, String, Float, ForeignKey, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 
@@ -30,6 +30,25 @@ class MenuItem(Base):
     accent_color: Mapped[str | None] = mapped_column(String, nullable=True)
     item_type: Mapped[str] = mapped_column(String, nullable=False, default="menu")
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    low_stock_threshold: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Relationship
+    # Relationship
     category: Mapped["Category"] = relationship("Category", back_populates="items")
+    limits: Mapped[list["MenuItemLimit"]] = relationship("MenuItemLimit", back_populates="menu_item")
+
+class MenuItemLimit(Base):
+    __tablename__ = "menu_item_limits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    menu_item_id: Mapped[int] = mapped_column(Integer, ForeignKey("menu_items.id"), nullable=False, index=True)
+    
+    start_time: Mapped[datetime] = mapped_column(Time, nullable=False) # e.g., 12:00
+    end_time: Mapped[datetime] = mapped_column(Time, nullable=False)   # e.g., 13:00
+    
+    # Number allowed per hour in this interval. None = Infinite.
+    max_quantity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Current remaining quantity for this slot. None = Infinite.
+    current_quantity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    menu_item: Mapped["MenuItem"] = relationship("MenuItem", back_populates="limits")

@@ -21,6 +21,8 @@ type MenuItem = {
   accent?: string
   price: string
   item_type?: string
+  remaining_quantity?: number
+  low_stock_threshold?: number
 }
 
 type CartItem = {
@@ -53,7 +55,7 @@ function App() {
   const [isInfoOpen, setIsInfoOpen] = useState(false)
   const [apiStatus, setApiStatus] = useState<string>('Vérification...')
   const [currentEmail, setCurrentEmail] = useState('')
-  
+
   // États pour stocker les données de réservation
   const [reservationData, setReservationData] = useState<Partial<ReservationData>>({})
   const [menuId, setMenuId] = useState<number | undefined>(undefined)
@@ -88,24 +90,24 @@ function App() {
           throw new Error(`HTTP ${response.status}: ${text}`)
         }
         const data = await response.json()
-        console.log('Categories reçues:', data)
+        // console.log('Categories reçues:', data)
         let list: Category[] = Array.isArray(data)
           ? data
           : Array.isArray((data as any)?.categories)
-          ? (data as any).categories
-          : []
+            ? (data as any).categories
+            : []
 
         // Si vide, utilise des données de test
-        if (list.length === 0) {
-          console.log('⚠️ Aucune catégorie du backend, utilisation des données de test')
-          list = [
-            { id: '1', title: 'Burgers' },
-            { id: '2', title: 'Pizzas' },
-            { id: '3', title: 'Desserts' },
-          ]
-        }
+        //if (list.length === 0) {
+        //  console.log('⚠️ Aucune catégorie du backend, utilisation des données de test')
+        // list = [
+        //    { id: '1', title: 'Burgers' },
+        //    { id: '2', title: 'Pizzas' },
+        //    { id: '3', title: 'Desserts' },
+        //  ]
+        //}
 
-        console.log('Categories après parse:', list)
+        // console.log('Categories après parse:', list)
         setCategories(list)
         if (list.length > 0) {
           setSelectedCategoryId(list[0].id)
@@ -128,31 +130,31 @@ function App() {
           ? `/api/menu/items`
           : `/api/menu/items?category_id=${categoryIdNum}`
 
-        console.log('Fetching items from:', url)
+        // console.log('Fetching items from:', url)
         const response = await fetch(url)
         if (!response.ok) {
           const text = await response.text()
           throw new Error(`HTTP ${response.status}: ${text}`)
         }
         const data = await response.json()
-        console.log('Items reçus:', data)
+        // console.log('Items reçus:', data)
         let items: MenuItem[] = Array.isArray(data)
           ? data
           : Array.isArray((data as any)?.items)
-          ? (data as any).items
-          : []
+            ? (data as any).items
+            : []
 
         // Si vide, utilise des données de test
-        if (items.length === 0) {
-          console.log('⚠️ Aucun item du backend, utilisation des données de test')
-          items = [
-            { id: 1, title: 'Burger Classique', subtitle: 'Boeuf haché', price: '12,50 €' },
-            { id: 2, title: 'Burger Déluxe', subtitle: 'Double boeuf', price: '15,00 €' },
-            { id: 3, title: 'Burger Végétal', subtitle: 'Patty végétale', price: '11,00 €' },
-          ]
-        }
+        //if (items.length === 0) {
+        //  console.log('⚠️ Aucun item du backend, utilisation des données de test')
+        //  items = [
+        //    { id: 1, title: 'Burger Classique', subtitle: 'Boeuf haché', price: '12,50 €' },
+        //    { id: 2, title: 'Burger Déluxe', subtitle: 'Double boeuf', price: '15,00 €' },
+        //    { id: 3, title: 'Burger Végétal', subtitle: 'Patty végétale', price: '11,00 €' },
+        //  ]
+        //}
 
-        console.log('Items après parse:', items)
+        // console.log('Items après parse:', items)
         setMenuByCategory((prev) => ({
           ...prev,
           [selectedCategoryId]: items,
@@ -184,7 +186,7 @@ function App() {
       if (prev.length >= 3) return prev
       return [...prev, { id: item.id, title: item.title, price: item.price }]
     })
-    
+
     // Stocker les IDs selon le type
     if (item.item_type === 'menu' && item.id) setMenuId(item.id)
     if (item.item_type === 'boisson' && item.id) setBoissonId(item.id)
@@ -196,7 +198,7 @@ function App() {
   }
 
 
-   return (
+  return (
     <div className="page">
       <div style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '12px', color: '#333', zIndex: 1000, background: '#fff', padding: '5px 10px', border: '1px solid #ccc' }}>
         <div>{apiStatus}</div>
@@ -222,6 +224,8 @@ function App() {
                   tag={item.tag}
                   accent={item.accent}
                   price={item.price}
+                  remaining_quantity={item.remaining_quantity}
+                  low_stock_threshold={item.low_stock_threshold}
                   onAdd={() => {
                     handleAddToCart(item)
                   }}
