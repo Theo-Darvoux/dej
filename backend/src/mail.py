@@ -2,7 +2,7 @@ from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from src.core.config import settings
 
 # Configuration email
-conf_mail = ConnectionConfig(
+conf_mail_mailhug = ConnectionConfig(
     MAIL_USERNAME=settings.MAIL_USERNAME,
     MAIL_PASSWORD=settings.MAIL_PASSWORD,
     MAIL_FROM=settings.MAIL_FROM,
@@ -13,6 +13,20 @@ conf_mail = ConnectionConfig(
     MAIL_SSL_TLS=settings.MAIL_SSL_TLS,
     USE_CREDENTIALS=settings.MAIL_USE_CREDENTIALS,
     VALIDATE_CERTS=settings.MAIL_VALIDATE_CERTS
+)
+
+
+conf_mail_hypnos = ConnectionConfig(
+    MAIL_USERNAME=settings.MAIL_HYPNOS_USERNAME,
+    MAIL_PASSWORD=settings.MAIL_HYPNOS_PASSWORD,
+    MAIL_FROM=settings.MAIL_HYPNOS_FROM,
+    MAIL_PORT=settings.MAIL_HYPNOS_PORT,
+    MAIL_SERVER=settings.MAIL_HYPNOS_SERVER,
+    MAIL_FROM_NAME=settings.MAIL_HYPNOS_FROM_NAME,
+    MAIL_STARTTLS=settings.MAIL_HYPNOS_STARTTLS,
+    MAIL_SSL_TLS=settings.MAIL_HYPNOS_SSL_TLS,
+    USE_CREDENTIALS=settings.MAIL_HYPNOS_USE_CREDENTIALS,
+    VALIDATE_CERTS=settings.MAIL_HYPNOS_VALIDATE_CERTS
 )
 
 
@@ -50,7 +64,8 @@ async def send_verification_email(recipient_email: str, code: str) -> bool:
         subtype=MessageType.html
     )
     
-    fm = FastMail(conf_mail)
+    fm = FastMail(conf_mail_mailhug)
+    fm = FastMail(conf_mail_hypnos)
     
     try:
         await fm.send_message(message)
@@ -75,7 +90,8 @@ async def send_test_email(recipient_email: str) -> bool:
         body=html,
         subtype=MessageType.html)
 
-    fm = FastMail(conf_mail)
+    fm = FastMail(conf_mail_mailhug)
+    fm = FastMail(conf_mail_hypnos)
 
     try:
         await fm.send_message(message)
