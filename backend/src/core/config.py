@@ -37,6 +37,18 @@ class Settings(BaseSettings):
     MAIL_USE_CREDENTIALS: bool = os.getenv("MAIL_USE_CREDENTIALS", "false").lower() == "true"
     MAIL_VALIDATE_CERTS: bool = os.getenv("MAIL_VALIDATE_CERTS", "false").lower() == "true"
     
+    # Email (FastMail)
+    MAIL_HYPNOS_USERNAME: str = os.getenv("MAIL_HYPNOS_USERNAME", "username")
+    MAIL_HYPNOS_PASSWORD: str = os.getenv("MAIL_HYPNOS_PASSWORD", "password")
+    MAIL_HYPNOS_FROM: str = os.getenv("MAIL_HYPNOS_FROM", "test@example.com")
+    MAIL_HYPNOS_FROM_NAME: str = os.getenv("MAIL_HYPNOS_FROM_NAME", "MC INT")
+    MAIL_HYPNOS_PORT: int = int(os.getenv("MAIL_HYPNOS_PORT", "1025"))
+    MAIL_HYPNOS_SERVER: str = os.getenv("MAIL_HYPNOS_SERVER", "mail")
+    MAIL_HYPNOS_STARTTLS: bool = os.getenv("MAIL_HYPNOS_STARTTLS", "false").lower() == "true"
+    MAIL_HYPNOS_SSL_TLS: bool = os.getenv("MAIL_HYPNOS_SSL_TLS", "false").lower() == "true"
+    MAIL_HYPNOS_USE_CREDENTIALS: bool = os.getenv("MAIL_HYPNOS_USE_CREDENTIALS", "false").lower() == "true"
+    MAIL_HYPNOS_VALIDATE_CERTS: bool = os.getenv("MAIL_HYPNOS_VALIDATE_CERTS", "false").lower() == "true"
+    
     # Frontend
     FRONTEND_URL: str = os.getenv("FRONTEND_URL")
     
@@ -45,9 +57,6 @@ class Settings(BaseSettings):
     HELLOASSO_CLIENT_SECRET: str = os.getenv("HELLOASSO_CLIENT_SECRET", "")
     HELLOASSO_URL_TOKEN: str = os.getenv("HELLOASSO_URL_TOKEN", "https://api.helloasso.com/oauth2")
     HELLOASSO_API: str = os.getenv("HELLOASSO_API", "https://api.helloasso.com/v5")
-    HELLOASSO_ORGANIZATION_SLUG: str = os.getenv("HELLOASSO_ORGANIZATION_SLUG", "")
-    # HTTPS URL for HelloAsso redirects (required by HelloAsso)
-    HELLOASSO_REDIRECT_BASE_URL: str = os.getenv("HELLOASSO_REDIRECT_BASE_URL", "")
     
     class Config:
         env_file = ".env"
