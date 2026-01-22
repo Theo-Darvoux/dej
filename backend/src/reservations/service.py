@@ -1,8 +1,6 @@
-
 from datetime import datetime
 from sqlalchemy.orm import Session
 
-from src.reservations.models import Reservation
 from src.users.models import User
 from src.core.exceptions import ReservationNotAllowedException, UserNotVerifiedException
 
@@ -15,10 +13,14 @@ def create_reservation(
     numero_chambre: str = None,
     numero_immeuble: str = None,
     adresse: str = None,
+    phone: str = None,
+    menu: str = None,
+    boisson: str = None,
+    bonus: str = None,
     db: Session = None
-) -> Reservation:
+) -> User:
     """
-    Crée une réservation pour l'utilisateur.
+    Crée une réservation en mettant à jour les données utilisateur.
     L'utilisateur doit être vérifié et cotisant BDE.
     """
     # Vérifier l'utilisateur
@@ -32,25 +34,24 @@ def create_reservation(
     if not user.is_cotisant:
         raise ReservationNotAllowedException("Vous n'êtes pas cotisant BDE actif")
     
-    # Créer la réservation
-    reservation = Reservation(
-        user_id=user_id,
-        date_reservation=date_reservation,
-        heure_reservation=heure_reservation,
-        habite_residence=habite_residence,
-        numero_chambre=numero_chambre,
-        numero_immeuble=numero_immeuble,
-        adresse=adresse,
-        status="confirmed",
-        payment_status="pending"
-    )
+    # Mettre à jour les données de réservation
+    user.date_reservation = date_reservation
+    user.heure_reservation = heure_reservation
+    user.habite_residence = habite_residence
+    user.numero_if_maisel = numero_chambre
+    user.adresse = adresse if not habite_residence else None
+    user.phone = phone
+    user.menu = menu
+    user.boisson = boisson
+    user.bonus = bonus
+    user.status = "confirmed"
+    user.payment_status = "pending"
     
     try:
-        db.add(reservation)
         db.commit()
-        db.refresh(reservation)
+        db.refresh(user)
     except Exception as e:
         db.rollback()
         raise ReservationNotAllowedException(f"Erreur création réservation: {str(e)}")
     
-    return reservation
+    return user

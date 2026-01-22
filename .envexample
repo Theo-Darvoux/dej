@@ -11,6 +11,7 @@ JWT_SECRET_KEY=change-this-to-a-secure-random-key-in-production
 # BDE API
 BDE_API_URL=https://gestion.bde-imtbs-tsp.fr
 BDE_API_KEY=your-bde-api-key-here
+BDE_API_TIMEOUT=30
 
 # Email (Mailhog for dev, SMTP for prod)
 MAIL_USERNAME=username
@@ -24,9 +25,27 @@ MAIL_SSL_TLS=false
 MAIL_USE_CREDENTIALS=false
 MAIL_VALIDATE_CERTS=false
 
-# Frontend
-FRONTEND_URL=http://frontend:8080
+# Email Hypnos
+MAIL_HYPNOS_USERNAME="resa@hypnos2026.fr"
+MAIL_HYPNOS_PASSWORD=
+MAIL_HYPNOS_FROM="resa@hypnos2026.fr"
+MAIL_HYPNOS_FROM_NAME="HYPNØS"
+MAIL_HYPNOS_PORT=587
+MAIL_HYPNOS_SERVER="smtp.ionos.fr"
+MAIL_HYPNOS_STARTTLS=True
+MAIL_HYPNOS_SSL_TLS=false
+MAIL_HYPNOS_USE_CREDENTIALS=false
+MAIL_HYPNOS_VALIDATE_CERTS=false
 
-# HelloAsso (à compléter avec la doc)
-HELLOASSO_API_KEY=your-helloasso-api-key
-HELLOASSO_API_URL=https://api.helloasso.com/v5
+# Frontend
+FRONTEND_URL=http://frontend:8080 #mettre le lien de votre frontend
+
+# HelloAsso
+HELLOASSO_CLIENT_ID=a_add
+HELLOASSO_CLIENT_SECRET=a_add
+HELLOASSO_ORGANIZATION_SLUG=ya_add
+
+HELLOASSO_REDIRECT_BASE_URL=http://frontend:8080 #mettre le lien de votre frontend
+
+HELLOASSO_URL_TOKEN=https://api.helloasso-sandbox.com/oauth2 #https://api.helloasso.com/oauth2
+HELLOASSO_API=https://api.helloasso-sandbox.com/v5 #https://api.helloasso.com/v5

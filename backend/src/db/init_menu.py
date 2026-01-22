@@ -1,0 +1,157 @@
+"""
+Script pour initialiser les données du menu.
+Exécuter avec: python -m src.db.init_menu
+"""
+
+from sqlalchemy.orm import Session
+from datetime import time
+from src.db.session import get_db
+from src.menu.models import Category, MenuItem, MenuItemLimit
+
+
+def init_menu_data():
+    """Initialise les catégories et items du menu une seule fois."""
+    db = next(get_db())
+    
+    # Vérifier si des données existent déjà
+    existing_categories = db.query(Category).count()
+    if existing_categories > 0:
+        print(f"✅ {existing_categories} catégories existent déjà. Skipping init...")
+        return
+    
+    # Créer les catégories
+    categories_data = [
+        {"name": "Normal", "display_order": 1, "active": True},
+        {"name": "Vegetarien", "display_order": 2, "active": True},
+        {"name": "Sucre", "display_order": 3, "active": True},
+        {"name": "Boissons", "display_order": 4, "active": True},
+        {"name": "Upsell", "display_order": 5, "active": True},
+    ]
+    
+    categories = {}
+    for cat_data in categories_data:
+        category = Category(**cat_data)
+        db.add(category)
+        db.flush()
+        categories[cat_data["name"]] = category.id
+    
+    # Créer les items pour "Les offres"
+    menu_items = [
+        {
+            "category_id": categories["Normal"],
+            "name": "le normal",
+            "description": "Pizza + ",
+            "price": 1,
+            "tag": "Signature",
+            "accent_color": "#f59e0b",
+            "item_type": "menu",
+            "display_order": 1,
+        },
+        {
+            "category_id": categories["Vegetarien"],
+            "name": "le vege",
+            "description": "... ",
+            "price": 1,
+            "tag": "Signature",
+            "accent_color": "#84f50b",
+            "item_type": "menu",
+            "display_order": 2,
+        },
+        {
+            "category_id": categories["Sucre"],
+            "name": "le sucre",
+            "description": "Brioche + truc",
+            "price": 1,
+            "tag": "Signature",
+            "accent_color": "#0b59f5",
+            "item_type": "menu",
+            "display_order": 3,
+        },
+        {
+            "category_id": categories["Boissons"],
+            "name": "Boisson fraîche",
+            "description": "Soda, eau ou jus",
+            "price": 0,
+            "tag": "Boisson",
+            "accent_color": "#0bc6f5",
+            "item_type": "boisson",
+            "display_order": 4,
+        },
+        {
+            "category_id": categories["Boissons"],
+            "name": "Café / Thé",
+            "description": "Boisson chaude",
+            "price": 0,
+            "tag": "Boisson",
+            "accent_color": "#0bc6f5",
+            "item_type": "boisson",
+            "display_order": 5,
+        },
+        {
+            "category_id": categories["Upsell"],
+            "name": "Poulet grillé",
+            "description": "Option poulet pour clients éligibles",
+            "price": 0,
+            "tag": "Option",
+            "accent_color": "#9b5de5",
+            "item_type": "upsell",
+            "display_order": 6,
+        },
+    ]
+    
+    for item_data in menu_items:
+        menu_item = MenuItem(**item_data)
+        db.add(menu_item)
+        db.flush() # Ensure ID is generated and object is attached
+
+        # Exemples de limites
+        if menu_item.name == "le normal" and menu_item.item_type == "menu":
+             # Limite de 50 menus entre 12h et 14h
+             limit_lunch = MenuItemLimit(
+                 menu_item_id=menu_item.id,
+                 start_time=time(12, 0),
+                 end_time=time(14, 0),
+                 max_quantity=50,
+                 current_quantity=50 # Init avec max
+             )
+             db.add(limit_lunch)
+             
+             # Limite de 30 menus le soir 19h-21h
+             limit_dinner = MenuItemLimit(
+                 menu_item_id=menu_item.id,
+                 start_time=time(19, 0),
+                 end_time=time(21, 0),
+                 max_quantity=30,
+                 current_quantity=30 # Init avec max
+             )
+             db.add(limit_dinner)
+
+             # Set warning threshold
+             menu_item.low_stock_threshold = 90
+             db.add(menu_item)
+
+        elif menu_item.name == "Boisson fraîche":
+             # Pas de limite (infini) de 6h à 23h
+             limit_day = MenuItemLimit(
+                 menu_item_id=menu_item.id,
+                 start_time=time(6, 0),
+                 end_time=time(23, 0),
+                 max_quantity=None, # Infini
+                 current_quantity=None
+             )
+             db.add(limit_day)
+    
+    db.commit()
+    
+    print(f"✅ Créé {len(categories_data)} catégories")
+    print(f"✅ Créé {len(menu_items)} items menu")
+    print("\nCatégories:")
+    for cat_name, cat_id in categories.items():
+        count = db.query(MenuItem).filter(MenuItem.category_id == cat_id).count()
+        print(f"  - {cat_name} (id={cat_id}): {count} items")
+
+
+if __name__ == "__main__":
+    print("🔄 Initialisation des données menu...")
+    init_menu_data()
+    print("✅ Terminé!")

@@ -30,7 +30,7 @@ services:
   frontend:
     build:
         context: ./frontend
-        dockerfile: DockerFile
+        dockerfile: Dockerfile
     restart: unless-stopped
     develop:
       watch:
@@ -42,7 +42,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: DockerFile
+      dockerfile: Dockerfile
     env_file:
       - .env
     depends_on:
@@ -53,6 +53,9 @@ services:
         - action: sync
           path: ./backend/src
           target: /app/src
+        - action: sync
+          path: ./backend/tests
+          target: /app/tests
 
   # Mailhog SMTP Server (Email testing - keep for development)
   mail:
@@ -63,4 +66,3 @@ services:
       - "8025:8025"  # Web UI
     logging:
       driver: none  # Disable logging to reduce noise
-  

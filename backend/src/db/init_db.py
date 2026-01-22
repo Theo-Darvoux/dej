@@ -8,7 +8,6 @@ Crée toutes les tables définies dans les modèles.
 from src.db.base import Base
 from src.db.session import engine
 from src.users.models import User
-from src.reservations.models import Reservation
 
 
 def init_db():
