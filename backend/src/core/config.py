@@ -26,16 +26,10 @@ class Settings(BaseSettings):
     BDE_API_TIMEOUT: int = int(os.getenv("BDE_API_TIMEOUT", "5"))  # Timeout en secondes
     
     # Email (FastMail)
-    MAIL_USERNAME: str = os.getenv("MAIL_USERNAME", "username")
-    MAIL_PASSWORD: str = os.getenv("MAIL_PASSWORD", "password")
     MAIL_FROM: str = os.getenv("MAIL_FROM", "test@example.com")
     MAIL_FROM_NAME: str = os.getenv("MAIL_FROM_NAME", "MC INT")
     MAIL_PORT: int = int(os.getenv("MAIL_PORT", "1025"))
     MAIL_SERVER: str = os.getenv("MAIL_SERVER", "mail")
-    MAIL_STARTTLS: bool = os.getenv("MAIL_STARTTLS", "false").lower() == "true"
-    MAIL_SSL_TLS: bool = os.getenv("MAIL_SSL_TLS", "false").lower() == "true"
-    MAIL_USE_CREDENTIALS: bool = os.getenv("MAIL_USE_CREDENTIALS", "false").lower() == "true"
-    MAIL_VALIDATE_CERTS: bool = os.getenv("MAIL_VALIDATE_CERTS", "false").lower() == "true"
     
     # Email (FastMail)
     MAIL_HYPNOS_USERNAME: str = os.getenv("MAIL_HYPNOS_USERNAME", "username")
