@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     # Frontend
     FRONTEND_URL: str = os.getenv("FRONTEND_URL")
     HELLOASSO_REDIRECT_BASE_URL: str = os.getenv("HELLOASSO_REDIRECT_BASE_URL")
+    HELLOASSO_ORGANIZATION_SLUG: str = os.getenv("HELLOASSO_ORGANIZATION_SLUG")
     # HelloAsso (OAuth2)
     HELLOASSO_CLIENT_ID: str = os.getenv("HELLOASSO_CLIENT_ID", "")
     HELLOASSO_CLIENT_SECRET: str = os.getenv("HELLOASSO_CLIENT_SECRET", "")
