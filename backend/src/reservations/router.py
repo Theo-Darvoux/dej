@@ -1,15 +1,32 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Cookie
+from fastapi import APIRouter, Depends, HTTPException, status, Cookie, Query
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, date, time
 
 from src.db.session import get_db
 from src.reservations import schemas, service
+from src.reservations.availability import get_available_slots, is_slot_available
 from src.auth.service import get_user_by_token
 from src.core.exceptions import UserNotVerifiedException
 from src.menu.models import MenuItem
 
 router = APIRouter()
+
+
+@router.get("/availability")
+async def check_availability(
+    menu_id: Optional[int] = Query(None),
+    boisson_id: Optional[int] = Query(None),
+    bonus_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Retourne les créneaux horaires disponibles pour les items du panier.
+    Un créneau est disponible si tous les items ont du stock.
+    """
+    item_ids = [menu_id, boisson_id, bonus_id]
+    slots = get_available_slots(db, item_ids)
+    return {"slots": slots}
 
 
 def get_current_user_from_cookie(
@@ -39,10 +56,19 @@ async def create_reservation(
     """
     Étape 3: Création de la réservation avec validations strictes
     - Date: 7 février 2026
-    - Heure: entre 7h et 18h
+    - Heure: entre 7h et 20h
     - Numéro chambre: entre 1000 et 6999
     - Items menu vérifiés en DB
+    - Pas de doublon de réservation
+    - Créneau disponible
     """
+    
+    # VALIDATION 0: Vérifier que l'utilisateur n'a pas déjà une réservation payée
+    if current_user.payment_status == "completed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vous avez déjà une réservation payée. Une seule réservation par personne."
+        )
     
     # VALIDATION 1: Date de réservation doit être le 7 février 2026
     try:
@@ -68,10 +94,10 @@ async def create_reservation(
             detail="Format d'heure invalide (attendu: HH:MM)"
         )
     
-    if not (time(7, 0) <= reservation_time <= time(18, 0)):
+    if not (time(7, 0) <= reservation_time <= time(19, 0)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="L'heure de réservation doit être entre 7h00 et 18h00"
+            detail="L'heure de réservation doit être entre 7h00 et 19h00"
         )
     # Tranche d'1h: minutes doivent être 00
     if reservation_time.minute != 0:
@@ -152,6 +178,18 @@ async def create_reservation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"L'item '{request.bonus}' n'est pas un bonus"
             )
+    
+    # VALIDATION 5: Vérifier la disponibilité du créneau pour tous les items
+    item_ids = [
+        menu_item.id if menu_item else None,
+        boisson_item.id if boisson_item else None,
+        bonus_item.id if bonus_item else None
+    ]
+    if not is_slot_available(db, item_ids, reservation_time):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ce créneau n'est plus disponible pour les items sélectionnés"
+        )
     
     # Vérification que l'utilisateur est bien vérifié et cotisant
     if not current_user.email_verified:

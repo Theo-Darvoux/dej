@@ -53,6 +53,9 @@ services:
         - action: sync
           path: ./backend/src
           target: /app/src
+        - action: sync
+          path: ./backend/tests
+          target: /app/tests
 
   # Mailhog SMTP Server (Email testing - keep for development)
   mail:

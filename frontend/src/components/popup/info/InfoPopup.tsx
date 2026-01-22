@@ -1,5 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import '../popup-shared.css'
+
+type TimeSlot = {
+  slot: string
+  start: string
+  available: boolean
+}
 
 type ReservationData = {
   date_reservation?: string
@@ -35,11 +41,61 @@ const InfoPopup = ({
   reservationData
 }: InfoPopupProps) => {
   const [phone, setPhone] = useState('')
-  const [dateReservation, setDateReservation] = useState('')
+  const dateReservation = '2026-02-07' // Date fixe - ne peut pas être modifiée
   const [heureReservation, setHeureReservation] = useState('')
   const [showPayment, setShowPayment] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
+  const [loadingSlots, setLoadingSlots] = useState(true)
+
+  // Charger les créneaux disponibles quand le popup s'ouvre
+  useEffect(() => {
+    if (!open) return
+
+    const fetchAvailability = async () => {
+      setLoadingSlots(true)
+      try {
+        const params = new URLSearchParams()
+        if (reservationData?.menu_id) params.append('menu_id', reservationData.menu_id.toString())
+        if (reservationData?.boisson_id) params.append('boisson_id', reservationData.boisson_id.toString())
+        if (reservationData?.bonus_id) params.append('bonus_id', reservationData.bonus_id.toString())
+
+        const response = await fetch(`/api/reservations/availability?${params.toString()}`, {
+          credentials: 'include'
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setTimeSlots(data.slots || [])
+        } else {
+          console.error('Erreur chargement disponibilités')
+          // Fallback: tous les créneaux disponibles
+          setTimeSlots([
+            { slot: "07:00 - 08:00", start: "07:00", available: false },
+            { slot: "08:00 - 09:00", start: "08:00", available: false },
+            { slot: "09:00 - 10:00", start: "09:00", available: false },
+            { slot: "10:00 - 11:00", start: "10:00", available: false },
+            { slot: "11:00 - 12:00", start: "11:00", available: false },
+            { slot: "12:00 - 13:00", start: "12:00", available: false },
+            { slot: "13:00 - 14:00", start: "13:00", available: false },
+            { slot: "14:00 - 15:00", start: "14:00", available: false },
+            { slot: "15:00 - 16:00", start: "15:00", available: false },
+            { slot: "16:00 - 17:00", start: "16:00", available: false },
+            { slot: "17:00 - 18:00", start: "17:00", available: false },
+            { slot: "18:00 - 19:00", start: "18:00", available: false },
+            { slot: "19:00 - 20:00", start: "19:00", available: false },
+          ])
+        }
+      } catch (err) {
+        console.error('Erreur fetch availability:', err)
+      } finally {
+        setLoadingSlots(false)
+      }
+    }
+
+    fetchAvailability()
+  }, [open, reservationData?.menu_id, reservationData?.boisson_id, reservationData?.bonus_id])
 
   const handleNext = async () => {
     if (!phone.trim()) {
@@ -165,23 +221,38 @@ const InfoPopup = ({
                 id="info-date"
                 className="popup__input"
                 type="date"
-                min="2026-02-07"
-                max="2026-02-07"
                 value={dateReservation}
-                onChange={(e) => setDateReservation(e.target.value)}
+                readOnly
+                style={{ cursor: 'not-allowed', backgroundColor: '#f0f0f0' }}
               />
 
-              <label className="popup__label" htmlFor="info-time">Heure de livraison</label>
-              <input
-                id="info-time"
-                className="popup__input"
-                type="time"
-                min="07:00"
-                max="18:00"
-                step={3600}
-                value={heureReservation}
-                onChange={(e) => setHeureReservation(e.target.value)}
-              />
+              <label className="popup__label" htmlFor="info-time">Créneau de livraison</label>
+              {loadingSlots ? (
+                <p style={{ color: '#666', fontSize: '0.9rem' }}>⏳ Chargement des créneaux...</p>
+              ) : (
+                <select
+                  id="info-time"
+                  className="popup__input"
+                  value={heureReservation}
+                  onChange={(e) => setHeureReservation(e.target.value)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <option value="">-- Sélectionne un créneau --</option>
+                  {timeSlots.map((slot) => (
+                    <option
+                      key={slot.start}
+                      value={slot.start}
+                      disabled={!slot.available}
+                      style={{
+                        color: slot.available ? 'inherit' : '#999',
+                        backgroundColor: slot.available ? 'inherit' : '#f0f0f0'
+                      }}
+                    >
+                      {slot.slot}{!slot.available ? ' (Complet)' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
 
               <label className="popup__label" htmlFor="info-phone">Numéro de téléphone</label>
               <input
