@@ -41,6 +41,7 @@ class User(Base):
     payment_date = Column(DateTime, nullable=True)
     
     # Métadonnées
+    last_ip = Column(String, nullable=True)
     user_type = Column(String, nullable=True)  # None (normal), "Listeux", "admin"
     status = Column(String, default="confirmed")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

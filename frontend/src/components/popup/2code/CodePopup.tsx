@@ -60,7 +60,7 @@ const CodePopup = ({ open, onClose, onContinue, step, total, email }: CodePopupP
           <p className="eyebrow">Étape {step} sur {total}</p>
           <h2>Saisis ton code 🔐</h2>
           <p className="popup__subtitle">
-            Entre le code reçu sur <strong>{email}</strong> pour continuer.
+            Entre le code (6 lettres et chiffres) reçu sur <strong>{email}</strong> pour continuer.
           </p>
 
           <label className="popup__label" htmlFor="popup-code">Code de vérification</label>
@@ -68,12 +68,12 @@ const CodePopup = ({ open, onClose, onContinue, step, total, email }: CodePopupP
             id="popup-code"
             className="popup__input"
             type="text"
-            placeholder="XXXX"
+            placeholder="code"
             value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onChange={(e) => setCode(e.target.value)}
             disabled={isLoading}
             maxLength={6}
-            style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '8px' }}
+            style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '8px', textTransform: 'none' }}
           />
 
           {error && <p className="popup__error">{error}</p>}

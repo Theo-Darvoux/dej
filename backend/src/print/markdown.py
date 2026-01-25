@@ -44,59 +44,61 @@ def markdown_2_pdf(markdown: str) -> bytes:
     return pdf_bytes
 
 
-def generate_markdown_for_all_clients(reservations):
-    markdown=""
-    for reservation in reservations:
-        prenom = "Pierre"
-        nom = "Caillou"
-        telephone = "01 23 45 67 89"
-        adresse = "U4 4516"
-        
-        # Exemple avec plusieurs produits
-        produits = [
-            {
+def generate_markdown_for_all_clients(reservations: List[Any]):
+    markdown = ""
+    for user in reservations:
+        # Préparation des produits
+        produits = []
+        if user.menu_item:
+            produits.append({
                 "QTE": 1,
-                "PRODUIT": "Menu Etudiant",
-                "UNIT": 5.50,
-                "TOTAL": 5.50
-            },
-            {
-                "QTE": 2,
-                "PRODUIT": "Coca-Cola",
-                "UNIT": 2.00,
-                "TOTAL": 4.00
-            },
-            {
+                "PRODUIT": user.menu_item.name,
+                "UNIT": user.menu_item.price,
+                "TOTAL": user.menu_item.price
+            })
+        if user.boisson_item:
+            produits.append({
                 "QTE": 1,
-                "PRODUIT": "Dessert",
-                "UNIT": 3.00,
-                "TOTAL": 3.00
-            }
-        ]
-        SUM = 12.50  # Total de tous les produits
+                "PRODUIT": user.boisson_item.name,
+                "UNIT": user.boisson_item.price,
+                "TOTAL": user.boisson_item.price
+            })
+        if user.bonus_item:
+            produits.append({
+                "QTE": 1,
+                "PRODUIT": user.bonus_item.name,
+                "UNIT": user.bonus_item.price,
+                "TOTAL": user.bonus_item.price
+            })
+
+        # Adresse / Logement
+        if user.habite_residence:
+            adresse = f"Maisel {user.adresse_if_maisel.value if user.adresse_if_maisel else ''} - Ch {user.numero_if_maisel}"
+        else:
+            adresse = user.adresse or "Non renseignée"
 
         markdown += generate_markdown_for_one_client(
-            Prenom=prenom,
-            Nom=nom,
-            telephone=telephone,
+            Prenom=user.prenom or "Inconnu",
+            Nom=user.nom or "Inconnu",
+            email=user.email,
+            telephone=user.phone or "Non renseigné",
             adresse=adresse,
+            horaire=user.heure_reservation.strftime("%Hh%M") if user.heure_reservation else "Non renseigné",
             produits=produits,
-            SUM=SUM
+            SUM=user.total_amount
         )
         markdown += "\n\n\n\n\n\n"  # Séparateur entre les clients
     return markdown
 
 
-
-
-
-#on formate en markdown
 def generate_markdown_for_one_client(
     Prenom: str,
     Nom: str,
+    email: str,
     telephone: str,
     adresse: str,
-    produits: List[Dict[str, Any]],  # Liste de dicts avec clés: QTE, PRODUIT, UNIT, TOTAL
+    horaire: str,
+    produits: List[Dict[str, Any]],
     SUM: float
 ):
     # Générer les lignes de produits avec alignement
@@ -113,13 +115,12 @@ def generate_markdown_for_one_client(
 
     ----------------------------------------
     
-    A reserver le 12/12/2024 à 14:30
-    Pour le client: {Prenom} {Nom}
-    email: azerty@telecom-surparis.eu
+    A reserver pour le client: {Prenom} {Nom}
+    email: {email}
 
     ----------------------------------------
     
-    Horaire de retrait: 13h/14h
+    Horaire de retrait: {horaire}
     Tel: {telephone}
     Adresse: {adresse}
 

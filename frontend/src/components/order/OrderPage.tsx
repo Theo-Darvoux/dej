@@ -153,6 +153,16 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
         setIsRequestOpen(true)
     }
 
+    const handleLogout = async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' })
+            onBackToHome()
+        } catch (error) {
+            console.error('Logout failed:', error)
+            onBackToHome() // Fallback
+        }
+    }
+
     return (
         <div className="order-page">
             {/* Header */}
@@ -165,6 +175,9 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
                     <p>Commande à emporter</p>
                 </div>
                 <div className="order-header__logo">🍟</div>
+                <button className="order-header__logout" onClick={handleLogout} aria-label="Déconnexion">
+                    Déconnexion
+                </button>
             </header>
 
             {/* Main Layout */}

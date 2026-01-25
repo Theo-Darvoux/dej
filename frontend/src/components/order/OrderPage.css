@@ -65,6 +65,29 @@
     background: rgba(255, 255, 255, 0.25);
 }
 
+.order-header__logout {
+    background: var(--mcdo-red);
+    color: var(--mcdo-white);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 0 #9b1c1c;
+}
+
+.order-header__logout:hover {
+    background: #e53935;
+    transform: translateY(-1px);
+}
+
+.order-header__logout:active {
+    transform: translateY(2px);
+    box-shadow: none;
+}
+
 /* Main Layout - Column on mobile, Row on desktop */
 .order-layout {
     display: flex;

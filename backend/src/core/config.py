@@ -13,12 +13,11 @@ class Settings(BaseSettings):
     # JWT
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 24 * 60  # Token d'accès expire en 24 heures
-    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # Refresh token expire en 7 jours
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 7 * 24 * 60  # Token d'accès expire en 7 jours
     
     # Code de vérification email
-    EMAIL_CODE_EXPIRE_MINUTES: int = 60  # Code email expire en 60 minutes
-    EMAIL_CODE_LENGTH: int = 4  # Longueur du code (4 chiffres)
+    EMAIL_CODE_EXPIRE_MINUTES: int = 15  # Code email expire en 60 minutes
+    EMAIL_CODE_LENGTH: int = 6  # Longueur du code (6 caractères)
     
     # BDE API
     BDE_API_URL: str = os.getenv("BDE_API_URL")

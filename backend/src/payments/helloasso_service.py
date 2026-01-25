@@ -110,7 +110,11 @@ async def create_checkout_intent(
     }
     
     if metadata:
-        payload["metadata"] = metadata
+        # HelloAsso requires metadata values to be strings
+        payload["metadata"] = {k: str(v) for k, v in metadata.items()}
+    
+    # Log payload for debugging
+    print(f"DEBUG: Create Checkout Payload: {payload}")
     
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -123,11 +127,12 @@ async def create_checkout_intent(
         )
         
         if response.status_code not in [200, 201]:
+            print(f"DEBUG: HelloAsso Error Response: {response.status_code} - {response.text}")
             raise Exception(f"HelloAsso checkout failed: {response.status_code} - {response.text}")
         
         data = response.json()
         return {
-            "id": data["id"],
+            "id": str(data["id"]),
             "redirectUrl": data["redirectUrl"]
         }
 

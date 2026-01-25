@@ -6,7 +6,6 @@ from datetime import datetime
 class TokenResponse(BaseModel):
     """Réponse token (envoyé dans cookies, infos en body)"""
     access_token: str
-    refresh_token: str
     user_id: int
     email: str
 
@@ -35,9 +34,6 @@ class VerifyCodeResponse(BaseModel):
     is_cotisant: bool  # Après vérif BDE
 
 
-class RefreshTokenRequest(BaseModel):
-    """Demande refresh token"""
-    refresh_token: str
 
 
 class LogoutResponse(BaseModel):
