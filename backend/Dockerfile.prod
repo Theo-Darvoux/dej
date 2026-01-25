@@ -1,46 +1,11 @@
-# Build stage - install dependencies and project
-# Using bookworm (not slim) which includes build dependencies
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm AS builder
+FROM ghcr.io/astral-sh/uv:alpine
 
 WORKDIR /app
 
-# Enable bytecode compilation for faster startup
-ENV UV_COMPILE_BYTECODE=1
-
-# Copy from the cache instead of linking since it's a different filesystem
-ENV UV_LINK_MODE=copy
-
-# Install dependencies in a separate layer for better caching
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-install-project --no-dev --no-editable
-
-# Copy the project source code
 COPY . .
 
-# Install the project itself (non-editable for production)
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-editable
-
-# Runtime stage - minimal image with only what's needed
-FROM python:3.14-slim-bookworm
-
-WORKDIR /app
-
-# Copy the virtual environment from the builder
-COPY --from=builder /app/.venv /app/.venv
-
-# Copy the application code
-COPY --from=builder /app /app
-
-# Place executables in the environment at the front of the path
-ENV PATH="/app/.venv/bin:$PATH"
-
-# Set PYTHONPATH for the application
-ENV PYTHONPATH=/app
+RUN uv sync --frozen --no-cache
 
 EXPOSE 3000
 
-# Run the FastAPI application in production mode
-CMD ["fastapi", "run", "src/main.py", "--host", "0.0.0.0", "--port", "3000", "--proxy-headers"]
+CMD ["/app/.venv/bin/fastapi", "run", "src/main.py", "--host", "0.0.0.0", "--port", "3000", "--proxy-headers"]

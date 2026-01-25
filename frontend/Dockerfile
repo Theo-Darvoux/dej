@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:krypton-alpine
 
 WORKDIR /app
 
@@ -7,4 +7,4 @@ RUN npm ci
 
 COPY . .
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "80"]
