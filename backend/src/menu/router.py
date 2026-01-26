@@ -61,6 +61,7 @@ def get_menu_items(category_id: int | None = None, db: Session = Depends(get_db)
             accent=item.accent_color,
             item_type=item.item_type,
             price=f"{item.price:.2f} €".replace(".", ","),
+            image=item.image_url,
             remaining_quantity=remaining,
             low_stock_threshold=item.low_stock_threshold
         ))

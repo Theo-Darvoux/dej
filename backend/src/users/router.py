@@ -1,38 +1,43 @@
-from fastapi import APIRouter, HTTPException, Depends, Cookie
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, Cookie
+from sqlalchemy.orm import Session, joinedload
 from typing import Optional
-from datetime import datetime, time, date
 
 from src.db.session import get_db
+from src.reservations.router import get_current_user_from_cookie
 from src.users.models import User
-from src.users.schemas import UserWithReservationResponse
-from src.auth.schemas import UserResponse
-from src.auth.service import get_user_by_token
-from src.menu.models import MenuItem
 
 router = APIRouter()
 
 
-def get_current_user_from_cookie(
-    access_token: Optional[str] = Cookie(None),
-    db: Session = Depends(get_db)
-):
-    """Dépendance pour récupérer l'utilisateur depuis le cookie"""
-    if not access_token:
-        raise HTTPException(status_code=401, detail="Non connecté")
-    
-    user = get_user_by_token(access_token, db)
-    return user
-
-
-
-
-@router.get("/me", response_model=UserWithReservationResponse)
-def get_current_user_details(
+@router.get("/me")
+async def get_current_user_details(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_from_cookie)
 ):
-    """Récupérer les détails complets de l'utilisateur connecté"""
-    return current_user
-
-
+    """Récupérer les détails complets de l'utilisateur connecté et sa commande"""
+    # Re-fetch user with items loaded
+    user = db.query(User).options(
+        joinedload(User.menu_item),
+        joinedload(User.boisson_item),
+        joinedload(User.bonus_item)
+    ).filter(User.id == current_user.id).first()
+    
+    has_active_order = user.menu_id is not None or user.boisson_id is not None or user.bonus_id is not None
+    
+    return {
+        "id": user.id,
+        "email": user.email,
+        "prenom": user.prenom,
+        "nom": user.nom,
+        "payment_status": user.payment_status,
+        "has_active_order": has_active_order,
+        "order": {
+            "menu": user.menu_item.name if user.menu_item else None,
+            "boisson": user.boisson_item.name if user.boisson_item else None,
+            "bonus": user.bonus_item.name if user.bonus_item else None,
+            "total_amount": user.total_amount,
+            "heure_reservation": user.heure_reservation.strftime("%H:%M") if user.heure_reservation else None,
+            "adresse": user.adresse if not user.habite_residence else f"Maisel {user.adresse_if_maisel.value if user.adresse_if_maisel else ''} - Ch {user.numero_if_maisel}",
+            "phone": user.phone
+        } if has_active_order else None
+    }

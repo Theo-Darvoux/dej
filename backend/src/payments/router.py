@@ -72,6 +72,11 @@ async def verify_payment(checkout_intent_id: str):
     Verify a payment after user returns from HelloAsso.
     Checks the checkout intent status and returns order/payment info.
     """
+    from src.db.session import SessionLocal
+    from src.users.models import User
+    from src.mail import send_order_confirmation
+    from datetime import datetime, timezone
+
     try:
         result = await helloasso_service.get_checkout_intent(checkout_intent_id)
         
@@ -79,6 +84,22 @@ async def verify_payment(checkout_intent_id: str):
         order = result.get("order")
         
         if order:
+            # Update database if not already done by webhook
+            metadata = result.get("metadata", {})
+            res_id = metadata.get("reservation_id")
+            
+            if res_id:
+                async with SessionLocal() as db:
+                    user = db.query(User).filter(User.id == int(res_id)).first()
+                    if user and user.payment_status != "completed":
+                        user.payment_status = "completed"
+                        user.payment_intent_id = checkout_intent_id
+                        user.payment_date = datetime.now(timezone.utc)
+                        db.commit()
+                        db.refresh(user)
+                        # Envoyer l'email de confirmation
+                        await send_order_confirmation(user)
+
             # Payment successful
             return PaymentVerifyResponse(
                 success=True,
@@ -107,6 +128,11 @@ async def payment_webhook(request: Request):
     Webhook endpoint for HelloAsso notifications.
     HelloAsso will POST here when a payment is completed.
     """
+    from src.db.session import SessionLocal
+    from src.users.models import User
+    from src.mail import send_order_confirmation
+    from datetime import datetime, timezone
+
     try:
         body = await request.json()
         
@@ -115,25 +141,36 @@ async def payment_webhook(request: Request):
         
         # Log the webhook for debugging
         print(f"HelloAsso Webhook: {event_type}")
-        print(f"Data: {data}")
         
         # Handle different event types
         if event_type == "Payment":
             # A payment was made
-            payment_id = data.get("id")
             order_id = data.get("order", {}).get("id")
-            amount = data.get("amount")
-            payer = data.get("payer", {})
             
-            print(f"Payment received: {payment_id}, Order: {order_id}, Amount: {amount}")
+            # Fetch the checkout intent to get metadata
+            # Note: The webhook data might not contain metadata directly depending on HelloAsso version
+            # It's safer to fetch the intent if it's not in the 'data'
+            checkout_intent_id = data.get("checkoutIntentId") # Verify if this is in the webhook payload
             
-            # TODO: Update your reservation/order status in the database
-            # You can use metadata to link back to your reservation_id
+            # Fallback/Alternative: use order metadata if available
+            metadata = data.get("metadata", {})
+            res_id = metadata.get("reservation_id")
             
-        elif event_type == "Order":
-            # An order was created
-            order_id = data.get("id")
-            print(f"Order created: {order_id}")
+            if res_id:
+                db = SessionLocal()
+                try:
+                    user = db.query(User).filter(User.id == int(res_id)).first()
+                    if user and user.payment_status != "completed":
+                        user.payment_status = "completed"
+                        user.payment_intent_id = checkout_intent_id or f"ORDER_{order_id}"
+                        user.payment_date = datetime.now(timezone.utc)
+                        db.commit()
+                        db.refresh(user)
+                        # Envoyer l'email de confirmation
+                        await send_order_confirmation(user)
+                        print(f"DEBUG: Reservation {res_id} updated via Webhook")
+                finally:
+                    db.close()
             
         return {"status": "ok"}
         

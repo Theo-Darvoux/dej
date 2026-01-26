@@ -20,6 +20,7 @@ type MenuItem = {
     tag?: string
     accent?: string
     price: string
+    image?: string
     item_type?: string
     remaining_quantity?: number
     low_stock_threshold?: number
@@ -29,6 +30,8 @@ type CartItem = {
     id?: number
     title: string
     price: string
+    item_type?: string
+    category_id?: string
 }
 
 type ReservationData = {
@@ -48,6 +51,14 @@ type OrderPageProps = {
     onBackToHome: () => void
 }
 
+// Groupes de catégories mutuellement exclusives
+// On ne peut prendre qu'UN SEUL item parmi toutes les catégories d'un groupe
+// Pour ajouter une catégorie au groupe menu, ajouter son nom ici (ex: "VIEUX")
+const EXCLUSIVE_CATEGORY_GROUPS: string[][] = [
+    ["BOULANGER'INT", "LE GRAS C'EST LA VIE", "EXOT'INT"], // Menus principaux
+    // Ajouter d'autres groupes ici si nécessaire
+]
+
 const OrderPage = ({ onBackToHome }: OrderPageProps) => {
     const [categories, setCategories] = useState<Category[]>([])
     const [menuByCategory, setMenuByCategory] = useState<Record<string, MenuItem[]>>({})
@@ -58,11 +69,28 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
     const [isAptOpen, setIsAptOpen] = useState(false)
     const [isInfoOpen, setIsInfoOpen] = useState(false)
     const [currentEmail, setCurrentEmail] = useState('')
+    const [hasToken, setHasToken] = useState(false)
+    const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
 
     const [reservationData, setReservationData] = useState<Partial<ReservationData>>({})
     const [menuId, setMenuId] = useState<number | undefined>(undefined)
     const [boissonId, setBoissonId] = useState<number | undefined>(undefined)
     const [bonusId, setBonusId] = useState<number | undefined>(undefined)
+
+    // Toast helper
+    const showToast = (message: string) => {
+        setToast({ message, visible: true })
+        setTimeout(() => setToast({ message: '', visible: false }), 3000)
+    }
+
+    // Check for token on mount
+    useEffect(() => {
+        const checkToken = () => {
+            const hasAccessToken = document.cookie.includes('access_token=')
+            setHasToken(hasAccessToken)
+        }
+        checkToken()
+    }, [])
 
     // Fetch categories
     useEffect(() => {
@@ -135,18 +163,59 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
     }, [cartItems])
 
     const handleAddToCart = (item: MenuItem) => {
+        const itemType = item.item_type || 'menu'
+        const categoryId = selectedCategoryId
+        const categoryName = currentCategory?.title || ''
+
+        // Vérifier si la catégorie appartient à un groupe exclusif
+        const exclusiveGroup = EXCLUSIVE_CATEGORY_GROUPS.find(group =>
+            group.includes(categoryName)
+        )
+
+        if (exclusiveGroup) {
+            // Vérifier si on a déjà un item d'une catégorie du même groupe
+            const existingFromGroup = cartItems.find(ci => {
+                const ciCategoryName = categories.find(c => c.id === ci.category_id)?.title || ''
+                return exclusiveGroup.includes(ciCategoryName)
+            })
+
+            if (existingFromGroup) {
+                showToast(`Vous avez déjà un menu - un seul choix parmi les formules`)
+                return
+            }
+        } else {
+            // Catégorie normale: vérifier si on a déjà un item de la même catégorie
+            const hasSameCategory = cartItems.some(ci => ci.category_id === categoryId)
+
+            if (hasSameCategory) {
+                showToast(`Vous avez déjà un article de ${categoryName}`)
+                return
+            }
+        }
+
         setCartItems((prev) => {
-            if (prev.length >= 3) return prev
-            return [...prev, { id: item.id, title: item.title, price: item.price }]
+            return [...prev, {
+                id: item.id,
+                title: item.title,
+                price: item.price,
+                item_type: itemType,
+                category_id: categoryId
+            }]
         })
 
         if (item.item_type === 'menu' && item.id) setMenuId(item.id)
         if (item.item_type === 'boisson' && item.id) setBoissonId(item.id)
-        if (item.item_type === 'bonus' && item.id) setBonusId(item.id)
+        if (item.item_type === 'upsell' && item.id) setBonusId(item.id)
     }
 
     const handleRemoveFromCart = (index: number) => {
+        const removedItem = cartItems[index]
         setCartItems((prev) => prev.filter((_, idx) => idx !== index))
+
+        // Réinitialiser l'ID correspondant
+        if (removedItem?.item_type === 'menu') setMenuId(undefined)
+        if (removedItem?.item_type === 'boisson') setBoissonId(undefined)
+        if (removedItem?.item_type === 'upsell') setBonusId(undefined)
     }
 
     const handleCheckout = () => {
@@ -165,6 +234,14 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
 
     return (
         <div className="order-page">
+            {/* Toast Notification */}
+            {toast.visible && (
+                <div className="order-toast">
+                    <span className="order-toast__icon">⚠️</span>
+                    <span className="order-toast__message">{toast.message}</span>
+                </div>
+            )}
+
             {/* Header */}
             <header className="order-header">
                 <button className="order-header__back" onClick={onBackToHome} aria-label="Retour">
@@ -175,9 +252,11 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
                     <p>Commande à emporter</p>
                 </div>
                 <div className="order-header__logo">🍟</div>
-                <button className="order-header__logout" onClick={handleLogout} aria-label="Déconnexion">
-                    Déconnexion
-                </button>
+                {hasToken && (
+                    <button className="order-header__logout" onClick={handleLogout} aria-label="Déconnexion">
+                        Déconnexion
+                    </button>
+                )}
             </header>
 
             {/* Main Layout */}
@@ -216,6 +295,7 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
                                         subtitle={item.subtitle}
                                         tag={item.tag}
                                         price={item.price}
+                                        image={item.image}
                                         remaining_quantity={item.remaining_quantity}
                                         low_stock_threshold={item.low_stock_threshold}
                                         onAdd={() => handleAddToCart(item)}

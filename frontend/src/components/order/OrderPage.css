@@ -6,6 +6,47 @@
     background: var(--mcdo-bg);
     display: flex;
     flex-direction: column;
+    position: relative;
+}
+
+/* Toast Notification */
+.order-toast {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5253 100%);
+    color: white;
+    padding: 14px 24px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 24px rgba(238, 82, 83, 0.4);
+    z-index: 9999;
+    animation: toast-slide-in 0.3s ease-out;
+    font-weight: 600;
+    max-width: 90%;
+}
+
+.order-toast__icon {
+    font-size: 1.2rem;
+}
+
+.order-toast__message {
+    font-size: 0.95rem;
+}
+
+@keyframes toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
 }
 
 /* Header */

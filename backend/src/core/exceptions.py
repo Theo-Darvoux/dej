@@ -1,6 +1,15 @@
 from fastapi import HTTPException, status
 
 
+class InvalidEmailException(HTTPException):
+    """Email au format invalide ou domaine non autorisé"""
+    def __init__(self, detail: str = "Email au format invalide ou domaine non autorisé"):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail
+        )
+
+
 class InvalidCredentialsException(HTTPException):
     """Email ou code invalide"""
     def __init__(self, detail: str = "Email ou code invalide"):

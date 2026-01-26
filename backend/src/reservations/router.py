@@ -63,11 +63,53 @@ async def create_reservation(
     - Créneau disponible
     """
     
-    # VALIDATION 0: Vérifier que l'utilisateur n'a pas déjà une réservation payée
+    # VALIDATION 0: Vérifier que l'utilisateur n'a pas déjà une réservation
+    from datetime import timedelta
+    now = datetime.utcnow()
+
+    # Si l'utilisateur a déjà payé
     if current_user.payment_status == "completed":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vous avez déjà une réservation payée. Une seule réservation par personne."
+        )
+    
+    # Si l'utilisateur a une réservation en attente mais expirée ou trop de tentatives
+    is_expired = current_user.reservation_expires_at and now > current_user.reservation_expires_at
+    too_many_attempts = current_user.payment_attempts >= 3
+    
+    if (is_expired or too_many_attempts) and current_user.payment_status != "completed":
+        # Annuler l'ancienne commande et libérer le stock avant d'en créer une nouvelle
+        # On fait ça silencieusement ici pour permettre d'en refaire une
+        from src.menu.models import MenuItemLimit
+        def restore_stock_internal(item_id, slot_time):
+            if not item_id: return
+            limit = db.query(MenuItemLimit).filter(
+                MenuItemLimit.menu_item_id == item_id,
+                MenuItemLimit.start_time <= slot_time,
+                MenuItemLimit.end_time > slot_time
+            ).first()
+            if limit and limit.current_quantity is not None:
+                limit.current_quantity += 1
+                db.add(limit)
+        
+        restore_stock_internal(current_user.menu_id, current_user.heure_reservation)
+        restore_stock_internal(current_user.boisson_id, current_user.heure_reservation)
+        restore_stock_internal(current_user.bonus_id, current_user.heure_reservation)
+        
+        # Reset user reservation fields
+        current_user.menu_id = None
+        current_user.boisson_id = None
+        current_user.bonus_id = None
+        current_user.payment_status = "pending"
+        current_user.payment_attempts = 0
+        current_user.reservation_expires_at = None
+        db.commit()
+    elif current_user.menu_id or current_user.boisson_id or current_user.bonus_id:
+         # Si une commande est en cours et pas encore expirée
+         raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vous avez déjà une commande en cours. Terminez le paiement ou attendez 1h."
         )
     
     # VALIDATION 1: Date de réservation doit être le 7 février 2026
@@ -134,8 +176,64 @@ async def create_reservation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="L'adresse est requise pour les non-résidents"
             )
+        
+        # Robust address validation using BAN API
+        import httpx
+        try:
+            async with httpx.AsyncClient() as client:
+                # Search for the address in BAN API
+                response = await client.get(
+                    "https://api-adresse.data.gouv.fr/search/",
+                    params={"q": request.adresse, "limit": 1}
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    features = data.get("features", [])
+                    
+                    if not features:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Adresse non reconnue. Merci de préciser une adresse valide."
+                        )
+                    
+                    # Check top result
+                    top_result = features[0]
+                    properties = top_result.get("properties", {})
+                    city_code = properties.get("citycode")
+                    city_name = properties.get("city", "")
+                    
+                    # Evry-Courcouronnes city code is 91228
+                    if city_code != "91228":
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Désolé, nous ne livrons pas à {city_name}. Livraison réservée à Évry-Courcouronnes."
+                        )
+                else:
+                    # Fail-safe logic if API is down
+                    lowercase_addr = request.adresse.lower()
+                    if not any(x in lowercase_addr for x in ["evry", "courcouronnes", "91000", "91080"]):
+                         raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Adresse invalide ou hors de la zone de livraison (Évry-Courcouronnes)."
+                        )
+        except HTTPException:
+            raise
+        except Exception as e:
+            # Si l'API BAN est injoignable, on fait un check basique
+            print(f"Warning: BAN API unreachable: {str(e)}")
+            lowercase_addr = request.adresse.lower()
+            if not any(x in lowercase_addr for x in ["evry", "courcouronnes", "91000", "91080"]):
+                 raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Adresse hors de la zone de livraison (Évry-Courcouronnes)."
+                )
     
     # VALIDATION 4: Vérifier que les items menu existent et correspondent au bon type
+    # Groupes de catégories mutuellement exclusives pour les menus
+    # On ne peut prendre qu'UN SEUL item parmi toutes ces catégories
+    EXCLUSIVE_MENU_CATEGORIES = ["BOULANGER'INT", "LE GRAS C'EST LA VIE", "EXOT'INT"]
+    
     menu_item = None
     boisson_item = None
     bonus_item = None
@@ -151,6 +249,15 @@ async def create_reservation(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"L'item '{request.menu}' n'est pas un menu"
+            )
+        
+        # Vérifier que le menu appartient à une catégorie valide
+        from src.menu.models import Category
+        menu_category = db.query(Category).filter(Category.id == menu_item.category_id).first()
+        if menu_category and menu_category.name not in EXCLUSIVE_MENU_CATEGORIES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Le menu doit provenir d'une des catégories: {', '.join(EXCLUSIVE_MENU_CATEGORIES)}"
             )
     
     if request.boisson:
@@ -173,10 +280,10 @@ async def create_reservation(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Bonus '{request.bonus}' non trouvé"
             )
-        if bonus_item.item_type != "bonus":
+        if bonus_item.item_type != "upsell":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"L'item '{request.bonus}' n'est pas un bonus"
+                detail=f"L'item '{request.bonus}' n'est pas un bonus (upsell)"
             )
     
     # VALIDATION 5: Vérifier la disponibilité du créneau pour tous les items
@@ -271,6 +378,8 @@ async def create_reservation(
     current_user.total_amount = total
     current_user.status = "confirmed"
     current_user.payment_status = "pending"
+    current_user.payment_attempts = 0
+    current_user.reservation_expires_at = datetime.utcnow() + timedelta(hours=1)
     current_user.updated_at = datetime.utcnow()
     
     try:
@@ -330,6 +439,20 @@ async def process_payment(
             detail="Paiement déjà effectué"
         )
     
+    # Vérifier expiration
+    if reservation.reservation_expires_at and datetime.utcnow() > reservation.reservation_expires_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Votre réservation a expiré (délai de 1h dépassé). Veuillez recommencer."
+        )
+    
+    # Vérifier tentatives
+    if reservation.payment_attempts >= 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Trop de tentatives de paiement échouées. Votre réservation est annulée."
+        )
+    
     # Appeler Stripe Mock
     try:
         async with httpx.AsyncClient() as client:
@@ -356,9 +479,11 @@ async def process_payment(
                     payment_status=reservation.payment_status
                 )
             else:
+                reservation.payment_attempts += 1
+                db.commit()
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Erreur lors du paiement"
+                    detail=f"Erreur lors du paiement (Tentative {reservation.payment_attempts}/3)"
                 )
     except Exception as e:
         # Restoration du stock en cas d'échec critique (optionnel selon specs, mais demandé par user)

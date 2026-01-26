@@ -1,4 +1,4 @@
-/* Landing Page - McDonald's Borne Style */
+/* Landing Page - Carousel Style Hypnøs */
 
 .landing {
     position: fixed;
@@ -6,126 +6,74 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 40px 24px 60px;
     overflow: hidden;
     z-index: 1000;
-
-    /* McDonald's Gradient Background */
-    background: linear-gradient(180deg,
-            #3d7a3e 0%,
-            #264027 30%,
-            #264027 50%,
-            #4a9a4b 70%,
-            #ffbc0d 100%);
+    cursor: pointer;
+    background: #1a1a1a;
 }
 
-/* Decorative Elements */
-.landing::before {
-    content: '';
+/* Carousel Container */
+.landing__carousel {
     position: absolute;
-    top: -50%;
-    right: -30%;
-    width: 80%;
-    height: 100%;
-    background: radial-gradient(ellipse, rgba(255, 188, 13, 0.15) 0%, transparent 70%);
+    inset: 0;
+    z-index: 0;
+}
+
+.landing__slide {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+}
+
+.landing__slide.is-active {
+    opacity: 1;
+}
+
+/* Overlay gradient pour lisibilité du CTA */
+.landing__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top,
+            rgba(0, 0, 0, 0.8) 0%,
+            rgba(0, 0, 0, 0.4) 30%,
+            rgba(0, 0, 0, 0) 60%);
+    z-index: 1;
     pointer-events: none;
 }
 
-.landing::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 40%;
-    background: linear-gradient(to top, rgba(255, 188, 13, 0.3) 0%, transparent 100%);
-    pointer-events: none;
-}
-
-/* Header Section */
-.landing__header {
+/* Indicateurs de slides */
+.landing__dots {
     position: relative;
-    z-index: 2;
-    text-align: center;
-}
-
-.landing__logo {
-    width: 80px;
-    height: 80px;
-    margin-bottom: 16px;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
-}
-
-.landing__logo-text {
-    font-size: 64px;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
-}
-
-.landing__title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--mcdo-white);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-/* Hero Section */
-.landing__hero {
-    position: relative;
-    z-index: 2;
-    flex: 1;
+    z-index: 3;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    gap: 24px;
-    max-width: 500px;
+    gap: 12px;
+    margin-bottom: 24px;
 }
 
-.landing__hero-image {
-    width: 280px;
-    height: 280px;
-    object-fit: contain;
-    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.4));
-    animation: float 3s ease-in-out infinite;
+.landing__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-.landing__hero-placeholder {
-    font-size: 180px;
-    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.4));
-    animation: float 3s ease-in-out infinite;
+.landing__dot.is-active {
+    background: var(--mcdo-yellow, #ffbc0d);
+    border-color: var(--mcdo-yellow, #ffbc0d);
+    transform: scale(1.3);
 }
 
-@keyframes float {
-
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(-15px);
-    }
-}
-
-.landing__message {
-    color: var(--mcdo-white);
-}
-
-.landing__message h2 {
-    font-size: 2rem;
-    font-weight: 800;
-    margin-bottom: 8px;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.landing__message p {
-    font-size: 1.1rem;
-    font-weight: 500;
-    opacity: 0.9;
+.landing__dot:hover {
+    background: rgba(255, 255, 255, 0.7);
 }
 
 /* CTA Section */
@@ -139,8 +87,8 @@
 .landing__btn {
     width: 100%;
     padding: 20px 32px;
-    background: var(--mcdo-yellow);
-    color: var(--mcdo-black);
+    background: var(--mcdo-yellow, #ffbc0d);
+    color: var(--mcdo-black, #292929);
     border: none;
     border-radius: 50px;
     font-size: 1.25rem;
@@ -156,7 +104,7 @@
 
 .landing__btn:hover {
     transform: scale(1.05);
-    background: var(--mcdo-yellow-hover);
+    background: #e5a80c;
     box-shadow:
         0 12px 32px rgba(0, 0, 0, 0.4),
         0 0 0 6px rgba(255, 188, 13, 0.4);
@@ -184,8 +132,9 @@
 
 .landing__hint {
     margin-top: 16px;
-    color: var(--mcdo-white);
+    color: var(--mcdo-white, #fff);
     font-size: 0.9rem;
+    text-align: center;
     opacity: 0.8;
     animation: blink 1.5s ease-in-out infinite;
 }
@@ -208,24 +157,27 @@
         padding: 60px 48px 80px;
     }
 
-    .landing__logo-text {
-        font-size: 80px;
-    }
-
-    .landing__title {
-        font-size: 2rem;
-    }
-
-    .landing__hero-placeholder {
-        font-size: 220px;
-    }
-
-    .landing__message h2 {
-        font-size: 2.5rem;
+    .landing__dot {
+        width: 14px;
+        height: 14px;
     }
 
     .landing__btn {
         font-size: 1.4rem;
         padding: 24px 48px;
+    }
+}
+
+/* Mode TV / Grande écran */
+@media (min-width: 1920px) {
+    .landing__btn {
+        font-size: 1.8rem;
+        padding: 32px 64px;
+        max-width: 600px;
+    }
+
+    .landing__dot {
+        width: 18px;
+        height: 18px;
     }
 }

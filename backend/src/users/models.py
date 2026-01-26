@@ -9,6 +9,7 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, nullable=False, index=True)
+    normalized_email = Column(String, unique=True, nullable=False, index=True)
     prenom = Column(String, nullable=True)
     nom = Column(String, nullable=True)
     
@@ -39,6 +40,8 @@ class User(Base):
     payment_status = Column(String, default="pending")  # pending, completed, failed
     payment_intent_id = Column(String, nullable=True)
     payment_date = Column(DateTime, nullable=True)
+    payment_attempts = Column(Integer, default=0)
+    reservation_expires_at = Column(DateTime, nullable=True)
     
     # Métadonnées
     last_ip = Column(String, nullable=True)
