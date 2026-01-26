@@ -127,7 +127,15 @@ async def create_checkout_intent(
         )
         
         if response.status_code not in [200, 201]:
-            print(f"DEBUG: HelloAsso Error Response: {response.status_code} - {response.text}")
+            error_detail = response.text
+            try:
+                # Try to parse JSON for a cleaner error message if possible
+                error_json = response.json()
+                if "errors" in error_json:
+                    error_detail = f"{response.status_code} - {error_json['errors']}"
+            except:
+                pass
+            print(f"DEBUG: HelloAsso Error Response: {response.status_code} - {error_detail}")
             raise Exception(f"HelloAsso checkout failed: {response.status_code} - {response.text}")
         
         data = response.json()

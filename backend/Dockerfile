@@ -6,9 +6,14 @@ RUN apt-get update && apt-get install -y weasyprint && rm -rf /var/lib/apt/lists
 
 WORKDIR /app
 
-COPY . .
+# Copy dependency files first
+COPY pyproject.toml uv.lock ./
 
-RUN uv sync --frozen --no-cache
+# Install dependencies before copying the source code
+RUN uv sync --frozen
+
+# Copy the rest of the application code
+COPY . .
 
 EXPOSE 3000
 
