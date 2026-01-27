@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Response, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
-from .markdown import generate_markdown_for_all_clients, markdown_2_pdf
+from .markdown import generate_pdf_for_all_clients
 from .schemas import PrintSummaryResponse, OrderCombo, OrderItem, OrdersListResponse
 from ..users.router import get_current_user_from_cookie
 from ..users.models import User
@@ -50,9 +50,8 @@ def get_ticket_pdf(
     if not reservations:
         return Response(content="Aucune réservation trouvée pour ce créneau", status_code=404)
 
-    # Générer le markdown et le PDF
-    markdown_content = generate_markdown_for_all_clients(reservations)    
-    pdf_bytes = markdown_2_pdf(markdown_content)
+    # Générer le PDF directement
+    pdf_bytes = generate_pdf_for_all_clients(reservations)
 
     return Response(
         content=pdf_bytes,

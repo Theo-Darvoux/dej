@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import random
 from datetime import datetime, date, time, timedelta, timezone
 from sqlalchemy.orm import Session
@@ -5,6 +9,9 @@ from src.db.session import get_db
 from src.users.models import User
 from src.menu.models import MenuItem
 from src.reservations.schemas import BatimentMaisel
+
+# Force addition of /app to sys.path for Docker
+sys.path.append("/app")
 
 def seed_fake_orders(count: int = 30):
     db = next(get_db())
