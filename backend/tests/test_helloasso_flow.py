@@ -44,7 +44,7 @@ async def test_helloasso_flow():
         return_url = "https://resa.timothecormier.fr/"
         error_url = "https://resa.timothecormier.fr/"
         back_url = "https://resa.timothecormier.fr/"
-        
+
         metadata = {"id8importante": "12345", "source": "scriptoncheck"}
 
         result = await helloasso_service.create_checkout_intent(
