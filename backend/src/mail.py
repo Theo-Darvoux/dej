@@ -132,7 +132,7 @@ async def send_order_confirmation(user) -> bool:
     """
     
     message = MessageSchema(
-        subject="Confirmation de commande Mc-INT 🍟",
+        subject="Confirmation de commande Mc'INT 🍟",
         recipients=[user.email],
         body=html,
         subtype=MessageType.html

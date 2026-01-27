@@ -1,4 +1,4 @@
-# MC-INT
+# Mc'INT
 
 Système de réservation pour les events.
 

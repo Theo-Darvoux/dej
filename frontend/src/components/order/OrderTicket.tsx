@@ -21,7 +21,7 @@ const OrderTicket = ({ order, onClose }: OrderTicketProps) => {
             <div className="ticket" onClick={(e) => e.stopPropagation()}>
                 <div className="ticket__header">
                     <div className="ticket__logo">🍟</div>
-                    <h1>Mc-INT</h1>
+                    <h1>Mc'INT</h1>
                     <p>Restaurant by Hypnos</p>
                     <div className="ticket__divider">-------------------------</div>
                 </div>

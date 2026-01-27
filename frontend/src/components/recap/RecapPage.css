@@ -1,0 +1,218 @@
+.recap-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.recap-loading,
+.recap-error {
+    text-align: center;
+    color: #fff;
+}
+
+.recap-loading__spinner {
+    font-size: 64px;
+    display: block;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.recap-error__icon {
+    font-size: 64px;
+    display: block;
+    margin-bottom: 16px;
+}
+
+.recap-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 32px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.recap-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.recap-header__logo {
+    font-size: 48px;
+    margin-bottom: 8px;
+}
+
+.recap-header h1 {
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+}
+
+.recap-header__subtitle {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.recap-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    margin: 20px 0;
+}
+
+.recap-section {
+    margin-bottom: 8px;
+}
+
+.recap-section__title {
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.recap-info__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.recap-info__label {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+}
+
+.recap-info__value {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: right;
+    max-width: 60%;
+    word-break: break-word;
+}
+
+.recap-time {
+    text-align: center;
+    padding: 16px;
+    background: rgba(255, 193, 7, 0.1);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.recap-time__value {
+    color: #ffc107;
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+}
+
+.recap-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.recap-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+}
+
+.recap-item__name {
+    color: #fff;
+    font-weight: 500;
+    flex: 1;
+}
+
+.recap-item__badge {
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+}
+
+.recap-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1));
+    border-radius: 12px;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.recap-total__label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+}
+
+.recap-total__value {
+    color: #22c55e;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.recap-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    margin: 20px 0;
+    background: rgba(34, 197, 94, 0.1);
+    border-radius: 8px;
+}
+
+.recap-status__icon {
+    font-size: 1.2rem;
+}
+
+.recap-status__text {
+    color: #22c55e;
+    font-weight: 600;
+}
+
+.recap-btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.recap-btn--primary {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: #fff;
+}
+
+.recap-btn--primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+}

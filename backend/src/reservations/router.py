@@ -57,7 +57,7 @@ async def create_reservation(
     Étape 3: Création de la réservation avec validations strictes
     - Date: 7 février 2026
     - Heure: entre 7h et 20h
-    - Numéro chambre: entre 1000 et 6999
+    - Numéro chambre: entre 1000 et 7999
     - Items menu vérifiés en DB
     - Pas de doublon de réservation
     - Créneau disponible
@@ -164,10 +164,10 @@ async def create_reservation(
                 detail="Le numéro de chambre doit être un nombre"
             )
         
-        if not (1000 <= num_chambre <= 6999):
+        if not (1000 <= num_chambre <= 7999):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Le numéro de chambre doit être entre 1000 et 6999"
+                detail="Le numéro de chambre doit être entre 1000 et 7999"
             )
     else:
         # Si pas résident, adresse requise
@@ -200,22 +200,22 @@ async def create_reservation(
                     # Check top result
                     top_result = features[0]
                     properties = top_result.get("properties", {})
-                    city_code = properties.get("citycode")
+                    postcode = properties.get("postcode")
                     city_name = properties.get("city", "")
                     
-                    # Evry-Courcouronnes city code is 91228
-                    if city_code != "91228":
+                    # Accept only Évry (91000), not Courcouronnes (91080)
+                    if postcode != "91000":
                         raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f"Désolé, nous ne livrons pas à {city_name}. Livraison réservée à Évry-Courcouronnes."
+                            detail=f"Désolé, nous ne livrons pas à {city_name} ({postcode}). Livraison réservée à Évry (91000)."
                         )
                 else:
                     # Fail-safe logic if API is down
                     lowercase_addr = request.adresse.lower()
-                    if not any(x in lowercase_addr for x in ["evry", "courcouronnes", "91000", "91080"]):
+                    if not any(x in lowercase_addr for x in ["evry", "91000"]):
                          raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Adresse invalide ou hors de la zone de livraison (Évry-Courcouronnes)."
+                            detail="Adresse invalide ou hors de la zone de livraison (Évry 91000)."
                         )
         except HTTPException:
             raise
@@ -223,10 +223,10 @@ async def create_reservation(
             # Si l'API BAN est injoignable, on fait un check basique
             print(f"Warning: BAN API unreachable: {str(e)}")
             lowercase_addr = request.adresse.lower()
-            if not any(x in lowercase_addr for x in ["evry", "courcouronnes", "91000", "91080"]):
+            if not any(x in lowercase_addr for x in ["evry", "91000"]):
                  raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Adresse hors de la zone de livraison (Évry-Courcouronnes)."
+                    detail="Adresse hors de la zone de livraison (Évry 91000)."
                 )
     
     # VALIDATION 4: Vérifier que les items menu existent et correspondent au bon type
@@ -315,7 +315,21 @@ async def create_reservation(
     current_user.date_reservation = reservation_date
     current_user.heure_reservation = reservation_time
     current_user.habite_residence = request.habite_residence
-    current_user.phone = request.phone
+    
+    # VALIDATION téléphone: seulement chiffres et + au début
+    import re
+    if request.phone:
+        phone_cleaned = re.sub(r'[^\d+]', '', request.phone)
+        # Le + ne peut être qu'au début
+        phone_cleaned = phone_cleaned[0] + phone_cleaned[1:].replace('+', '') if phone_cleaned.startswith('+') else phone_cleaned.replace('+', '')
+        if not re.match(r'^\+?\d{9,12}$', phone_cleaned):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Numéro de téléphone invalide (format attendu: 0612345678 ou +33612345678)"
+            )
+        current_user.phone = phone_cleaned
+    else:
+        current_user.phone = None
     
     if request.habite_residence:
         current_user.numero_if_maisel = int(request.numero_chambre)

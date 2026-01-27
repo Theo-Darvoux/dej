@@ -16,7 +16,7 @@ BDE_API_TIMEOUT=30
 # Email (Mailhog for dev, SMTP for prod)
 MAIL_USERNAME=username
 MAIL_PASSWORD=password
-MAIL_FROM=noreply@mc-int.fr
+MAIL_FROM=noreply@mcint.fr
 MAIL_FROM_NAME=MC INT
 MAIL_PORT=1025
 MAIL_SERVER=mail

@@ -92,6 +92,27 @@
     color: var(--mcdo-black, #292929);
 }
 
+/* Back Button */
+.popup__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: var(--mcdo-green, #264027);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px 0;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+
+.popup__back:hover {
+    color: var(--mcdo-yellow, #ffbc0d);
+    transform: translateX(-4px);
+}
+
 /* Body */
 .popup__body {
     padding: 24px;

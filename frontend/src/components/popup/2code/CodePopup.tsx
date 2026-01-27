@@ -80,11 +80,11 @@ const CodePopup = ({ open, onClose, onContinue, step, total, email }: CodePopupP
 
           <a
             className="popup__link"
-            href="https://z.imt.fr/"
+            href="https://cerbere.imt.fr/"
             target="_blank"
             rel="noopener noreferrer"
           >
-            📧 Ouvrir ma boîte mail (z.imt.fr)
+            📧 Ouvrir ma boîte mail (Zimbra)
           </a>
 
           <button

@@ -1,9 +1,3 @@
-"""
-Service de paiement HelloAsso
-
-TODO: À implémenter avec la documentation HelloAsso
-"""
-
 from typing import Optional
 import httpx
 from datetime import datetime, timedelta

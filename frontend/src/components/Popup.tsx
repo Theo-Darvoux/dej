@@ -16,13 +16,13 @@ const Popup = ({ open, onClose }: PopupProps) => {
         </button>
         <div className="popup__body">
           <p className="eyebrow">Connexion</p>
-          <h2>Connecte-toi à mc-INT</h2>
+          <h2>Connecte-toi à Mc'INT</h2>
           <p className="popup__subtitle">Reçois ton mc-code par email pour finaliser ta commande.</p>
           <label className="popup__label" htmlFor="popup-email">
             Email
           </label>
-          <input id="popup-email" className="popup__input" type="email" placeholder="ton.email@example.com" />
-          <button className="popup__cta">Recevoir mon mc-code</button>
+          <input id="popup-email" className="popup__input" type="email" placeholder="prenom.nom@telecom-sudparis.eu" />
+          <button className="popup__cta">Recevoir mon Hypno code</button>
         </div>
       </div>
     </div>

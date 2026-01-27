@@ -11,7 +11,7 @@ sys.path.append(backend_dir)
 
 from dotenv import load_dotenv
 
-# Charger les variables d'environnement du fichier .env à la racine (Mc-INT/)
+# Charger les variables d'environnement du fichier .env à la racine (Mc'INT/)
 project_root = os.path.dirname(backend_dir)
 load_dotenv(os.path.join(project_root, ".env"))
 

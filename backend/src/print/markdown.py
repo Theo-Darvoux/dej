@@ -109,7 +109,7 @@ def _draw_ticket(
     
     # Titre
     pdf.set_font("Helvetica", "B", 7)
-    pdf.cell(TICKET_WIDTH - 4, 4, "Mc-INT by Hypnos", align="C")
+    pdf.cell(TICKET_WIDTH - 4, 4, "Mc'INT by Hypnos", align="C")
     
     # Ligne séparatrice
     pdf.line(x + 2, y + 7, x + TICKET_WIDTH - 2, y + 7)

@@ -103,7 +103,8 @@ async def request_verification_code(email: str, db: Session) -> bool:
     
     # Envoyer email (utiliser delivery_email)
     try:
-        await send_verification_email(delivery_email, code)
+        #await send_verification_email(delivery_email, code)
+        pass  # TODO: remettre l'envoi d'email en prod
     except Exception as e:
         # Nettoyer le code si l'envoi échoue
         user.verification_code = None
@@ -120,14 +121,15 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
     Lance une exception si invalide/expiré.
     Vérifie aussi avec BDE API.
     """
+    
     # Valider et normaliser
     _, identity = normalize_email(email)
- 
+    
     # Chercher utilisateur par normalized_email (identité unique)
     user = db.query(User).filter(User.normalized_email == identity).first()
     if not user:
         raise InvalidCredentialsException("Utilisateur non trouvé")
-    
+    #"""# TODO DEBUT
     # Vérifier code
     if not user.verification_code or user.verification_code != code:
         raise InvalidCredentialsException("Code invalide")
@@ -147,10 +149,10 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
         user.code_created_at = None
         db.commit()
         raise CodeExpiredException()
-    
+    #""" #TODO FIN
     # Vérifier avec BDE API
-    #is_cotisant = await verify_with_bde(email) #TODO
-    is_cotisant = True  # TODO: Supprimer cette ligne après intégration BDE
+    is_cotisant = await verify_with_bde(email)
+    #is_cotisant=True # TODO: à supprimer
 
     # Extraire prénom/nom depuis l'email (format prenom.nom@...)
     try:
@@ -162,6 +164,8 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
             user.nom = nom_raw.strip().capitalize()
     except Exception:
         # Ne bloque pas la vérification si parsing échoue
+        user.prenom = ""
+        user.nom = ""
         pass
 
     # Marquer email comme vérifié et log IP

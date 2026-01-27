@@ -3,7 +3,7 @@ import './LandingPage.css'
 
 type LandingPageProps = {
     onStart: () => void
-    onViewOrder: (orderData: any) => void
+    onViewRecap: () => void
 }
 
 // Liste des pubs disponibles
@@ -15,22 +15,28 @@ const ADS = [
     { id: 'shotgun', name: 'Shotgun', image: '/ads/pub5_shotgun.webp' },
 ]
 
-const LandingPage = ({ onStart, onViewOrder }: LandingPageProps) => {
+const LandingPage = ({ onStart, onViewRecap }: LandingPageProps) => {
     const [currentAd, setCurrentAd] = useState(0)
-    const [userOrder, setUserOrder] = useState<any>(null)
+    const [hasCompletedOrder, setHasCompletedOrder] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
         const checkUserStatus = async () => {
             try {
-                const response = await fetch('/api/users/me')
+                const response = await fetch('/api/users/me', {
+                    credentials: 'include'
+                })
                 if (response.ok) {
                     const data = await response.json()
-                    if (data.has_active_order) {
-                        setUserOrder(data.order)
+                    // Afficher "Voir mon recap" seulement si paiement complété
+                    if (data.has_active_order && data.payment_status === 'completed') {
+                        setHasCompletedOrder(true)
                     }
                 }
             } catch (err) {
                 console.error('Failed to fetch user status:', err)
+            } finally {
+                setIsLoading(false)
             }
         }
         checkUserStatus()
@@ -45,7 +51,7 @@ const LandingPage = ({ onStart, onViewOrder }: LandingPageProps) => {
     }, [])
 
     return (
-        <div className="landing" onClick={userOrder ? undefined : onStart}>
+        <div className="landing" onClick={hasCompletedOrder ? undefined : onStart}>
             {/* Carousel de pubs */}
             <div className="landing__carousel">
                 {ADS.map((ad, index) => (
@@ -76,12 +82,16 @@ const LandingPage = ({ onStart, onViewOrder }: LandingPageProps) => {
 
             {/* CTA Button */}
             <div className="landing__cta">
-                {userOrder ? (
+                {isLoading ? (
+                    <button className="landing__btn" disabled>
+                        Chargement...
+                    </button>
+                ) : hasCompletedOrder ? (
                     <button className="landing__btn landing__btn--order" onClick={(e) => {
                         e.stopPropagation()
-                        onViewOrder(userOrder)
+                        onViewRecap()
                     }}>
-                        Voir ma commande 🍟
+                        Voir mon récap 🍟
                     </button>
                 ) : (
                     <button className="landing__btn" onClick={onStart}>
@@ -89,7 +99,7 @@ const LandingPage = ({ onStart, onViewOrder }: LandingPageProps) => {
                     </button>
                 )}
                 <p className="landing__hint">
-                    {userOrder ? "Tu as déjà une commande en cours" : "Appuyez sur l'écran pour commencer"}
+                    {hasCompletedOrder ? "Tu as déjà une commande confirmée" : "Appuyez sur l'écran pour commencer"}
                 </p>
             </div>
         </div>

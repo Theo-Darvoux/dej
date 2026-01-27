@@ -3,12 +3,12 @@ import LandingPage from './components/landing/LandingPage'
 import OrderPage from './components/order/OrderPage'
 import PaymentSuccess from './components/payment/PaymentSuccess'
 import PaymentError from './components/payment/PaymentError'
-import OrderTicket from './components/order/OrderTicket'
+import RecapPage from './components/recap/RecapPage'
 import PrintPage from './pages/print'
 import TerminalPage from './pages/terminal'
 import './App.css'
 
-type ViewState = 'landing' | 'order' | 'payment-success' | 'payment-error' | 'admin-print' | 'admin-terminal'
+type ViewState = 'landing' | 'order' | 'payment-success' | 'payment-error' | 'recap' | 'admin-print' | 'admin-terminal'
 
 function App() {
   const [view, setView] = useState<ViewState>(() => {
@@ -16,14 +16,13 @@ function App() {
     if (path === '/payment/success') return 'payment-success'
     if (path === '/payment/error') return 'payment-error'
     if (path === '/order') return 'order'
+    if (path === '/recap') return 'recap'
     if (path === '/admin/print' || path === '/print' || path === '/summary') return 'admin-print'
     if (path === '/admin/terminal' || path === '/terminal') return 'admin-terminal'
     return 'landing'
   })
   const [isVerifying, setIsVerifying] = useState(() => window.location.pathname === '/auth/verify')
   const [verifyError, setVerifyError] = useState<string | null>(null)
-  const [activeOrder, setActiveOrder] = useState<any>(null)
-  const [showTicket, setShowTicket] = useState(false)
 
   const handleAutoVerify = async (email: string, code: string) => {
     setIsVerifying(true)
@@ -74,6 +73,8 @@ function App() {
       setView('payment-error')
     } else if (path === '/order') {
       setView('order')
+    } else if (path === '/recap') {
+      setView('recap')
     } else if (path === '/admin/print' || path === '/print' || path === '/summary') {
       setView('admin-print')
     } else if (path === '/admin/terminal' || path === '/terminal') {
@@ -85,12 +86,11 @@ function App() {
     // Clear URL and go to landing
     window.history.pushState({}, '', '/')
     setView('landing')
-    setShowTicket(false)
   }
 
-  const handleViewOrder = (orderData: any) => {
-    setActiveOrder(orderData)
-    setShowTicket(true)
+  const handleViewRecap = () => {
+    window.history.pushState({}, '', '/recap')
+    setView('recap')
   }
 
   return (
@@ -106,22 +106,21 @@ function App() {
       )}
 
       {view === 'landing' && !isVerifying && (
-        <>
-          <LandingPage
-            onStart={() => {
-              window.history.pushState({}, '', '/')
-              setView('order')
-            }}
-            onViewOrder={handleViewOrder}
-          />
-          {showTicket && activeOrder && (
-            <OrderTicket order={activeOrder} onClose={() => setShowTicket(false)} />
-          )}
-        </>
+        <LandingPage
+          onStart={() => {
+            window.history.pushState({}, '', '/')
+            setView('order')
+          }}
+          onViewRecap={handleViewRecap}
+        />
       )}
 
       {view === 'order' && !isVerifying && (
         <OrderPage onBackToHome={handleGoHome} />
+      )}
+
+      {view === 'recap' && !isVerifying && (
+        <RecapPage onBackToHome={handleGoHome} />
       )}
 
       {view === 'payment-success' && !isVerifying && (

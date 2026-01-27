@@ -23,6 +23,7 @@ type ReservationData = {
 type InfoPopupProps = {
   open: boolean
   onClose: () => void
+  onBack: () => void
   step: number
   total: number
   amount: string
@@ -34,6 +35,7 @@ type InfoPopupProps = {
 const InfoPopup = ({
   open,
   onClose,
+  onBack,
   step,
   total,
   amount,
@@ -159,7 +161,7 @@ const InfoPopup = ({
 
       // Get user info from reservationData or use defaults
       const payerFirstName = 'Client'
-      const payerLastName = 'Mc-INT'
+      const payerLastName = "Mc'INT"
       const payerEmail = localStorage.getItem('user_email') || 'client@mcint.fr'
 
       // Create checkout intent
@@ -169,7 +171,7 @@ const InfoPopup = ({
         credentials: 'include',
         body: JSON.stringify({
           amount: amountCentimes,
-          item_name: 'Commande Mc-INT',
+          item_name: "Commande Mc'INT",
           payer_email: payerEmail,
           payer_first_name: payerFirstName,
           payer_last_name: payerLastName,
@@ -210,6 +212,9 @@ const InfoPopup = ({
         <div className="popup__body">
           {!showPayment ? (
             <>
+              <button className="popup__back" onClick={onBack} aria-label="Retour">
+                ← Retour
+              </button>
               <p className="eyebrow">Étape {step} sur {total}</p>
               <h2>Détails de livraison 📦</h2>
               <p className="popup__subtitle">
@@ -259,9 +264,15 @@ const InfoPopup = ({
                 id="info-phone"
                 className="popup__input"
                 type="tel"
-                placeholder="06 12 34 56 78"
+                maxLength={13}
+                placeholder="07... ou +33..."
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  // N'accepter que les chiffres et + au début
+                  const value = e.target.value
+                  const filtered = value.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '')
+                  setPhone(filtered)
+                }}
               />
 
               {error && <p className="popup__error">{error}</p>}
@@ -272,6 +283,9 @@ const InfoPopup = ({
             </>
           ) : (
             <>
+              <button className="popup__back" onClick={() => setShowPayment(false)} aria-label="Retour">
+                ← Retour
+              </button>
               <p className="eyebrow">Paiement sécurisé</p>
               <h2>Finalise ta commande 💳</h2>
               <p className="popup__subtitle">

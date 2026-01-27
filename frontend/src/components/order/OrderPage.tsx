@@ -70,6 +70,7 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
     const [isInfoOpen, setIsInfoOpen] = useState(false)
     const [currentEmail, setCurrentEmail] = useState('')
     const [hasToken, setHasToken] = useState(false)
+    const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
 
     const [reservationData, setReservationData] = useState<Partial<ReservationData>>({})
@@ -83,13 +84,32 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
         setTimeout(() => setToast({ message: '', visible: false }), 3000)
     }
 
-    // Check for token on mount
+    // Check for token and authentication status on mount
     useEffect(() => {
-        const checkToken = () => {
+        const checkAuth = async () => {
             const hasAccessToken = document.cookie.includes('access_token=')
             setHasToken(hasAccessToken)
+
+            if (hasAccessToken) {
+                try {
+                    const response = await fetch('/api/users/me', { credentials: 'include' })
+                    if (response.ok) {
+                        const data = await response.json()
+                        setIsAuthenticated(true)
+                        if (data.email) {
+                            setCurrentEmail(data.email)
+                        }
+                        // Si l'utilisateur a déjà une commande payée, le prévenir
+                        if (data.has_active_order && data.payment_status === 'completed') {
+                            showToast('Tu as déjà une commande confirmée !')
+                        }
+                    }
+                } catch (err) {
+                    console.error('Auth check failed:', err)
+                }
+            }
         }
-        checkToken()
+        checkAuth()
     }, [])
 
     // Fetch categories
@@ -219,7 +239,12 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
     }
 
     const handleCheckout = () => {
-        setIsRequestOpen(true)
+        if (isAuthenticated) {
+            // Skip email/code verification, go directly to apartment popup
+            setIsAptOpen(true)
+        } else {
+            setIsRequestOpen(true)
+        }
     }
 
     const handleLogout = async () => {
@@ -248,7 +273,7 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
                     ←
                 </button>
                 <div className="order-header__title">
-                    <h1>Mc-INT</h1>
+                    <h1>Mc'INT</h1>
                     <p>Commande à emporter</p>
                 </div>
                 <div className="order-header__logo">🍟</div>
@@ -358,7 +383,9 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
             <CartBar
                 itemCount={cartItems.length}
                 total={totalAmount}
+                items={cartItems}
                 onCheckout={handleCheckout}
+                onRemoveItem={handleRemoveFromCart}
             />
 
             {/* Checkout Popups */}
@@ -387,6 +414,14 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
             <AptPopup
                 open={isAptOpen}
                 onClose={() => setIsAptOpen(false)}
+                onBack={() => {
+                    setIsAptOpen(false)
+                    if (isAuthenticated) {
+                        // Si déjà authentifié, juste fermer (retour au menu)
+                    } else {
+                        setIsCodeOpen(true)
+                    }
+                }}
                 onContinue={(aptData) => {
                     setReservationData((prev) => ({
                         ...prev,
@@ -404,6 +439,10 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
             <InfoPopup
                 open={isInfoOpen}
                 onClose={() => setIsInfoOpen(false)}
+                onBack={() => {
+                    setIsInfoOpen(false)
+                    setIsAptOpen(true)
+                }}
                 onPaymentSuccess={() => {
                     setIsInfoOpen(false)
                     alert('Paiement réussi ! Commande confirmée.')

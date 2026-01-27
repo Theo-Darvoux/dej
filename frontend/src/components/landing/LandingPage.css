@@ -155,6 +155,8 @@
 @media (min-width: 768px) {
     .landing {
         padding: 60px 48px 80px;
+        justify-content: center;
+        /* Centrer verticalement sur desktop */
     }
 
     .landing__dot {

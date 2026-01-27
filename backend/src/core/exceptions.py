@@ -54,7 +54,7 @@ class ReservationNotAllowedException(HTTPException):
             detail=detail
         )
 
-class AdminException(HTTPException):#a renomer TODO
+class AdminException(HTTPException):
     """Accès admin non autorisé"""
     def __init__(self, detail: str = "Vous devez être admin"):
         super().__init__(

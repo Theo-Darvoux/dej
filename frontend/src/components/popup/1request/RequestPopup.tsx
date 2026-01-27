@@ -57,9 +57,9 @@ const RequestPopup = ({ open, onClose, onRequestCode, step, total }: RequestPopu
         </div>
         <div className="popup__body">
           <p className="eyebrow">Étape {step} sur {total}</p>
-          <h2>Connecte-toi à Mc-INT 🍔</h2>
+          <h2>Connecte-toi à Mc'INT 🍔</h2>
           <p className="popup__subtitle">
-            Reçois ton code de vérification par email pour finaliser ta commande.
+            Reçois ton code de vérification par email.
           </p>
 
           <label className="popup__label" htmlFor="popup-email">Adresse email</label>
@@ -67,7 +67,7 @@ const RequestPopup = ({ open, onClose, onRequestCode, step, total }: RequestPopu
             id="popup-email"
             className="popup__input"
             type="email"
-            placeholder="ton.email@example.com"
+            placeholder="@telecom-sudparis.eu ou @imt-bs.eu"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}

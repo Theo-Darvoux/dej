@@ -11,12 +11,13 @@ type ApartmentData = {
 type AptPopupProps = {
   open: boolean
   onClose: () => void
+  onBack: () => void
   onContinue: (data: ApartmentData) => void
   step: number
   total: number
 }
 
-const AptPopup = ({ open, onClose, onContinue, step, total }: AptPopupProps) => {
+const AptPopup = ({ open, onClose, onBack, onContinue, step, total }: AptPopupProps) => {
   const [habiteResidence, setHabiteResidence] = useState(true)
   const [numeroChambre, setNumeroChambre] = useState('')
   const [adresse, setAdresse] = useState('')
@@ -37,8 +38,8 @@ const AptPopup = ({ open, onClose, onContinue, step, total }: AptPopupProps) => 
 
     setLoading(true)
     try {
-      // API BAN - Filtered by citycode 91228 (Evry-Courcouronnes)
-      const response = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&citycode=91228&limit=5`)
+      // API BAN - Filtered by postcode 91000 (Évry only)
+      const response = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&postcode=91000&limit=5`)
       const data = await response.json()
       setSuggestions(data.features || [])
     } catch (err) {
@@ -60,15 +61,20 @@ const AptPopup = ({ open, onClose, onContinue, step, total }: AptPopupProps) => 
         setError("L'adresse est requise.")
         return
       }
-      // Simple check to ensure it's in Evry (even if they didn't pick from suggestion)
+      // Simple check to ensure it's in Evry only (not Courcouronnes)
       const lowercaseAddr = adresse.toLowerCase()
-      if (!lowercaseAddr.includes('evry') && !lowercaseAddr.includes('courcouronnes') && !lowercaseAddr.includes('91000') && !lowercaseAddr.includes('91080')) {
-        setError("Désolé, nous ne livrons qu'à Évry-Courcouronnes.")
+      if (!lowercaseAddr.includes('evry') && !lowercaseAddr.includes('91000')) {
+        setError("Désolé, nous ne livrons qu'à Évry (91000).")
         return
       }
     } else {
       if (!numeroChambre || numeroChambre.length !== 4) {
         setError("Le numéro de chambre doit comporter 4 chiffres.")
+        return
+      }
+      const numChambre = parseInt(numeroChambre, 10)
+      if (isNaN(numChambre) || numChambre < 1000 || numChambre > 7999) {
+        setError("⚠️ Le numéro de chambre doit être entre 1000 et 7999")
         return
       }
     }
@@ -152,7 +158,7 @@ const AptPopup = ({ open, onClose, onContinue, step, total }: AptPopupProps) => 
           ) : (
             <div style={{ position: 'relative' }}>
               <label className="popup__label" htmlFor="apt-address">
-                Adresse à Évry-Courcouronnes
+                Adresse à Évry Uniquement
               </label>
               <input
                 id="apt-address"
