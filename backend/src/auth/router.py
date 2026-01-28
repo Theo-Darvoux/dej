@@ -52,11 +52,14 @@ async def verify_code(
     tokens = await service.get_tokens(user_id, request_data.email)
     
     # Setter tokens en cookies httpOnly
+    from src.core.config import settings
+    is_production = settings.ENVIRONMENT == "production"
+    
     response.set_cookie(
         key="access_token",
         value=tokens.access_token,
         httponly=True,
-        secure=True,  # À adapter selon env (dev vs prod)
+        secure=is_production,  # True en prod (HTTPS), False en dev (HTTP)
         samesite="lax",
         max_age=7 * 24 * 60 * 60  # 7 jours
     )

@@ -26,9 +26,7 @@ conf_mail_hypnos = ConnectionConfig(
 
 CONTACT_INFO = """
 <p style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px; font-size: 13px; color: #666;">
-    En cas de problème ou de question, vous pouvez nous contacter :<br>
-    <strong>Email :</strong> hypnos.industrie@gmail.com<br>
-    <strong>Téléphone :</strong> 01 23 45 67 89
+    En cas de problème ou de question, vous pouvez nous contacter sur WhatsApp<br>
 </p>
 """
 
@@ -42,7 +40,7 @@ async def send_verification_email(recipient_email: str, code: str) -> bool:
     html = f"""
     <html>
     <body style="font-family: Arial, sans-serif;">
-        <h2>Bienvenue sur MC INT!</h2>
+        <h2>Bienvenue sur Mc'INT!</h2>
         <p>Pour continuer votre réservation, veuillez vérifier votre email.</p>
         
         <p><strong>Votre code de vérification: {code}</strong></p>

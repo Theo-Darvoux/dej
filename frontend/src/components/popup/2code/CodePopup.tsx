@@ -4,7 +4,7 @@ import '../popup-shared.css'
 type CodePopupProps = {
   open: boolean
   onClose: () => void
-  onContinue: () => void
+  onContinue: (authenticated: boolean) => void
   step: number
   total: number
   email: string
@@ -36,7 +36,7 @@ const CodePopup = ({ open, onClose, onContinue, step, total, email }: CodePopupP
         throw new Error(data.detail || 'Code invalide')
       }
 
-      onContinue()
+      onContinue(true)
       setCode('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')

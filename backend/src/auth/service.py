@@ -70,6 +70,30 @@ def normalize_email(email: str) -> tuple[str, str]:
     return delivery_email, identity
 
 
+def is_user_blacklisted(identity: str) -> bool:
+    """
+    Vérifie si l'utilisateur (prenom.nom) est dans la blacklist.
+    Normalise les _ en . pour la comparaison.
+    """
+    import json
+    import os
+    
+    blacklist_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "blacklist.json")
+    
+    # Normaliser l'identité (remplacer _ par .)
+    normalized_identity = identity.lower().replace("_", ".")
+    
+    try:
+        with open(blacklist_path, "r") as f:
+            data = json.load(f)
+            blocked_users = data.get("blocked_users", [])
+            # Normaliser aussi les entrées de la blacklist
+            normalized_blocked = [u.lower().replace("_", ".") for u in blocked_users]
+            return normalized_identity in normalized_blocked
+    except (FileNotFoundError, json.JSONDecodeError):
+        return False
+
+
 async def request_verification_code(email: str, db: Session) -> bool:
     """
     Génère et envoie un code de vérification par email.
@@ -77,6 +101,10 @@ async def request_verification_code(email: str, db: Session) -> bool:
     """
     # Valider et normaliser l'email
     delivery_email, identity = normalize_email(email)
+    
+    # Vérifier la blacklist
+    if is_user_blacklisted(identity):
+        raise InvalidCredentialsException("Vous n'avez pas le droit de commander")
     
     # Générer code à 6 caractères alphanumériques
     chars = string.ascii_letters + string.digits
@@ -129,7 +157,7 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
     user = db.query(User).filter(User.normalized_email == identity).first()
     if not user:
         raise InvalidCredentialsException("Utilisateur non trouvé")
-    #"""# TODO DEBUT
+    # TODO DEBUT
     # Vérifier code
     if not user.verification_code or user.verification_code != code:
         raise InvalidCredentialsException("Code invalide")
@@ -149,7 +177,7 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
         user.code_created_at = None
         db.commit()
         raise CodeExpiredException()
-    #""" #TODO FIN
+    #TODO FIN
     # Vérifier avec BDE API
     is_cotisant = await verify_with_bde(email)
     #is_cotisant=True # TODO: à supprimer

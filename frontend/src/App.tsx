@@ -17,8 +17,6 @@ function App() {
     if (path === '/payment/error') return 'payment-error'
     if (path === '/order') return 'order'
     if (path === '/recap') return 'recap'
-    if (path === '/admin/print' || path === '/print' || path === '/summary') return 'admin-print'
-    if (path === '/admin/terminal' || path === '/terminal') return 'admin-terminal'
     return 'landing'
   })
   const [isVerifying, setIsVerifying] = useState(() => window.location.pathname === '/auth/verify')
@@ -75,10 +73,6 @@ function App() {
       setView('order')
     } else if (path === '/recap') {
       setView('recap')
-    } else if (path === '/admin/print' || path === '/print' || path === '/summary') {
-      setView('admin-print')
-    } else if (path === '/admin/terminal' || path === '/terminal') {
-      setView('admin-terminal')
     }
   }, [])
 

@@ -234,6 +234,13 @@ async def create_reservation(
     # On ne peut prendre qu'UN SEUL item parmi toutes ces catégories
     EXCLUSIVE_MENU_CATEGORIES = ["BOULANGER'INT", "LE GRAS C'EST LA VIE", "EXOT'INT"]
     
+    # VALIDATION MENU OBLIGATOIRE
+    if not request.menu:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vous devez choisir au moins un menu pour commander"
+        )
+    
     menu_item = None
     boisson_item = None
     bonus_item = None

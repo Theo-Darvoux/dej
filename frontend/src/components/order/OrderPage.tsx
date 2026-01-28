@@ -239,6 +239,13 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
     }
 
     const handleCheckout = () => {
+        // Vérifier qu'il y a au moins un menu dans le panier
+        const hasMenu = cartItems.some(item => item.item_type === 'menu')
+        if (!hasMenu) {
+            showToast('Vous devez choisir au moins un menu pour commander')
+            return
+        }
+
         if (isAuthenticated) {
             // Skip email/code verification, go directly to apartment popup
             setIsAptOpen(true)
@@ -403,7 +410,10 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
             <CodePopup
                 open={isCodeOpen}
                 onClose={() => setIsCodeOpen(false)}
-                onContinue={() => {
+                onContinue={(authenticated) => {
+                    if (authenticated) {
+                        setIsAuthenticated(true)
+                    }
                     setIsCodeOpen(false)
                     setIsAptOpen(true)
                 }}
