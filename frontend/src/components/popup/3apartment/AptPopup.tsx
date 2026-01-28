@@ -17,7 +17,7 @@ type AptPopupProps = {
   total: number
 }
 
-const AptPopup = ({ open, onClose, onBack, onContinue, step, total }: AptPopupProps) => {
+const AptPopup = ({ open, onClose, onContinue, step, total }: AptPopupProps) => {
   const [habiteResidence, setHabiteResidence] = useState(true)
   const [numeroChambre, setNumeroChambre] = useState('')
   const [adresse, setAdresse] = useState('')
