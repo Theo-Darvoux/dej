@@ -1,3 +1,4 @@
+ENVIRONMENT=production
 # Database
 DATABASE_URL=postgresql://user:MOTDEPASSE@postgres:5432/mcint_db
 POSTGRES_USER=user

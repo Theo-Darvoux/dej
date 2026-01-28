@@ -25,11 +25,18 @@ Base.metadata.create_all(bind=engine)
 init_db()  # Lance au démarrage de l'app
 init_menu_data()
 
+# Désactiver la documentation en production
+is_production = settings.ENVIRONMENT == "production"
+
 app = FastAPI(
     title="MC INT API",
     description="API pour réservations MC INT avec auth email/code, BDE check et paiement HelloAsso",
     version="1.0.0",
-    root_path="/api"
+    root_path="/api",
+    # Désactiver /docs, /redoc et /openapi.json en production
+    docs_url=None if is_production else "/docs",
+    redoc_url=None if is_production else "/redoc",
+    openapi_url=None if is_production else "/openapi.json",
 )
 
 # CORS

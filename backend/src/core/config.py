@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     """
     Configuration application utilisant les variables d'environnement
     """
+    # Environment
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
+    
     # Base de données
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     
