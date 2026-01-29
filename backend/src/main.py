@@ -39,10 +39,18 @@ app = FastAPI(
     openapi_url=None if is_production else "/openapi.json",
 )
 
-# CORS
+# CORS - build allowed origins list
+allowed_origins = [
+    "https://dej.hypnos2026.fr",
+    "http://localhost:4200",
+    "http://localhost:5173",
+]
+if settings.FRONTEND_URL and settings.FRONTEND_URL not in allowed_origins:
+    allowed_origins.append(settings.FRONTEND_URL)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:4200"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
