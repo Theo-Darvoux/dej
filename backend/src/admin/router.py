@@ -14,11 +14,52 @@ from src.core.exceptions import AdminException
 router = APIRouter()
 
 
+
+from src.menu.utils import load_menu_data
+
 def require_admin(current_user):
     """Vérifie que l'utilisateur est admin. Lève AdminException sinon."""
     if not current_user or current_user.user_type != "admin":
         raise AdminException()
     return current_user
+
+_menu_data_cache = None
+
+def get_menu_data_cached():
+    global _menu_data_cache
+    if not _menu_data_cache:
+        _menu_data_cache = load_menu_data()
+    return _menu_data_cache
+
+def get_item_details(item_id):
+    if not item_id: return None
+    data = get_menu_data_cached()
+    for cat in ["menus", "boissons", "extras"]:
+        for item in data.get(cat, []):
+            if item["id"] == item_id:
+                # Add item_type if missing, based on category
+                item_copy = item.copy()
+                if "item_type" not in item_copy:
+                    if cat == "menus": item_copy["item_type"] = "menu"
+                    elif cat == "boissons": item_copy["item_type"] = "boisson"
+                    elif cat == "extras": item_copy["item_type"] = "upsell"
+                return item_copy
+    return None
+
+def enrich_order(user):
+    # Convert SQLAlchemy model to dict-like that Pydantic can parse
+    # We can rely on Pydantic's from_attributes=True, but we need to inject the computed items
+    user_dict = {
+        c.name: getattr(user, c.name) 
+        for c in user.__table__.columns
+    }
+    
+    # Inject items
+    user_dict["menu_item"] = get_item_details(user.menu_id)
+    user_dict["boisson_item"] = get_item_details(user.boisson_id)
+    user_dict["bonus_item"] = get_item_details(user.bonus_id)
+    
+    return user_dict
 
 
 @router.get("/me", response_model=UserResponse)
@@ -43,11 +84,7 @@ async def list_orders(
     """Liste toutes les commandes (utilisateurs avec réservations)"""
     require_admin(current_user)
     
-    query = db.query(User).options(
-        joinedload(User.menu_item),
-        joinedload(User.boisson_item),
-        joinedload(User.bonus_item)
-    ).filter(User.menu_id.isnot(None) | User.boisson_id.isnot(None) | User.bonus_id.isnot(None))
+    query = db.query(User).filter(User.menu_id.isnot(None) | User.boisson_id.isnot(None) | User.bonus_id.isnot(None))
     
     if payment_status:
         query = query.filter(User.payment_status == payment_status)
@@ -55,7 +92,8 @@ async def list_orders(
         query = query.filter(User.status == status)
         
     orders = query.order_by(User.created_at.desc()).all()
-    return orders
+    
+    return [enrich_order(u) for u in orders]
 
 
 @router.get("/orders/{user_id}", response_model=admin_schemas.AdminOrderResponse)
@@ -67,16 +105,12 @@ async def get_order(
     """Récupère une commande spécifique"""
     require_admin(current_user)
     
-    user = db.query(User).options(
-        joinedload(User.menu_item),
-        joinedload(User.boisson_item),
-        joinedload(User.bonus_item)
-    ).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     
     if not user:
         raise HTTPException(status_code=404, detail="Commande non trouvée")
     
-    return user
+    return enrich_order(user)
 
 
 @router.patch("/orders/{user_id}", response_model=admin_schemas.AdminOrderResponse)
@@ -100,12 +134,9 @@ async def update_order(
     db.commit()
     db.refresh(user)
     
-    # Re-fetch with joins for response
-    return db.query(User).options(
-        joinedload(User.menu_item),
-        joinedload(User.boisson_item),
-        joinedload(User.bonus_item)
-    ).filter(User.id == user_id).first()
+    # Re-fetch for response
+    user = db.query(User).filter(User.id == user_id).first()
+    return enrich_order(user)
 
 
 @router.delete("/orders/{user_id}")

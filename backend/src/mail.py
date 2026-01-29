@@ -92,14 +92,30 @@ async def send_order_confirmation(user) -> bool:
         user.status_token = secrets.token_urlsafe(32)
         # Note: Le commit doit être fait par l'appelant après cette fonction
     
+    # Helper to resolve item name/price
+    from src.menu.utils import load_menu_data
+    menu_data = load_menu_data()
+    
+    def get_item_details(item_id):
+        if not item_id: return None
+        for cat in ["menus", "boissons", "extras"]:
+            for item in menu_data.get(cat, []):
+                if item["id"] == item_id:
+                    return item
+        return None
+
+    menu_details = get_item_details(user.menu_id)
+    boisson_details = get_item_details(user.boisson_id)
+    bonus_details = get_item_details(user.bonus_id)
+
     # Préparation des produits pour le ticket
     produits = []
-    if user.menu_item:
-        produits.append({"QTE": 1, "PRODUIT": user.menu_item.name, "UNIT": user.menu_item.price, "TOTAL": user.menu_item.price})
-    if user.boisson_item:
-        produits.append({"QTE": 1, "PRODUIT": user.boisson_item.name, "UNIT": user.boisson_item.price, "TOTAL": user.boisson_item.price})
-    if user.bonus_item:
-        produits.append({"QTE": 1, "PRODUIT": user.bonus_item.name, "UNIT": user.bonus_item.price, "TOTAL": user.bonus_item.price})
+    if menu_details:
+        produits.append({"QTE": 1, "PRODUIT": menu_details["name"], "UNIT": menu_details.get("price", 0), "TOTAL": menu_details.get("price", 0)})
+    if boisson_details:
+        produits.append({"QTE": 1, "PRODUIT": boisson_details["name"], "UNIT": boisson_details.get("price", 0), "TOTAL": boisson_details.get("price", 0)})
+    if bonus_details:
+        produits.append({"QTE": 1, "PRODUIT": bonus_details["name"], "UNIT": bonus_details.get("price", 0), "TOTAL": bonus_details.get("price", 0)})
 
     print(f"[DEBUG] send_order_confirmation: user={user.id}, email={user.email}, products_count={len(produits)}, total_amount={user.total_amount}")
 

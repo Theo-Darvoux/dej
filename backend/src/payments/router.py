@@ -13,7 +13,7 @@ from src.payments import helloasso_service
 from src.core.config import settings
 from src.auth.service import normalize_email
 from sqlalchemy import or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 import secrets
 
@@ -190,11 +190,7 @@ async def get_payment_status(checkout_intent_id: str):
     db = SessionLocal()
     try:
         # Find user by payment_intent_id (stored during checkout creation)
-        user = db.query(User).options(
-            joinedload(User.menu_item),
-            joinedload(User.boisson_item),
-            joinedload(User.bonus_item)
-        ).filter(User.payment_intent_id == checkout_intent_id).first()
+        user = db.query(User).filter(User.payment_intent_id == checkout_intent_id).first()
 
         if not user:
             print(f"[DEBUG] get_payment_status: no user found for intent {checkout_intent_id}")
@@ -256,7 +252,7 @@ async def verify_payment(checkout_intent_id: str):
     from src.db.session import SessionLocal
     from src.users.models import User
     from src.mail import send_order_confirmation
-    from sqlalchemy.orm import joinedload
+
     from datetime import datetime, timezone
     import secrets
 
@@ -288,22 +284,14 @@ async def verify_payment(checkout_intent_id: str):
 
                 # Strategy 1: Find by reservation_id from metadata
                 if res_id:
-                    user = db.query(User).options(
-                        joinedload(User.menu_item),
-                        joinedload(User.boisson_item),
-                        joinedload(User.bonus_item)
-                    ).filter(User.id == int(res_id)).first()
+                    user = db.query(User).filter(User.id == int(res_id)).first()
                     if user:
                         print(f"[DEBUG] User found by reservation_id: {user.id} ({user.email})")
 
                 # Strategy 2: Find by checkout_intent_id stored in payment_intent_id
                 if not user:
                     print(f"[DEBUG] Attempting to find user by checkout_intent_id: {checkout_intent_id}")
-                    user = db.query(User).options(
-                        joinedload(User.menu_item),
-                        joinedload(User.boisson_item),
-                        joinedload(User.bonus_item)
-                    ).filter(User.payment_intent_id == checkout_intent_id).first()
+                    user = db.query(User).filter(User.payment_intent_id == checkout_intent_id).first()
                     if user:
                         print(f"[DEBUG] User found by checkout_intent_id: {user.id} ({user.email})")
 
@@ -320,11 +308,7 @@ async def verify_payment(checkout_intent_id: str):
 
                     # Recherche robuste : user avec commande valide
                     # Don't require payment_status == "pending" anymore (webhook may have changed it)
-                    query = db.query(User).options(
-                        joinedload(User.menu_item),
-                        joinedload(User.boisson_item),
-                        joinedload(User.bonus_item)
-                    ).filter(
+                    query = db.query(User).filter(
                         User.menu_id.isnot(None),          # A une commande
                         User.total_amount > 0,             # Montant valide
                     )
@@ -465,21 +449,13 @@ async def payment_webhook(request: Request):
 
                 # Strategy 1: Find by reservation_id from metadata
                 if res_id:
-                    user = db.query(User).options(
-                        joinedload(User.menu_item),
-                        joinedload(User.boisson_item),
-                        joinedload(User.bonus_item)
-                    ).filter(User.id == int(res_id)).first()
+                    user = db.query(User).filter(User.id == int(res_id)).first()
                     if user:
                         print(f"[WEBHOOK] Found user by reservation_id: {user.id}")
 
                 # Strategy 2: Find by checkout_intent_id
                 if not user and checkout_intent_id:
-                    user = db.query(User).options(
-                        joinedload(User.menu_item),
-                        joinedload(User.boisson_item),
-                        joinedload(User.bonus_item)
-                    ).filter(User.payment_intent_id == checkout_intent_id).first()
+                    user = db.query(User).filter(User.payment_intent_id == checkout_intent_id).first()
                     if user:
                         print(f"[WEBHOOK] Found user by checkout_intent_id: {user.id}")
 

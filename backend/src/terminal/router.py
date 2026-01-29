@@ -1,7 +1,7 @@
 from datetime import time, datetime
 from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
 from .schemas import TerminalOrder, TerminalOrdersResponse
@@ -45,17 +45,25 @@ def get_terminal_orders(
     t_end = time(hour=current_hour, minute=59)
 
     # Query paid orders for this hour
-    reservations = db.query(User).options(
-        joinedload(User.menu_item),
-        joinedload(User.boisson_item),
-        joinedload(User.bonus_item)
-    ).filter(
+    reservations = db.query(User).filter(
         and_(
             User.payment_status == "completed",
             User.heure_reservation >= t_start,
             User.heure_reservation <= t_end
         )
     ).order_by(User.heure_reservation).all()
+
+    # Helper to resolve item name
+    from src.menu.utils import load_menu_data
+    menu_data = load_menu_data()
+    
+    def get_item_name(item_id):
+        if not item_id: return None
+        for cat in ["menus", "boissons", "extras"]:
+            for item in menu_data.get(cat, []):
+                if item["id"] == item_id:
+                    return item["name"]
+        return None
 
     # Build response
     orders = []
@@ -66,9 +74,9 @@ def get_terminal_orders(
             nom=res.nom,
             is_maisel=res.adresse_if_maisel is not None,
             batiment=res.adresse_if_maisel.value if res.adresse_if_maisel else None,
-            menu=res.menu_item.name if res.menu_item else None,
-            boisson=res.boisson_item.name if res.boisson_item else None,
-            bonus=res.bonus_item.name if res.bonus_item else None
+            menu=get_item_name(res.menu_id),
+            boisson=get_item_name(res.boisson_id),
+            bonus=get_item_name(res.bonus_id)
         ))
 
     return TerminalOrdersResponse(

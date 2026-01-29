@@ -21,29 +21,45 @@ def generate_pdf_for_all_clients(reservations: List[Any]) -> bytes:
     
     ticket_count = 0
     
+    # Helper to resolve item name/price
+    from src.menu.utils import load_menu_data
+    menu_data = load_menu_data()
+    
+    def get_item_details(item_id):
+        if not item_id: return None
+        for cat in ["menus", "boissons", "extras"]:
+            for item in menu_data.get(cat, []):
+                if item["id"] == item_id:
+                    return item
+        return None
+
     for user in reservations:
         # Préparation des produits
+        menu_details = get_item_details(user.menu_id)
+        boisson_details = get_item_details(user.boisson_id)
+        bonus_details = get_item_details(user.bonus_id)
+        
         produits = []
-        if user.menu_item:
+        if menu_details:
             produits.append({
                 "QTE": 1,
-                "PRODUIT": user.menu_item.name,
-                "UNIT": user.menu_item.price,
-                "TOTAL": user.menu_item.price
+                "PRODUIT": menu_details["name"],
+                "UNIT": menu_details.get("price", 0),
+                "TOTAL": menu_details.get("price", 0)
             })
-        if user.boisson_item:
+        if boisson_details:
             produits.append({
                 "QTE": 1,
-                "PRODUIT": user.boisson_item.name,
-                "UNIT": user.boisson_item.price,
-                "TOTAL": user.boisson_item.price
+                "PRODUIT": boisson_details["name"],
+                "UNIT": boisson_details.get("price", 0),
+                "TOTAL": boisson_details.get("price", 0)
             })
-        if user.bonus_item:
+        if bonus_details:
             produits.append({
                 "QTE": 1,
-                "PRODUIT": user.bonus_item.name,
-                "UNIT": user.bonus_item.price,
-                "TOTAL": user.bonus_item.price
+                "PRODUIT": bonus_details["name"],
+                "UNIT": bonus_details.get("price", 0),
+                "TOTAL": bonus_details.get("price", 0)
             })
 
         # Adresse / Logement

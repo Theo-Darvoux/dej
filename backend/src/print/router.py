@@ -32,14 +32,8 @@ def get_ticket_pdf(
     except ValueError:
         return Response(content="Format d'heure invalide (HH:MM)", status_code=400)
 
-    from sqlalchemy.orm import joinedload
-    
     # Récupérer les réservations filtrées
-    reservations = db.query(User).options(
-        joinedload(User.menu_item),
-        joinedload(User.boisson_item),
-        joinedload(User.bonus_item)
-    ).filter(
+    reservations = db.query(User).filter(
         and_(
             User.payment_status == "completed",
             User.heure_reservation >= t_start,
@@ -81,27 +75,35 @@ def get_print_summary(
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Format d'heure invalide (HH:MM)")
 
-    from sqlalchemy.orm import joinedload
+
 
     # Récupérer les réservations filtrées
-    reservations = db.query(User).options(
-        joinedload(User.menu_item),
-        joinedload(User.boisson_item),
-        joinedload(User.bonus_item)
-    ).filter(
+    reservations = db.query(User).filter(
         and_(
             User.payment_status == "completed",
             User.heure_reservation >= t_start,
             User.heure_reservation <= t_end
         )
     ).all()
+    
+    # Helper to resolve item name
+    from src.menu.utils import load_menu_data
+    menu_data = load_menu_data()
+    
+    def get_item_name(item_id):
+        if not item_id: return None
+        for cat in ["menus", "boissons", "extras"]:
+            for item in menu_data.get(cat, []):
+                if item["id"] == item_id:
+                    return item["name"]
+        return None
 
     # Compter les types de commandes
     combos_dict = {}
     for res in reservations:
-        menu_name = res.menu_item.name if res.menu_item else "Aucun"
-        boisson_name = res.boisson_item.name if res.boisson_item else "Aucune"
-        bonus_name = res.bonus_item.name if res.bonus_item else "Aucun"
+        menu_name = get_item_name(res.menu_id) or "Aucun"
+        boisson_name = get_item_name(res.boisson_id) or "Aucune"
+        bonus_name = get_item_name(res.bonus_id) or "Aucun"
         
         combo_key = (menu_name, boisson_name, bonus_name)
         combos_dict[combo_key] = combos_dict.get(combo_key, 0) + 1
@@ -140,15 +142,10 @@ def get_orders_list(
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Format d'heure invalide (HH:MM)")
 
-    from sqlalchemy.orm import joinedload
     from math import ceil
 
     # Build query with filters
-    query = db.query(User).options(
-        joinedload(User.menu_item),
-        joinedload(User.boisson_item),
-        joinedload(User.bonus_item)
-    ).filter(
+    query = db.query(User).filter(
         and_(
             User.heure_reservation >= t_start,
             User.heure_reservation <= t_end
@@ -170,6 +167,20 @@ def get_orders_list(
     offset = (page - 1) * per_page
     reservations = query.order_by(User.heure_reservation).offset(offset).limit(per_page).all()
 
+    # Define get_item_name helper if not already defined in this scope? 
+    # It's better to redefine or import it properly. Since we are in a function, let's just do it again cleanly.
+    
+    from src.menu.utils import load_menu_data
+    menu_data_list = load_menu_data()
+    
+    def get_name(item_id):
+        if not item_id: return None
+        for cat in ["menus", "boissons", "extras"]:
+            for item in menu_data_list.get(cat, []):
+                if item["id"] == item_id:
+                    return item["name"]
+        return None
+
     # Build response
     orders = []
     for res in reservations:
@@ -178,9 +189,9 @@ def get_orders_list(
             prenom=res.prenom,
             nom=res.nom,
             heure_reservation=res.heure_reservation.strftime("%H:%M") if res.heure_reservation else "",
-            menu=res.menu_item.name if res.menu_item else None,
-            boisson=res.boisson_item.name if res.boisson_item else None,
-            bonus=res.bonus_item.name if res.bonus_item else None,
+            menu=get_name(res.menu_id),
+            boisson=get_name(res.boisson_id),
+            bonus=get_name(res.bonus_id),
             payment_status=res.payment_status or "pending",
             is_maisel=res.adresse_if_maisel is not None,
             adresse=res.adresse

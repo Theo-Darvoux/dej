@@ -4,7 +4,7 @@ from datetime import datetime, date, time
 from src.reservations.schemas import BatimentMaisel
 
 class AdminOrderItem(BaseModel):
-    id: int
+    id: str
     name: str
     price: float
     item_type: str
@@ -46,6 +46,6 @@ class AdminOrderUpdate(BaseModel):
     numero_if_maisel: Optional[int] = None
     adresse: Optional[str] = None
     special_requests: Optional[str] = None
-    menu_id: Optional[int] = None
-    boisson_id: Optional[int] = None
-    bonus_id: Optional[int] = None
+    menu_id: Optional[str] = None
+    boisson_id: Optional[str] = None
+    bonus_id: Optional[str] = None
