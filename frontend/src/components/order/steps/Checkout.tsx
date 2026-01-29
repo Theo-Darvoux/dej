@@ -20,13 +20,14 @@ type CheckoutProps = {
 const Checkout = ({
     onBack,
     cartItems,
-    onPaymentSuccess,
+    onPaymentSuccess: _onPaymentSuccess,
     isInfoStep = false,
     deliveryInfo,
     userEmail,
     initialUserInfo,
     onInfoContinue
 }: CheckoutProps) => {
+    void _onPaymentSuccess // Payment success handled by redirect
     const [formData, setFormData] = useState({
         phone: initialUserInfo?.phone || '',
     })

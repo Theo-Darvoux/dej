@@ -19,7 +19,7 @@ export type UserInfo = {
 }
 
 const OrderPage = ({ onBackToHome }: OrderPageProps) => {
-    const { menuByCategory } = useMenu()
+    useMenu() // Initialize menu context
 
     // Wizard State
     const [step, setStep] = useState<Step>('SELECTION')
