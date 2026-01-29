@@ -1,218 +1,652 @@
+/* ============================================
+   RECAP PAGE - Modern Ticket Style
+   ============================================ */
+
 .recap-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #DA291C 0%, #b71c1c 50%, #FFC72C 100%);
+    min-height: 100dvh;
+    background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
+    box-sizing: border-box;
 }
 
-.recap-loading,
-.recap-error {
+/* Container with ticket effect */
+.recap-container {
+    width: 100%;
+    max-width: 440px;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ticket perforated edges */
+.recap-ticket-edge {
+    height: 16px;
+    background: radial-gradient(circle at 12px 0, transparent 12px, #fff 12px);
+    background-size: 24px 16px;
+    background-position: -12px 0;
+}
+
+.recap-ticket-edge--top {
+    border-radius: 16px 16px 0 0;
+    background-color: #fff;
+    background-image: radial-gradient(circle at 12px 100%, #1a1a1a 8px, transparent 8px);
+    background-position: -12px 0;
+}
+
+.recap-ticket-edge--bottom {
+    border-radius: 0 0 16px 16px;
+    background-color: #fff;
+    background-image: radial-gradient(circle at 12px 0, #1a1a1a 8px, transparent 8px);
+    background-position: -12px 0;
+}
+
+/* Main Card */
+.recap-card {
+    background: #fff;
+    padding: 24px;
+    position: relative;
+}
+
+/* Loading State */
+.recap-loading {
     text-align: center;
     color: #fff;
+    padding: 40px;
 }
 
 .recap-loading__spinner {
-    font-size: 64px;
-    display: block;
-    animation: spin 2s linear infinite;
+    width: 56px;
+    height: 56px;
+    border: 4px solid rgba(255, 199, 44, 0.2);
+    border-top-color: #FFC72C;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
+    to { transform: rotate(360deg); }
+}
 
-    to {
-        transform: rotate(360deg);
-    }
+.recap-loading p {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+/* Error State */
+.recap-error {
+    text-align: center;
+    color: #fff;
+    padding: 40px 24px;
+    max-width: 320px;
 }
 
 .recap-error__icon {
-    font-size: 64px;
-    display: block;
-    margin-bottom: 16px;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    color: rgba(255, 255, 255, 0.6);
 }
 
-.recap-card {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 24px;
-    padding: 32px;
-    max-width: 420px;
+.recap-error__icon svg {
     width: 100%;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    height: 100%;
 }
 
-.recap-header {
-    text-align: center;
-    margin-bottom: 24px;
-}
-
-.recap-header__logo {
-    font-size: 48px;
-    margin-bottom: 8px;
-}
-
-.recap-header h1 {
-    color: #fff;
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0 0 4px 0;
-}
-
-.recap-header__subtitle {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.9rem;
-    margin: 0;
-}
-
-.recap-divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    margin: 20px 0;
-}
-
-.recap-section {
-    margin-bottom: 8px;
-}
-
-.recap-section__title {
-    color: #fff;
-    font-size: 0.85rem;
+.recap-error h2 {
+    font-size: 1.25rem;
+    margin: 0 0 8px;
     font-weight: 600;
-    margin: 0 0 12px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
-.recap-info__row {
+.recap-error p {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin: 0 0 24px;
+}
+
+/* Header */
+.recap-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
+    margin-bottom: 24px;
 }
 
-.recap-info__label {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.85rem;
+.recap-header__brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-.recap-info__value {
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 500;
-    text-align: right;
-    max-width: 60%;
-    word-break: break-word;
-}
-
-.recap-time {
-    text-align: center;
-    padding: 16px;
-    background: rgba(255, 199, 44, 0.2);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 199, 44, 0.4);
-}
-
-.recap-time__value {
+.recap-header__logo {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #DA291C, #b71c1c);
     color: #FFC72C;
-    font-size: 2rem;
-    font-weight: 700;
-    font-family: 'Courier New', monospace;
+    font-size: 1.75rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-family: 'Arial Black', sans-serif;
 }
 
+.recap-header__text h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    line-height: 1;
+}
+
+.recap-header__tagline {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.recap-header__badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 24px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.recap-header__badge svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Time Section */
+.recap-time-section {
+    background: linear-gradient(135deg, #FFC72C 0%, #FFD54F 100%);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.recap-time-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.recap-time-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.recap-time-display {
+    position: relative;
+}
+
+.recap-time-value {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    font-family: 'Arial Black', 'Helvetica Neue', sans-serif;
+    letter-spacing: 2px;
+}
+
+.recap-date {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.7);
+    margin-top: 8px;
+}
+
+/* Sections */
+.recap-section {
+    margin-bottom: 20px;
+}
+
+.recap-section__title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 16px;
+}
+
+.recap-section__icon {
+    width: 20px;
+    height: 20px;
+    color: #DA291C;
+}
+
+.recap-section__icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Order Items */
 .recap-items {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .recap-item {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.1);
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f8f8f8;
     border-radius: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recap-item:hover {
+    transform: translateX(4px);
+    box-shadow: -4px 0 0 #DA291C;
+}
+
+.recap-item__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.recap-item__icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.recap-item__icon--menu {
+    background: #DA291C;
+    color: #fff;
+}
+
+.recap-item__icon--drink {
+    background: #2196F3;
+    color: #fff;
+}
+
+.recap-item__icon--bonus {
+    background: #FF9800;
+    color: #fff;
 }
 
 .recap-item__name {
-    color: #fff;
-    font-weight: 500;
     flex: 1;
+    font-weight: 600;
+    color: #1a1a1a;
+    font-size: 0.95rem;
 }
 
 .recap-item__badge {
-    background: rgba(255, 199, 44, 0.3);
-    color: #FFC72C;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.7rem;
+    font-weight: 700;
     padding: 4px 10px;
     border-radius: 20px;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
+.recap-item__badge--menu {
+    background: rgba(218, 41, 28, 0.1);
+    color: #DA291C;
+}
+
+.recap-item__badge--drink {
+    background: rgba(33, 150, 243, 0.1);
+    color: #2196F3;
+}
+
+.recap-item__badge--bonus {
+    background: rgba(255, 152, 0, 0.1);
+    color: #FF9800;
+}
+
+/* Total */
 .recap-total {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px;
-    background: linear-gradient(135deg, rgba(255, 199, 44, 0.2), rgba(255, 199, 44, 0.1));
+    padding: 18px 20px;
+    background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
     border-radius: 12px;
-    border: 1px solid rgba(255, 199, 44, 0.4);
+    margin-bottom: 20px;
 }
 
 .recap-total__label {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.95rem;
+    font-weight: 500;
 }
 
 .recap-total__value {
     color: #FFC72C;
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-size: 1.75rem;
+    font-weight: 800;
 }
 
-.recap-status {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px;
-    margin: 20px 0;
-    background: rgba(255, 199, 44, 0.2);
-    border-radius: 8px;
+/* Separator */
+.recap-separator {
+    padding: 20px 0;
+    position: relative;
 }
 
-.recap-status__icon {
-    font-size: 1.2rem;
+.recap-separator__line {
+    height: 2px;
+    background: repeating-linear-gradient(
+        90deg,
+        #ddd 0px,
+        #ddd 8px,
+        transparent 8px,
+        transparent 14px
+    );
 }
 
-.recap-status__text {
-    color: #FFC72C;
+/* Info Grid */
+.recap-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.recap-info-item {
+    background: #f8f8f8;
+    padding: 12px 14px;
+    border-radius: 10px;
+}
+
+.recap-info-item--full {
+    grid-column: 1 / -1;
+}
+
+.recap-info-item__label {
+    display: block;
+    font-size: 0.7rem;
     font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
 }
 
+.recap-info-item__value {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    word-break: break-word;
+}
+
+.recap-info-item__value--small {
+    font-size: 0.8rem;
+}
+
+/* Button */
 .recap-btn {
     width: 100%;
-    padding: 16px;
+    padding: 16px 24px;
     border: none;
     border-radius: 12px;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.recap-btn svg {
+    width: 20px;
+    height: 20px;
 }
 
 .recap-btn--primary {
-    background: linear-gradient(135deg, #FFC72C, #FFD54F);
-    color: #292929;
+    background: linear-gradient(135deg, #DA291C, #b71c1c);
+    color: #fff;
 }
 
 .recap-btn--primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(255, 199, 44, 0.4);
+    box-shadow: 0 8px 24px rgba(218, 41, 28, 0.35);
+}
+
+.recap-btn--primary:active {
+    transform: translateY(0);
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Small phones */
+@media (max-width: 380px) {
+    .recap-page {
+        padding: 12px;
+    }
+
+    .recap-card {
+        padding: 20px 16px;
+    }
+
+    .recap-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .recap-header__badge {
+        align-self: flex-start;
+    }
+
+    .recap-header__logo {
+        width: 40px;
+        height: 40px;
+        font-size: 1.5rem;
+    }
+
+    .recap-header__text h1 {
+        font-size: 1.25rem;
+    }
+
+    .recap-time-value {
+        font-size: 2.25rem;
+    }
+
+    .recap-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .recap-item {
+        padding: 12px;
+    }
+
+    .recap-item__name {
+        font-size: 0.85rem;
+    }
+
+    .recap-total__value {
+        font-size: 1.5rem;
+    }
+}
+
+/* Medium phones */
+@media (min-width: 381px) and (max-width: 480px) {
+    .recap-card {
+        padding: 24px 20px;
+    }
+
+    .recap-time-value {
+        font-size: 2.5rem;
+    }
+}
+
+/* Tablets and larger */
+@media (min-width: 481px) {
+    .recap-page {
+        padding: 24px;
+    }
+
+    .recap-container {
+        max-width: 480px;
+    }
+
+    .recap-card {
+        padding: 32px;
+    }
+
+    .recap-header__logo {
+        width: 56px;
+        height: 56px;
+        font-size: 2rem;
+    }
+
+    .recap-header__text h1 {
+        font-size: 1.75rem;
+    }
+
+    .recap-time-section {
+        padding: 32px;
+    }
+
+    .recap-time-value {
+        font-size: 3.5rem;
+    }
+
+    .recap-item {
+        padding: 16px 20px;
+    }
+
+    .recap-btn {
+        padding: 18px 28px;
+    }
+}
+
+/* Desktop */
+@media (min-width: 768px) {
+    .recap-container {
+        max-width: 500px;
+    }
+
+    .recap-card {
+        padding: 40px;
+    }
+
+    .recap-time-value {
+        font-size: 4rem;
+    }
+}
+
+/* Landscape mode on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .recap-page {
+        padding: 12px;
+        align-items: flex-start;
+    }
+
+    .recap-container {
+        max-width: 600px;
+    }
+
+    .recap-time-section {
+        padding: 16px;
+    }
+
+    .recap-time-value {
+        font-size: 2rem;
+    }
+
+    .recap-info-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .recap-info-item--full {
+        grid-column: span 2;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .recap-page {
+        background: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .recap-container {
+        animation: none;
+    }
+
+    .recap-loading__spinner {
+        animation: none;
+        border-color: #FFC72C;
+    }
+
+    .recap-item:hover {
+        transform: none;
+    }
+
+    .recap-btn:hover {
+        transform: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    .recap-page {
+        background: #fff;
+        padding: 0;
+    }
+
+    .recap-ticket-edge {
+        display: none;
+    }
+
+    .recap-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+
+    .recap-btn {
+        display: none;
+    }
 }
