@@ -5,7 +5,11 @@ import './AdminPage.css'
 
 type AuthState = 'loading' | 'not_logged_in' | 'not_admin' | 'admin'
 
-const AdminPage = () => {
+interface AdminPageProps {
+    onGoHome: () => void
+}
+
+const AdminPage = ({ onGoHome }: AdminPageProps) => {
     const [authState, setAuthState] = useState<AuthState>('loading')
 
     const checkAdminStatus = async () => {
@@ -35,11 +39,6 @@ const AdminPage = () => {
         checkAdminStatus()
     }
 
-    const handleGoHome = () => {
-        window.history.pushState({}, '', '/')
-        window.location.reload()
-    }
-
     const handleLogout = async () => {
         try {
             await fetch('/api/auth/logout', { method: 'POST' })
@@ -64,7 +63,7 @@ const AdminPage = () => {
         return (
             <div className="admin-page">
                 <AdminLogin onLoginSuccess={handleLoginSuccess} />
-                <button className="admin-page__home-btn" onClick={handleGoHome}>
+                <button className="admin-page__home-btn" onClick={onGoHome}>
                     Retour à l'accueil
                 </button>
             </div>
@@ -85,7 +84,7 @@ const AdminPage = () => {
                             Contactez un administrateur si vous pensez que c'est une erreur.
                         </p>
                         <div className="admin-access-denied__actions">
-                            <button className="admin-access-denied__btn" onClick={handleGoHome}>
+                            <button className="admin-access-denied__btn" onClick={onGoHome}>
                                 Retour à l'accueil
                             </button>
                             <button className="admin-access-denied__btn admin-access-denied__btn--secondary" onClick={handleLogout}>
@@ -98,7 +97,7 @@ const AdminPage = () => {
         )
     }
 
-    return <AdminDashboard />
+    return <AdminDashboard onGoHome={onGoHome} />
 }
 
 export default AdminPage

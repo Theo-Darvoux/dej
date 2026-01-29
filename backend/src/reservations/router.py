@@ -6,11 +6,10 @@ import re
 
 from src.db.session import get_db
 from src.reservations import schemas, service
-from src.reservations.availability import get_available_slots, is_slot_available
+from src.reservations.availability import get_available_slots, is_slot_available, MAX_ORDERS_PER_SLOT
 from src.auth.service import get_user_by_token
 from src.core.exceptions import UserNotVerifiedException
 from src.menu.utils import load_menu_data
-from src.reservations.models import MenuItemLimit
 
 router = APIRouter()
 
@@ -104,24 +103,9 @@ async def create_reservation(
     too_many_attempts = current_user.payment_attempts >= 3
     
     if (is_expired or too_many_attempts) and current_user.payment_status != "completed":
-        # Annuler l'ancienne commande et libérer le stock avant d'en créer une nouvelle
-        # On fait ça silencieusement ici pour permettre d'en refaire une
-        
-        def restore_stock_internal(item_id, slot_time):
-            if not item_id: return
-            limit = db.query(MenuItemLimit).filter(
-                MenuItemLimit.item_id == item_id,
-                MenuItemLimit.start_time <= slot_time,
-                MenuItemLimit.end_time > slot_time
-            ).first()
-            if limit and limit.current_quantity is not None:
-                limit.current_quantity += 1
-                db.add(limit)
-        
-        restore_stock_internal(current_user.menu_id, current_user.heure_reservation)
-        restore_stock_internal(current_user.boisson_id, current_user.heure_reservation)
-        restore_stock_internal(current_user.bonus_id, current_user.heure_reservation)
-        
+        # Annuler l'ancienne commande pour permettre d'en refaire une
+        # Le comptage par créneau se fait automatiquement via la requête SQL
+
         # Reset user reservation fields
         current_user.menu_id = None
         current_user.boisson_id = None
@@ -161,10 +145,10 @@ async def create_reservation(
             detail="Format d'heure invalide (attendu: HH:MM)"
         )
     
-    if not (time(7, 0) <= reservation_time <= time(19, 0)):
+    if not (time(8, 0) <= reservation_time <= time(17, 0)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="L'heure de réservation doit être entre 7h00 et 19h00"
+            detail="L'heure de réservation doit être entre 8h00 et 17h00"
         )
     # Tranche d'1h: minutes doivent être 00
     if reservation_time.minute != 0:
@@ -389,43 +373,10 @@ async def create_reservation(
     current_user.menu_id = menu_item["id"] if menu_item else None
     current_user.boisson_id = boisson_item["id"] if boisson_item else None
     current_user.bonus_id = bonus_item["id"] if bonus_item else None
-    
-    # ---------------- DEBUT GESTION STOCK ----------------
-    def check_and_decrement_stock(item_id, slot_time):
-        """Vérifie et décrémente stock pour un item à l'heure donnée"""
-        
-        # Trouver limite correspondante (ou une qui couvre cette heure)
-        # Note: Dans une vraie implém, il faudrait gérer le jour aussi, ici on suppose que limits sont valides pour le jour J
-        limit = db.query(MenuItemLimit).filter(
-            MenuItemLimit.item_id == item_id,
-            MenuItemLimit.start_time <= slot_time,
-            MenuItemLimit.end_time > slot_time
-        ).first()
-        
-        if limit:
-            if limit.current_quantity is not None:
-                if limit.current_quantity <= 0:
-                     raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Item ID {item_id} n'est plus disponible pour ce créneau ({slot_time})"
-                    )
-                limit.current_quantity -= 1
-                db.add(limit) # Mark as modified
-                return limit
-        return None
 
-    stock_updates = []
-    if menu_item:
-        l = check_and_decrement_stock(menu_item["id"], reservation_time)
-        if l: stock_updates.append(l)
-    if boisson_item:
-        l = check_and_decrement_stock(boisson_item["id"], reservation_time)
-        if l: stock_updates.append(l)
-    if bonus_item:
-        l = check_and_decrement_stock(bonus_item["id"], reservation_time)
-        if l: stock_updates.append(l)
-    # ---------------- FIN GESTION STOCK ----------------
-    
+    # Note: La disponibilité des créneaux est gérée par comptage SQL dans availability.py
+    # (MAX_ORDERS_PER_SLOT commandes max par créneau)
+
     # Calculer le montant total
     total = 0.0
     if menu_item:
@@ -567,26 +518,8 @@ async def process_payment(
                     detail=f"Erreur lors du paiement (Tentative {reservation.payment_attempts}/3)"
                 )
     except Exception as e:
-        
-        def restore_stock(item_id, slot_time):
-            if not item_id: return
-            limit = db.query(MenuItemLimit).filter(
-                MenuItemLimit.item_id == item_id,
-                MenuItemLimit.start_time <= slot_time,
-                MenuItemLimit.end_time > slot_time
-            ).first()
-            if limit and limit.current_quantity is not None:
-                limit.current_quantity += 1
-                db.add(limit)
-
-        try:
-             restore_stock(reservation.menu_id, reservation.heure_reservation)
-             restore_stock(reservation.boisson_id, reservation.heure_reservation)
-             restore_stock(reservation.bonus_id, reservation.heure_reservation)
-             db.commit()
-        except:
-             pass # Fail safe
-
+        # Note: La disponibilité des créneaux est gérée par comptage SQL
+        # Pas besoin de restaurer le stock manuellement
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Erreur de connexion au service de paiement: {str(e)}"

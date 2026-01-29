@@ -24,13 +24,18 @@ interface Order {
     created_at: string
 }
 
-const AdminDashboard = () => {
+interface AdminDashboardProps {
+    onGoHome: () => void
+}
+
+const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
     const [orders, setOrders] = useState<Order[]>([])
     const [loading, setLoading] = useState(true)
     const [filterStatus, setFilterStatus] = useState('')
     const [error, setError] = useState<string | null>(null)
     const [editingOrder, setEditingOrder] = useState<Order | null>(null)
     const [menuItems, setMenuItems] = useState<OrderItem[]>([])
+    const [printingPdf, setPrintingPdf] = useState(false)
 
     const fetchOrders = async () => {
         setLoading(true)
@@ -124,13 +129,44 @@ const AdminDashboard = () => {
         })
     }
 
+    const handlePrintAllTickets = async () => {
+        setPrintingPdf(true)
+        try {
+            const response = await fetch('/api/print/get_printPDF?start_time=00:00&end_time=23:59')
+            if (!response.ok) {
+                if (response.status === 404) {
+                    alert('Aucune commande payée à imprimer')
+                    return
+                }
+                throw new Error('Erreur lors de la génération du PDF')
+            }
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            window.open(url, '_blank')
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Erreur lors de la génération du PDF')
+        } finally {
+            setPrintingPdf(false)
+        }
+    }
+
     return (
         <div className="admin-dashboard">
             <header className="admin-header">
-                <h1>📊 Dashboard Admin</h1>
-                <button onClick={() => window.history.pushState({}, '', '/')} className="payment-return__btn" style={{ width: 'auto', padding: '0.5rem 1rem' }}>
-                    🏠 Retour Accueil
-                </button>
+                <h1>Dashboard Admin</h1>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                        onClick={handlePrintAllTickets}
+                        className="payment-return__btn"
+                        style={{ width: 'auto', padding: '0.5rem 1rem', background: '#333', color: '#fff' }}
+                        disabled={printingPdf}
+                    >
+                        {printingPdf ? 'Chargement...' : 'Imprimer tickets'}
+                    </button>
+                    <button onClick={onGoHome} className="payment-return__btn" style={{ width: 'auto', padding: '0.5rem 1rem' }}>
+                        Retour Accueil
+                    </button>
+                </div>
             </header>
 
             <div className="admin-filters">

@@ -139,7 +139,7 @@ function App() {
       )}
 
       {view === 'admin' && (
-        <AdminPage />
+        <AdminPage onGoHome={handleGoHome} />
       )}
 
       {view === 'admin-print' && (

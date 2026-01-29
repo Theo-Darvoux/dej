@@ -14,32 +14,12 @@ type AddressSuggestion = {
     city: string
 }
 
-// Time slots from 8h to 18h
-const TIME_SLOTS = [
-    { id: '08:00-09:00', label: '08h - 09h', maxCapacity: 20 },
-    { id: '09:00-10:00', label: '09h - 10h', maxCapacity: 20 },
-    { id: '10:00-11:00', label: '10h - 11h', maxCapacity: 20 },
-    { id: '11:00-12:00', label: '11h - 12h', maxCapacity: 30 }, // Rush hour
-    { id: '12:00-13:00', label: '12h - 13h', maxCapacity: 30 }, // Rush hour
-    { id: '13:00-14:00', label: '13h - 14h', maxCapacity: 30 }, // Rush hour
-    { id: '14:00-15:00', label: '14h - 15h', maxCapacity: 20 },
-    { id: '15:00-16:00', label: '15h - 16h', maxCapacity: 20 },
-    { id: '16:00-17:00', label: '16h - 17h', maxCapacity: 20 },
-    { id: '17:00-18:00', label: '17h - 18h', maxCapacity: 20 },
-]
-
-// Current bookings (to be replaced with API call)
-const CURRENT_BOOKINGS: Record<string, number> = {
-    '08:00-09:00': 3,
-    '09:00-10:00': 8,
-    '10:00-11:00': 15,
-    '11:00-12:00': 30, // Full
-    '12:00-13:00': 22,
-    '13:00-14:00': 30, // Full
-    '14:00-15:00': 5,
-    '15:00-16:00': 10,
-    '16:00-17:00': 2,
-    '17:00-18:00': 0,
+type SlotData = {
+    slot: string
+    start: string
+    available: boolean
+    current_count: number
+    max_capacity: number
 }
 
 type DeliveryProps = {
@@ -62,6 +42,34 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
     const [isLoadingAddresses, setIsLoadingAddresses] = useState(false)
 
     const [selectedSlot, setSelectedSlot] = useState(initialDeliveryInfo?.timeSlot || '')
+
+    // Slots data from API
+    const [slots, setSlots] = useState<SlotData[]>([])
+    const [slotsLoading, setSlotsLoading] = useState(true)
+    const [slotsError, setSlotsError] = useState<string | null>(null)
+
+    // Fetch slot availability from API
+    useEffect(() => {
+        const fetchSlots = async () => {
+            setSlotsLoading(true)
+            setSlotsError(null)
+            try {
+                const response = await fetch('/api/reservations/availability')
+                if (!response.ok) {
+                    throw new Error('Erreur lors du chargement des créneaux')
+                }
+                const data = await response.json()
+                setSlots(data.slots || [])
+            } catch (err) {
+                setSlotsError(err instanceof Error ? err.message : 'Erreur inconnue')
+                setSlots([])
+            } finally {
+                setSlotsLoading(false)
+            }
+        }
+
+        fetchSlots()
+    }, [])
 
     // Debounced address search
     useEffect(() => {
@@ -152,24 +160,33 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
         setAddressError('')
     }
 
-    const getSlotStatus = (slotId: string) => {
-        const slot = TIME_SLOTS.find(s => s.id === slotId)
-        if (!slot) return 'full'
+    const getSlotStatus = (slot: SlotData) => {
+        const remaining = slot.max_capacity - slot.current_count
+        const percentFree = remaining / slot.max_capacity
 
-        const booked = CURRENT_BOOKINGS[slotId] || 0
-        const remaining = slot.maxCapacity - booked
-        const percentFree = remaining / slot.maxCapacity
-
-        if (remaining <= 0) return 'full'
+        if (!slot.available || remaining <= 0) return 'full'
         if (percentFree <= 0.5) return 'limited'
         return 'available'
     }
 
-    const getRemainingPlaces = (slotId: string): number => {
-        const slot = TIME_SLOTS.find(s => s.id === slotId)
-        if (!slot) return 0
-        const booked = CURRENT_BOOKINGS[slotId] || 0
-        return Math.max(0, slot.maxCapacity - booked)
+    const getRemainingPlaces = (slot: SlotData): number => {
+        return Math.max(0, slot.max_capacity - slot.current_count)
+    }
+
+    // Convert slot start time to ID format (e.g., "08:00" -> "08:00")
+    const getSlotId = (slot: SlotData): string => {
+        return slot.start
+    }
+
+    // Format slot label (e.g., "08:00 - 09:00" -> "08h - 09h")
+    const formatSlotLabel = (slot: SlotData): string => {
+        const parts = slot.slot.split(' - ')
+        if (parts.length === 2) {
+            const start = parts[0].replace(':', 'h').slice(0, 3)
+            const end = parts[1].replace(':', 'h').slice(0, 3)
+            return `${start} - ${end}`
+        }
+        return slot.slot
     }
 
     const canContinue = () => {
@@ -295,32 +312,39 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
             {/* Time Slots */}
             <div className="delivery-section">
                 <h3>Choisissez votre créneau</h3>
-                <div className="time-slots-grid">
-                    {TIME_SLOTS.map(slot => {
-                        const status = getSlotStatus(slot.id)
-                        const isDisabled = status === 'full'
-                        const isSelected = selectedSlot === slot.id
-                        const remaining = getRemainingPlaces(slot.id)
+                {slotsLoading ? (
+                    <div className="time-slots-loading">Chargement des créneaux...</div>
+                ) : slotsError ? (
+                    <div className="time-slots-error">{slotsError}</div>
+                ) : (
+                    <div className="time-slots-grid">
+                        {slots.map(slot => {
+                            const slotId = getSlotId(slot)
+                            const status = getSlotStatus(slot)
+                            const isDisabled = status === 'full'
+                            const isSelected = selectedSlot === slotId
+                            const remaining = getRemainingPlaces(slot)
 
-                        return (
-                            <button
-                                key={slot.id}
-                                className={`time-slot ${status} ${isSelected ? 'selected' : ''}`}
-                                onClick={() => !isDisabled && setSelectedSlot(slot.id)}
-                                disabled={isDisabled}
-                            >
-                                <span className="time-slot__label">{slot.label}</span>
-                                <span className="time-slot__remaining">
-                                    {remaining > 0 ? `${remaining} place${remaining > 1 ? 's' : ''}` : 'Complet'}
-                                </span>
-                            </button>
-                        )
-                    })}
-                </div>
+                            return (
+                                <button
+                                    key={slotId}
+                                    className={`time-slot ${status} ${isSelected ? 'selected' : ''}`}
+                                    onClick={() => !isDisabled && setSelectedSlot(slotId)}
+                                    disabled={isDisabled}
+                                >
+                                    <span className="time-slot__label">{formatSlotLabel(slot)}</span>
+                                    <span className="time-slot__remaining">
+                                        {remaining > 0 ? `${remaining} place${remaining > 1 ? 's' : ''}` : 'Complet'}
+                                    </span>
+                                </button>
+                            )
+                        })}
+                    </div>
+                )}
                 <div className="time-slots-legend">
-                    <span className="legend-item available">🟢 Disponible</span>
-                    <span className="legend-item limited">🟠 Dernières places</span>
-                    <span className="legend-item full">⚫ Complet</span>
+                    <span className="legend-item available">Disponible</span>
+                    <span className="legend-item limited">Dernières places</span>
+                    <span className="legend-item full">Complet</span>
                 </div>
             </div>
 
