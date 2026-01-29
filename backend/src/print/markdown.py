@@ -99,6 +99,7 @@ def generate_pdf_for_all_clients(reservations: List[Any]) -> bytes:
             numero_commande=user.id,
             prenom=user.prenom or "",
             nom=user.nom or "",
+            email=user.email or "",
             telephone=user.phone or "",
             adresse=adresse,
             chambre=chambre,
@@ -121,6 +122,7 @@ def _draw_beautiful_ticket(
     numero_commande: int,
     prenom: str,
     nom: str,
+    email: str,
     telephone: str,
     adresse: str,
     chambre: str,
@@ -195,6 +197,15 @@ def _draw_beautiful_ticket(
         nom_complet = nom_complet[:24] + "."
     pdf.cell(TICKET_WIDTH - 6, 5, nom_complet, align="L")
     current_y += 5
+
+    # Email
+    if email:
+        pdf.set_xy(x + 3, current_y)
+        pdf.set_font("Helvetica", "", 6)
+        pdf.set_text_color(100, 100, 100)
+        email_display = email if len(email) <= 35 else email[:34] + "."
+        pdf.cell(TICKET_WIDTH - 6, 3, email_display, align="L")
+        current_y += 3.5
 
     # Adresse et chambre
     pdf.set_xy(x + 3, current_y)
