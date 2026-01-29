@@ -3,13 +3,15 @@ Payment Router - HelloAsso Checkout endpoints
 """
 from fastapi import APIRouter, HTTPException, Request
 from src.payments.schemas import (
-    CheckoutRequest, 
-    CheckoutResponse, 
+    CheckoutRequest,
+    CheckoutResponse,
     PaymentVerifyRequest,
     PaymentVerifyResponse
 )
 from src.payments import helloasso_service
 from src.core.config import settings
+from src.auth.service import normalize_email
+from sqlalchemy import or_
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
@@ -26,6 +28,9 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
         redirect_base = settings.HELLOASSO_REDIRECT_BASE_URL
         if not redirect_base:
             redirect_base = settings.FRONTEND_URL or "http://localhost:5173"
+        
+        # Remove trailing slash to avoid double slashes
+        redirect_base = redirect_base.rstrip('/')
         
         # Ensure HTTPS for HelloAsso (required by their API)
         if not redirect_base.startswith("https://"):
@@ -75,47 +80,152 @@ async def verify_payment(checkout_intent_id: str):
     from src.db.session import SessionLocal
     from src.users.models import User
     from src.mail import send_order_confirmation
+    from sqlalchemy.orm import joinedload
     from datetime import datetime, timezone
+    import secrets
 
     try:
+        print(f"[DEBUG] Verifying payment for intent: {checkout_intent_id}")
         result = await helloasso_service.get_checkout_intent(checkout_intent_id)
+        
+        print(f"[DEBUG] HelloAsso result keys: {list(result.keys())}")
+        metadata = result.get('metadata', {})
+        print(f"[DEBUG] Metadata: {metadata}")
         
         # Check if we have an order (payment was successful)
         order = result.get("order")
+        status_token = None
         
         if order:
+            order_id = order.get('id')
+            payer_email = order.get("payer", {}).get("email")
+            print(f"[DEBUG] Order found, ID: {order_id}, Payer: {payer_email}")
+            
             # Update database if not already done by webhook
-            metadata = result.get("metadata", {})
             res_id = metadata.get("reservation_id")
             
-            if res_id:
-                async with SessionLocal() as db:
-                    user = db.query(User).filter(User.id == int(res_id)).first()
-                    if user and user.payment_status != "completed":
+            print(f"[DEBUG] reservation_id from metadata: {res_id} (type: {type(res_id)})")
+            
+            db = SessionLocal()
+            try:
+                user = None
+                if res_id:
+                    user = db.query(User).options(
+                        joinedload(User.menu_item),
+                        joinedload(User.boisson_item),
+                        joinedload(User.bonus_item)
+                    ).filter(User.id == int(res_id)).first()
+                    if user:
+                        print(f"[DEBUG] User found by reservation_id: {user.id} ({user.email})")
+                
+                if not user and payer_email:
+                    print(f"[DEBUG] Attempting fallback: finding user by payer email {payer_email}")
+
+                    # Normaliser l'email pour la recherche par identité
+                    identity = None
+                    try:
+                        _, identity = normalize_email(payer_email)
+                    except Exception as e:
+                        print(f"[DEBUG] Could not normalize email: {e}")
+
+                    # Recherche robuste : user avec commande valide non-expirée
+                    query = db.query(User).options(
+                        joinedload(User.menu_item),
+                        joinedload(User.boisson_item),
+                        joinedload(User.bonus_item)
+                    ).filter(
+                        User.payment_status == "pending",  # Seulement en attente de paiement
+                        User.menu_id.isnot(None),          # A une commande
+                        User.total_amount > 0,             # Montant valide
+                    )
+
+                    # Chercher par identité normalisée OU email exact
+                    if identity:
+                        query = query.filter(
+                            or_(
+                                User.normalized_email == identity,
+                                User.email == payer_email
+                            )
+                        )
+                    else:
+                        query = query.filter(User.email == payer_email)
+
+                    # Vérifier que la réservation n'est pas expirée
+                    query = query.filter(
+                        or_(
+                            User.reservation_expires_at.is_(None),
+                            User.reservation_expires_at > datetime.now(timezone.utc)
+                        )
+                    )
+
+                    user = query.order_by(User.created_at.desc()).first()
+
+                    if user:
+                        print(f"[DEBUG] User found by email fallback: {user.id} (identity: {identity})")
+                    else:
+                        print(f"[WARNING] No valid pending user found for email {payer_email} (identity: {identity})")
+
+                if user:
+                    # Refresh to ensure we have the latest data from DB (in case of concurrent updates)
+                    db.refresh(user)
+                    
+                    # Log what we found to debug empty emails
+                    print(f"[DEBUG] User {user.id} data: total={user.total_amount}, menu={user.menu_id}, drink={user.boisson_id}, bonus={user.bonus_id}")
+                    
+                    # Générer status_token si absent
+                    if not user.status_token:
+                        print(f"[DEBUG] Generating new status_token for user {user.id}")
+                        user.status_token = secrets.token_urlsafe(32)
+                        db.commit()
+                    status_token = user.status_token
+                    
+                    if user.payment_status != "completed":
+                        print(f"[DEBUG] Updating payment status to completed for user {user.id}")
                         user.payment_status = "completed"
                         user.payment_intent_id = checkout_intent_id
                         user.payment_date = datetime.now(timezone.utc)
                         db.commit()
                         db.refresh(user)
+                        
                         # Envoyer l'email de confirmation
-                        await send_order_confirmation(user)
+                        try:
+                            print(f"[DEBUG] Sending order confirmation email to {user.email}")
+                            email_sent = await send_order_confirmation(user)
+                            if email_sent:
+                                print(f"[DEBUG] Confirmation email sent successfully to {user.email}")
+                            else:
+                                print(f"[WARNING] Confirmation email failed for {user.email}")
+                            # Sauvegarder le status_token si modifié par l'email
+                            db.commit()
+                        except Exception as e:
+                            print(f"[ERROR] Exception during envoi email: {e}")
+                else:
+                    print(f"[ERROR] No user found for this payment (intent: {checkout_intent_id})")
+
+            finally:
+                db.close()
 
             # Payment successful
             return PaymentVerifyResponse(
                 success=True,
-                order_id=order.get("id"),
+                order_id=order_id,
                 amount=order.get("amount", {}).get("total"),
-                payer_email=order.get("payer", {}).get("email"),
-                message="Paiement réussi"
+                payer_email=payer_email,
+                message="Paiement réussi",
+                status_token=status_token
             )
         else:
             # No order yet - payment pending or failed
+            print(f"[DEBUG] No order found for intent {checkout_intent_id}. result: {result.get('status')}")
             return PaymentVerifyResponse(
                 success=False,
                 message="Paiement en attente ou non complété"
             )
             
     except Exception as e:
+        print(f"[ERROR] Exception in verify_payment: {e}")
+        import traceback
+        traceback.print_exc()
         return PaymentVerifyResponse(
             success=False,
             message=str(e)
@@ -159,13 +269,21 @@ async def payment_webhook(request: Request):
             if res_id:
                 db = SessionLocal()
                 try:
-                    user = db.query(User).filter(User.id == int(res_id)).first()
+                    from sqlalchemy.orm import joinedload
+                    user = db.query(User).options(
+                        joinedload(User.menu_item),
+                        joinedload(User.boisson_item),
+                        joinedload(User.bonus_item)
+                    ).filter(User.id == int(res_id)).first()
+                    
                     if user and user.payment_status != "completed":
                         user.payment_status = "completed"
                         user.payment_intent_id = checkout_intent_id or f"ORDER_{order_id}"
                         user.payment_date = datetime.now(timezone.utc)
                         db.commit()
                         db.refresh(user)
+                        
+                        print(f"[DEBUG] Webhook: Sending order confirmation email to {user.email}")
                         # Envoyer l'email de confirmation
                         await send_order_confirmation(user)
                         print(f"DEBUG: Reservation {res_id} updated via Webhook")

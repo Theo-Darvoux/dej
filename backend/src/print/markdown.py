@@ -78,7 +78,8 @@ def generate_pdf_for_all_clients(reservations: List[Any]) -> bytes:
             adresse=adresse,
             horaire=user.heure_reservation.strftime("%Hh%M") if user.heure_reservation else "?",
             produits=produits,
-            total=user.total_amount
+            total=user.total_amount,
+            special_requests=user.special_requests
         )
         
         ticket_count += 1
@@ -97,7 +98,8 @@ def _draw_ticket(
     adresse: str,
     horaire: str,
     produits: List[Dict[str, Any]],
-    total: float
+    total: float,
+    special_requests: str = None
 ):
     """Dessine un petit ticket à la position (x, y)."""
     # Cadre du ticket
@@ -141,6 +143,13 @@ def _draw_ticket(
         pdf.cell(60, 4, f"{p['QTE']}x {produit_name}", align="L")
         pdf.cell(TICKET_WIDTH - 64, 4, f"{p['TOTAL']:.2f}E", align="R")
         current_y += 4
+    
+    # Demandes spéciales (si présentes)
+    if special_requests:
+        pdf.set_xy(x + 2, current_y + 1)
+        pdf.set_font("Helvetica", "I", 5)
+        note_short = special_requests[:40] + "..." if len(special_requests) > 40 else special_requests
+        pdf.cell(TICKET_WIDTH - 4, 3, f"Note: {note_short}", align="L")
     
     # Total en bas
     pdf.set_xy(x + 2, y + TICKET_HEIGHT - 8)

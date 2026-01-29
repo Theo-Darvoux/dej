@@ -65,7 +65,7 @@
 .cart-bar__total {
     font-size: 1.1rem;
     font-weight: 800;
-    color: var(--mcdo-green);
+    color: var(--mcdo-red);
 }
 
 /* CTA Button */
@@ -218,7 +218,7 @@
 
 .cart-drawer__item-price {
     font-size: 0.9rem;
-    color: var(--mcdo-green, #264027);
+    color: var(--mcdo-red, #DA291C);
     font-weight: 700;
 }
 

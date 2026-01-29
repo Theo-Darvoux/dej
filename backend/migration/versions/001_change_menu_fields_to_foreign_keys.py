@@ -20,9 +20,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Supprimer les anciennes colonnes String
-    op.drop_column('users', 'menu')
-    op.drop_column('users', 'boisson')
-    op.drop_column('users', 'bonus')
+    # op.drop_column('users', 'menu')
+    # op.drop_column('users', 'boisson')
+    # op.drop_column('users', 'bonus')
     
     # Ajouter les nouvelles colonnes ForeignKey
     op.add_column('users', sa.Column('menu_id', sa.Integer(), nullable=True))

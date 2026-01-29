@@ -6,7 +6,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies before copying the source code
-RUN uv sync --frozen
+RUN uv sync
 
 # Copy the rest of the application code
 COPY . .

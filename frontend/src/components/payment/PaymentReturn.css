@@ -125,7 +125,7 @@
 }
 
 .payment-return__btn {
-    margin-top: 24px;
+    margin-top: 12px;
     padding: 16px 32px;
     background: #ffbc0d;
     color: #292929;
@@ -137,12 +137,42 @@
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 4px 16px rgba(255, 188, 13, 0.3);
+    display: block;
+    width: 100%;
 }
 
 .payment-return__btn:hover {
     background: #ffc933;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(255, 188, 13, 0.4);
+}
+
+.payment-return__btn--primary {
+    background: #4CAF50;
+    color: white;
+    box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
+    margin-top: 24px;
+}
+
+.payment-return__btn--primary:hover {
+    background: #45a049;
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.payment-return__btn--secondary {
+    background: transparent;
+    color: #666;
+    box-shadow: none;
+    text-decoration: underline;
+    font-size: 0.9rem;
+    padding: 12px;
+}
+
+.payment-return__btn--secondary:hover {
+    background: transparent;
+    color: #333;
+    box-shadow: none;
+    transform: none;
 }
 
 /* Mobile */

@@ -30,6 +30,7 @@ class ReservationCreateRequest(BaseModel):
     numero_immeuble: Optional[str] = None  # Si habite_residence=True
     adresse: Optional[str] = None  # Si habite_residence=False
     phone: Optional[str] = None  # Téléphone pour livraison
+    special_requests: Optional[str] = None  # Demandes spéciales
     menu: Optional[str] = None
     boisson: Optional[str] = None
     bonus: Optional[str] = None

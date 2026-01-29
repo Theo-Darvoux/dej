@@ -1,0 +1,104 @@
+import { useState, useEffect } from 'react'
+import AdminDashboard from './AdminDashboard'
+import AdminLogin from './AdminLogin'
+import './AdminPage.css'
+
+type AuthState = 'loading' | 'not_logged_in' | 'not_admin' | 'admin'
+
+const AdminPage = () => {
+    const [authState, setAuthState] = useState<AuthState>('loading')
+
+    const checkAdminStatus = async () => {
+        setAuthState('loading')
+        try {
+            const response = await fetch('/api/admin/orders?limit=1')
+
+            if (response.ok) {
+                setAuthState('admin')
+            } else if (response.status === 401) {
+                setAuthState('not_logged_in')
+            } else if (response.status === 403) {
+                setAuthState('not_admin')
+            } else {
+                setAuthState('not_logged_in')
+            }
+        } catch {
+            setAuthState('not_logged_in')
+        }
+    }
+
+    useEffect(() => {
+        checkAdminStatus()
+    }, [])
+
+    const handleLoginSuccess = () => {
+        checkAdminStatus()
+    }
+
+    const handleGoHome = () => {
+        window.history.pushState({}, '', '/')
+        window.location.reload()
+    }
+
+    const handleLogout = async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' })
+        } catch {
+            // Ignore errors
+        }
+        setAuthState('not_logged_in')
+    }
+
+    if (authState === 'loading') {
+        return (
+            <div className="admin-page admin-page--loading">
+                <div className="admin-loading">
+                    <div className="admin-loading__spinner">🍟</div>
+                    <p>Vérification des accès...</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (authState === 'not_logged_in') {
+        return (
+            <div className="admin-page">
+                <AdminLogin onLoginSuccess={handleLoginSuccess} />
+                <button className="admin-page__home-btn" onClick={handleGoHome}>
+                    Retour à l'accueil
+                </button>
+            </div>
+        )
+    }
+
+    if (authState === 'not_admin') {
+        return (
+            <div className="admin-page">
+                <div className="admin-access-denied">
+                    <div className="admin-access-denied__card">
+                        <span className="admin-access-denied__icon">🚫</span>
+                        <h2>Accès refusé</h2>
+                        <p>
+                            Vous êtes connecté mais vous n'avez pas les droits administrateur.
+                        </p>
+                        <p className="admin-access-denied__hint">
+                            Contactez un administrateur si vous pensez que c'est une erreur.
+                        </p>
+                        <div className="admin-access-denied__actions">
+                            <button className="admin-access-denied__btn" onClick={handleGoHome}>
+                                Retour à l'accueil
+                            </button>
+                            <button className="admin-access-denied__btn admin-access-denied__btn--secondary" onClick={handleLogout}>
+                                Se déconnecter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    return <AdminDashboard />
+}
+
+export default AdminPage

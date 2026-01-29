@@ -338,6 +338,9 @@ async def create_reservation(
     else:
         current_user.phone = None
     
+    # Sauvegarder demandes spéciales
+    current_user.special_requests = request.special_requests.strip()[:500] if request.special_requests else None
+    
     if request.habite_residence:
         current_user.numero_if_maisel = int(request.numero_chambre)
         current_user.adresse = None
@@ -415,7 +418,8 @@ async def create_reservation(
     
     return {
         "message": "Réservation créée avec succès",
-        "user_id": current_user.id,
+        "id": current_user.id,  # Frontend attend "id" pour localStorage
+        "user_id": current_user.id,  # Gardé pour rétrocompatibilité
         "status": current_user.status,
         "payment_status": current_user.payment_status,
         "date_reservation": str(current_user.date_reservation),

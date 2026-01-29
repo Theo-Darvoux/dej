@@ -65,9 +65,9 @@
 }
 
 .category-slider__item.is-active .category-slider__icon {
-    border-color: var(--mcdo-green);
+    border-color: var(--mcdo-red);
     background: var(--mcdo-white);
-    box-shadow: 0 4px 12px rgba(38, 64, 39, 0.2);
+    box-shadow: 0 4px 12px rgba(218, 41, 28, 0.2);
 }
 
 .category-slider__label {
@@ -83,7 +83,7 @@
 }
 
 .category-slider__item.is-active .category-slider__label {
-    color: var(--mcdo-green);
+    color: var(--mcdo-red);
     font-weight: 700;
 }
 
@@ -118,7 +118,7 @@
     }
 
     .category-slider__item.is-active {
-        background: rgba(38, 64, 39, 0.08);
+        background: rgba(218, 41, 28, 0.08);
     }
 
     .category-slider__icon {

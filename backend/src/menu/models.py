@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Integer, String, Float, ForeignKey, Time
+from sqlalchemy import Boolean, Integer, String, Float, ForeignKey, Time, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 
@@ -9,6 +9,7 @@ class Category(Base):
     __tablename__ = "categories"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    external_id: Mapped[str] = mapped_column(String, unique=True, nullable=True, index=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -21,6 +22,7 @@ class MenuItem(Base):
     __tablename__ = "menu_items"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    external_id: Mapped[str] = mapped_column(String, unique=True, nullable=True, index=True)
     category_id: Mapped[int] = mapped_column(Integer, ForeignKey("categories.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=True)
@@ -31,6 +33,7 @@ class MenuItem(Base):
     item_type: Mapped[str] = mapped_column(String, nullable=False, default="menu")
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     low_stock_threshold: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    items: Mapped[list | None] = mapped_column(JSON, nullable=True)  # Liste des éléments du menu
 
     # Relationship
     # Relationship

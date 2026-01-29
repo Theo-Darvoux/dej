@@ -131,8 +131,7 @@ async def request_verification_code(email: str, db: Session) -> bool:
     
     # Envoyer email (utiliser delivery_email)
     try:
-        #await send_verification_email(delivery_email, code)
-        pass  # TODO: remettre l'envoi d'email en prod
+        await send_verification_email(delivery_email, code)
     except Exception as e:
         # Nettoyer le code si l'envoi échoue
         user.verification_code = None
@@ -157,6 +156,12 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
     user = db.query(User).filter(User.normalized_email == identity).first()
     if not user:
         raise InvalidCredentialsException("Utilisateur non trouvé")
+    
+    # Vérifier si l'utilisateur a déjà commandé (paiement complété)
+    # Exception: les admins peuvent toujours se connecter
+    if user.payment_status == "completed" and user.user_type != "admin":
+        raise InvalidCredentialsException("Vous avez déjà passé une commande avec cet email. Contactez Solène ou Théo pour toute modification.")
+    
     # TODO DEBUT
     # Vérifier code
     if not user.verification_code or user.verification_code != code:

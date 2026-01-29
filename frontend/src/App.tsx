@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react'
+import { MenuProvider } from './context/MenuContext'
 import LandingPage from './components/landing/LandingPage'
 import OrderPage from './components/order/OrderPage'
+import OrderStatus from './components/order/OrderStatus'
 import PaymentSuccess from './components/payment/PaymentSuccess'
 import PaymentError from './components/payment/PaymentError'
 import RecapPage from './components/recap/RecapPage'
+import AdminPage from './components/admin/AdminPage'
 import PrintPage from './pages/print'
 import TerminalPage from './pages/terminal'
 import './App.css'
 
-type ViewState = 'landing' | 'order' | 'payment-success' | 'payment-error' | 'recap' | 'admin-print' | 'admin-terminal'
+type ViewState = 'landing' | 'order' | 'order-status' | 'payment-success' | 'payment-error' | 'recap' | 'admin' | 'admin-print' | 'admin-terminal'
 
 function App() {
   const [view, setView] = useState<ViewState>(() => {
@@ -16,7 +19,9 @@ function App() {
     if (path === '/payment/success') return 'payment-success'
     if (path === '/payment/error') return 'payment-error'
     if (path === '/order') return 'order'
+    if (path.startsWith('/order/status/')) return 'order-status'
     if (path === '/recap') return 'recap'
+    if (path === '/admin') return 'admin'
     return 'landing'
   })
   const [isVerifying, setIsVerifying] = useState(() => window.location.pathname === '/auth/verify')
@@ -71,8 +76,12 @@ function App() {
       setView('payment-error')
     } else if (path === '/order') {
       setView('order')
+    } else if (path.startsWith('/order/status/')) {
+      setView('order-status')
     } else if (path === '/recap') {
       setView('recap')
+    } else if (path === '/admin') {
+      setView('admin')
     }
   }, [])
 
@@ -88,7 +97,7 @@ function App() {
   }
 
   return (
-    <>
+    <MenuProvider>
       {isVerifying && (
         <div className="verify-overlay">
           <div className="verify-content">
@@ -113,6 +122,10 @@ function App() {
         <OrderPage onBackToHome={handleGoHome} />
       )}
 
+      {view === 'order-status' && !isVerifying && (
+        <OrderStatus />
+      )}
+
       {view === 'recap' && !isVerifying && (
         <RecapPage onBackToHome={handleGoHome} />
       )}
@@ -125,6 +138,10 @@ function App() {
         <PaymentError onClose={() => setView('order')} />
       )}
 
+      {view === 'admin' && (
+        <AdminPage />
+      )}
+
       {view === 'admin-print' && (
         <PrintPage />
       )}
@@ -132,8 +149,9 @@ function App() {
       {view === 'admin-terminal' && (
         <TerminalPage />
       )}
-    </>
+    </MenuProvider>
   )
 }
 
 export default App
+

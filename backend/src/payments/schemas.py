@@ -35,3 +35,5 @@ class PaymentVerifyResponse(BaseModel):
     amount: Optional[int] = None
     payer_email: Optional[str] = None
     message: Optional[str] = None
+    status_token: Optional[str] = None  # Token pour accéder à la page de statut
+

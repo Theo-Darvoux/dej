@@ -1,226 +1,149 @@
 """
-Script pour initialiser les données du menu.
+Script pour initialiser les données du menu depuis un fichier JSON.
 Exécuter avec: python -m src.db.init_menu
 """
 
+import json
+from pathlib import Path
 from sqlalchemy.orm import Session
 from datetime import time
 from src.db.session import get_db
 from src.menu.models import Category, MenuItem, MenuItemLimit
 
 
+def load_menu_data():
+    """Charge les données du menu depuis le fichier JSON."""
+    json_path = Path(__file__).parent / "menu_data.json"
+    with open(json_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def init_menu_data():
-    """Initialise les catégories et items du menu une seule fois."""
+    """Initialise ou met à jour les données du menu depuis le fichier JSON via external_id."""
     db = next(get_db())
     
-    # Vérifier si des données existent déjà
-    existing_categories = db.query(Category).count()
-    if existing_categories > 0:
-        print(f"✅ {existing_categories} catégories existent déjà. Skipping init...")
-        return
+    # Charger les données depuis le JSON
+    data = load_menu_data()
     
-    # Créer les catégories
-    categories_data = [
-        {"name": "BOULANGER'INT", "display_order": 1, "active": True},
-        {"name": "LE GRAS C'EST LA VIE", "display_order": 2, "active": True},
-        {"name": "EXOT'INT", "display_order": 3, "active": True},
-        {"name": "SHOTGUN", "display_order": 4, "active": True},
-        {"name": "BOISSONS", "display_order": 5, "active": True},
-        {"name": "ABSINTHE", "display_order": 6, "active": True},
-        {"name": "VIEUX", "display_order": 7, "active": True},
-    ]
+    # 1. CATÉGORIES
+    print("🔄 Syncing Categories...")
+    categories_map = {}  # external_id -> db_obj
     
-    categories = {}
-    for cat_data in categories_data:
-        category = Category(**cat_data)
-        db.add(category)
+    for cat_data in data["categories"]:
+        ext_id = cat_data.pop("id")
+        name = cat_data["name"]
+        
+        # Chercher existant par ID ou Nom
+        category = db.query(Category).filter((Category.external_id == ext_id) | (Category.name == name)).first()
+        
+        if category:
+            # Update
+            if not category.external_id:
+                category.external_id = ext_id
+                print(f"  🔗 Linked legacy category to id: {ext_id}")
+            
+            for key, value in cat_data.items():
+                setattr(category, key, value)
+            print(f"  📝 Updated category: {name}")
+        else:
+            # Create
+            category = Category(external_id=ext_id, **cat_data)
+            db.add(category)
+            print(f"  ✨ Created category: {name}")
+            
         db.flush()
-        categories[cat_data["name"]] = category.id
-    
-    # Créer les items pour "Les offres"
-    menu_items = [
-        {
-            "category_id": categories["BOULANGER'INT"],
-            "name": "Focaccia + Tiramisu",
-            "description": "Focaccia et Tiramisu",
-            "price": 1,
-            "tag": "Le français",
-            "accent_color": "#f59e0b",
-            "item_type": "menu",
-            "display_order": 1,
-        },
-        {
-            "category_id": categories["BOULANGER'INT"],
-            "name": "Sandwich poulet halal + Tiramisu",
-            "description": "Sandwich gourmand poulet halal et Tiramisu",
-            "price": 1,
-            "tag": "Le français",
-            "accent_color": "#f59e0b",
-            "item_type": "menu",
-            "display_order": 2,
-        },
-        {
-            "category_id": categories["LE GRAS C'EST LA VIE"],
-            "name": "Rizotto + Doughnut",
-            "description": "Rizotto et Doughnut comme dans le nom",
-            "price": 1,
-            "tag": "Le gras",
-            "accent_color": "#84f50b",
-            "item_type": "menu",
-            "display_order": 1,
-        },
-        {
-            "category_id": categories["EXOT'INT"],
-            "name": "Nouilles patates chinoises",
-            "description": "",
-            "price": 1,
-            "tag": "Exotique",
-            "accent_color": "#0b59f5",
-            "item_type": "menu",
-            "display_order": 1,
-        },
-        {
-            "category_id": categories["EXOT'INT"],
-            "name": "Sandwich sucré",
-            "description": "fruit + pain epice + fromage de chevre",
-            "price": 1,
-            "tag": "Exotique",
-            "accent_color": "#0b59f5",
-            "item_type": "menu",
-            "display_order": 2,
-        },
-        {
-            "category_id": categories["BOISSONS"],
-            "name": "Coca-Cola",
-            "description": "",
-            "price": 0,
-            "tag": "Boisson",
-            "accent_color": "#0bc6f5",
-            "item_type": "boisson",
-            "display_order": 1,
-        },
-        {
-            "category_id": categories["BOISSONS"],
-            "name": "Fanta",
-            "description": "",
-            "price": 0,
-            "tag": "Boisson",
-            "accent_color": "#0bc6f5",
-            "item_type": "boisson",
-            "display_order": 2,
-        },
-        {
-            "category_id": categories["BOISSONS"],
-            "name": "Schweppes",
-            "description": "",
-            "price": 0,
-            "tag": "Boisson",
-            "accent_color": "#0bc6f5",
-            "item_type": "boisson",
-            "display_order": 3,
-        },
-        {
-            "category_id": categories["BOISSONS"],
-            "name": "Sprite",
-            "description": "",
-            "price": 0,
-            "tag": "Boisson",
-            "accent_color": "#0bc6f5",
-            "item_type": "boisson",
-            "display_order": 4,
-        },
-        {
-            "category_id": categories["BOISSONS"],
-            "name": "Premix",
-            "description": "",
-            "price": 0,
-            "tag": "Boisson",
-            "accent_color": "#0bc6f5",
-            "item_type": "boisson",
-            "display_order": 5,
-        },
-        {
-            "category_id": categories["ABSINTHE"],
-            "name": "Bière",
-            "description": "UNIQUEMENT POUR LES ABSINTHE",
-            "price": 0,
-            "tag": "Option",
-            "accent_color": "#9b5de5",
-            "item_type": "upsell",
-            "display_order": 1,
-        },
-        {
-            "category_id": categories["VIEUX"],
-            "name": "Poulet grillé",
-            "description": "UNIQUEMENT POUR LES VIEUX, ",
-            "price": 0,
-            "tag": "Option",
-            "accent_color": "#9b5de5",
-            "item_type": "upsell",
-            "display_order": 1,
-        },
-        {
-            "category_id": categories["SHOTGUN"],
-            "name": "Miche de pain",
-            "description": "Shotgun Miche de pain maison, faut etre rapide",
-            "price": 0,
-            "tag": "Option",
-            "accent_color": "#9b5de5",
-            "item_type": "upsell",
-            "display_order": 1,
+        categories_map[ext_id] = category
+
+    # 2. MENUS
+    print("\n🔄 Syncing Menus...")
+    for menu_data in data["menus"]:
+        cat_ext_id = menu_data.pop("category")
+        ext_id = menu_data.pop("id")
+        name = menu_data["name"]
+        
+        category = categories_map.get(cat_ext_id)
+        if not category:
+            print(f"  ⚠️ Category {cat_ext_id} not found for menu {name}")
+            continue
+
+        menu_item = db.query(MenuItem).filter((MenuItem.external_id == ext_id) | (MenuItem.name == name)).first()
+        
+        menu_payload = {
+            "category_id": category.id,
+            **menu_data
         }
-    ]
-    
-    for item_data in menu_items:
-        menu_item = MenuItem(**item_data)
-        db.add(menu_item)
-        db.flush() # Ensure ID is generated and object is attached
 
-        # Exemples de limites
-        if menu_item.name == "le normal" and menu_item.item_type == "menu":
-             # Limite de 50 menus entre 12h et 14h
-             limit_lunch = MenuItemLimit(
-                 menu_item_id=menu_item.id,
-                 start_time=time(12, 0),
-                 end_time=time(14, 0),
-                 max_quantity=50,
-                 current_quantity=50 # Init avec max
-             )
-             db.add(limit_lunch)
-             
-             # Limite de 30 menus le soir 19h-21h
-             limit_dinner = MenuItemLimit(
-                 menu_item_id=menu_item.id,
-                 start_time=time(19, 0),
-                 end_time=time(21, 0),
-                 max_quantity=30,
-                 current_quantity=30 # Init avec max
-             )
-             db.add(limit_dinner)
+        if menu_item:
+            if not menu_item.external_id:
+                menu_item.external_id = ext_id
+                print(f"  🔗 Linked legacy menu to id: {ext_id}")
 
-             # Set warning threshold
-             menu_item.low_stock_threshold = 90
-             db.add(menu_item)
+            for key, value in menu_payload.items():
+                setattr(menu_item, key, value)
+            print(f"  📝 Updated menu: {name}")
+        else:
+            menu_item = MenuItem(external_id=ext_id, **menu_payload)
+            db.add(menu_item)
+            print(f"  ✨ Created menu: {name}")
 
-        elif menu_item.name == "Boisson fraîche":
-             # Pas de limite (infini) de 6h à 23h
-             limit_day = MenuItemLimit(
-                 menu_item_id=menu_item.id,
-                 start_time=time(6, 0),
-                 end_time=time(23, 0),
-                 max_quantity=None, # Infini
-                 current_quantity=None
-             )
-             db.add(limit_day)
+    # 3. BOISSONS
+    print("\n🔄 Syncing Drinks...")
+    cat_boissons = categories_map.get("cat_boissons")
+    for boisson_data in data["boissons"]:
+        ext_id = boisson_data.pop("id")
+        name = boisson_data["name"]
+        
+        boisson = db.query(MenuItem).filter((MenuItem.external_id == ext_id) | (MenuItem.name == name)).first()
+        
+        payload = {
+            "category_id": cat_boissons.id,
+            "item_type": "boisson",
+            **boisson_data
+        }
+
+        if boisson:
+            if not boisson.external_id:
+                boisson.external_id = ext_id
+                print(f"  🔗 Linked legacy drink to id: {ext_id}")
+                
+            for key, value in payload.items():
+                setattr(boisson, key, value)
+            print(f"  📝 Updated drink: {name}")
+        else:
+            boisson = MenuItem(external_id=ext_id, **payload)
+            db.add(boisson)
+            print(f"  ✨ Created drink: {name}")
+
+    # 4. EXTRAS
+    print("\n🔄 Syncing Extras...")
+    cat_extra = categories_map.get("cat_extra")
+    for extra_data in data["extras"]:
+        ext_id = extra_data.pop("id")
+        name = extra_data["name"]
+        
+        extra = db.query(MenuItem).filter((MenuItem.external_id == ext_id) | (MenuItem.name == name)).first()
+        
+        payload = {
+            "category_id": cat_extra.id,
+            "item_type": "upsell",
+            **extra_data
+        }
+
+        if extra:
+            if not extra.external_id:
+                extra.external_id = ext_id
+                print(f"  🔗 Linked legacy extra to id: {ext_id}")
+                
+            for key, value in payload.items():
+                setattr(extra, key, value)
+            print(f"  📝 Updated extra: {name}")
+        else:
+            extra = MenuItem(external_id=ext_id, **payload)
+            db.add(extra)
+            print(f"  ✨ Created extra: {name}")
     
     db.commit()
-    
-    print(f"✅ Créé {len(categories_data)} catégories")
-    print(f"✅ Créé {len(menu_items)} items menu")
-    print("\nCatégories:")
-    for cat_name, cat_id in categories.items():
-        count = db.query(MenuItem).filter(MenuItem.category_id == cat_id).count()
-        print(f"  - {cat_name} (id={cat_id}): {count} items")
+    print("\n✅ Database sync completed!")
 
 
 if __name__ == "__main__":

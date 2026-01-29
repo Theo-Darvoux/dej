@@ -10,10 +10,15 @@ type PaymentSuccessProps = {
 const PaymentSuccess = ({ onClose }: PaymentSuccessProps) => {
     const [status, setStatus] = useState<PaymentStatus>('loading')
     const [message, setMessage] = useState('')
+    const [statusToken, setStatusToken] = useState<string | null>(null)
 
     useEffect(() => {
         const verifyPayment = async () => {
-            const checkoutIntentId = localStorage.getItem('checkout_intent_id')
+            const params = new URLSearchParams(window.location.search)
+            const urlIntentId = params.get('checkoutIntentId')
+            const storedIntentId = localStorage.getItem('checkout_intent_id')
+
+            const checkoutIntentId = urlIntentId || storedIntentId
 
             if (!checkoutIntentId) {
                 setStatus('error')
@@ -28,9 +33,12 @@ const PaymentSuccess = ({ onClose }: PaymentSuccessProps) => {
                 if (data.success) {
                     setStatus('success')
                     setMessage('Ta commande a bien été enregistrée !')
-                    // Clear stored data
-                    localStorage.removeItem('checkout_intent_id')
-                    localStorage.removeItem('pending_reservation_id')
+                    setStatusToken(data.status_token)
+                    // Clear stored data only if we were the ones who put it there
+                    if (storedIntentId === checkoutIntentId) {
+                        localStorage.removeItem('checkout_intent_id')
+                        localStorage.removeItem('pending_reservation_id')
+                    }
                 } else {
                     setStatus('error')
                     setMessage(data.message || 'Le paiement n\'a pas pu être vérifié')
@@ -43,6 +51,14 @@ const PaymentSuccess = ({ onClose }: PaymentSuccessProps) => {
 
         verifyPayment()
     }, [])
+
+    const handleViewOrder = () => {
+        if (statusToken) {
+            window.location.href = `/order/status/${statusToken}`
+        } else {
+            onClose()
+        }
+    }
 
     return (
         <div className="payment-return">
@@ -63,7 +79,10 @@ const PaymentSuccess = ({ onClose }: PaymentSuccessProps) => {
                         <p className="payment-return__details">
                             Tu recevras un email de confirmation avec les détails de ta commande.
                         </p>
-                        <button className="payment-return__btn" onClick={onClose}>
+                        <button className="payment-return__btn payment-return__btn--primary" onClick={handleViewOrder}>
+                            📊 Voir ma commande
+                        </button>
+                        <button className="payment-return__btn payment-return__btn--secondary" onClick={onClose}>
                             Retour à l'accueil
                         </button>
                     </>
@@ -85,3 +104,4 @@ const PaymentSuccess = ({ onClose }: PaymentSuccessProps) => {
 }
 
 export default PaymentSuccess
+

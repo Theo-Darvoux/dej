@@ -41,3 +41,78 @@ async def get_current_user_details(
             "phone": user.phone
         } if has_active_order else None
     }
+
+
+@router.get("/order/status/{status_token}")
+async def get_order_status(
+    status_token: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Récupérer le statut d'une commande via un token unique.
+    Endpoint public (pas d'authentification requise).
+    """
+    user = db.query(User).options(
+        joinedload(User.menu_item),
+        joinedload(User.boisson_item),
+        joinedload(User.bonus_item)
+    ).filter(User.status_token == status_token).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Commande non trouvée"
+        )
+    
+    # Construire l'adresse
+    if user.habite_residence:
+        adresse = f"Maisel {user.adresse_if_maisel.value if user.adresse_if_maisel else ''} - Ch {user.numero_if_maisel}"
+    else:
+        adresse = user.adresse or "Non renseignée"
+    
+    # Construire la liste des produits
+    produits = []
+    if user.menu_item:
+        produits.append({
+            "name": user.menu_item.name,
+            "price": user.menu_item.price,
+            "category": "Menu"
+        })
+    if user.boisson_item:
+        produits.append({
+            "name": user.boisson_item.name,
+            "price": user.boisson_item.price,
+            "category": "Boisson"
+        })
+    if user.bonus_item:
+        produits.append({
+            "name": user.bonus_item.name,
+            "price": user.bonus_item.price,
+            "category": "Supplément"
+        })
+    
+    return {
+        "prenom": user.prenom,
+        "nom": user.nom,
+        "status": user.status,
+        "payment_status": user.payment_status,
+        "date_reservation": "2026-02-07",  # Date fixe de l'événement
+        "heure_reservation": user.heure_reservation.strftime("%H:%M") if user.heure_reservation else None,
+        "adresse": adresse,
+        "phone": user.phone,
+        "special_requests": user.special_requests,
+        "produits": produits,
+        "total_amount": user.total_amount,
+        "payment_date": user.payment_date.isoformat() if user.payment_date else None,
+        "contacts": {
+            "responsable1": {
+                "name": "Théo DARVOUX",
+                "email": "theo.darvoux@telecom-sudparis.eu"
+            },
+            "responsable2": {
+                "name": "Solène CHAMPION",
+                "email": "solene.champion@telecom-sudparis.eu"
+            }
+        }
+    }
+

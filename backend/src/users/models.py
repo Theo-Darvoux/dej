@@ -34,6 +34,7 @@ class User(Base):
     
     # Contact et commande
     phone = Column(String, nullable=True)
+    special_requests = Column(String, nullable=True)  # Demandes spéciales client
     total_amount = Column(Float, nullable=False, default=0.0)
     
     # Paiement
@@ -47,6 +48,7 @@ class User(Base):
     last_ip = Column(String, nullable=True)
     user_type = Column(String, nullable=True)  # None (normal), "Listeux", "admin"
     status = Column(String, default="confirmed")
+    status_token = Column(String, nullable=True, index=True)  # Token unique pour page statut commande
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     

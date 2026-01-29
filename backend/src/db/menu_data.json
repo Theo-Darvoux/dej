@@ -1,0 +1,134 @@
+{
+    "categories": [
+        {
+            "id": "cat_boulanger",
+            "name": "Boulanger'INT",
+            "display_order": 1,
+            "active": true
+        },
+        {
+            "id": "cat_gourmand",
+            "name": "Gourmand'INT",
+            "display_order": 2,
+            "active": true
+        },
+        {
+            "id": "cat_veget",
+            "name": "Végét'INT",
+            "display_order": 3,
+            "active": true
+        },
+        {
+            "id": "cat_boissons",
+            "name": "BOISSONS",
+            "display_order": 4,
+            "active": true
+        },
+        {
+            "id": "cat_extra",
+            "name": "Extra",
+            "display_order": 5,
+            "active": true
+        }
+    ],
+    "menus": [
+        {
+            "id": "menu_boulanger",
+            "category": "cat_boulanger",
+            "name": "Menu Boulanger'INT",
+            "description": "le best",
+            "items": [
+                "Focaccia au poulet (halal).",
+                "Tiramisu maison."
+            ],
+            "price": 1.00,
+            "tag": "Classique",
+            "accent_color": "#eab308",
+            "item_type": "menu",
+            "display_order": 1,
+            "image_url": "/ads/pub1_focaccia.webp"
+        },
+        {
+            "id": "menu_gourmand",
+            "category": "cat_gourmand",
+            "name": "Menu Gourmand'INT",
+            "description": "gourmaaaandd va",
+            "items": [
+                "Sandwich au chèvre et aux fruits sur pain d'épices.",
+                "Tartelettes au citron.",
+                "Chouquettes."
+            ],
+            "price": 1.00,
+            "tag": "Gourmand",
+            "accent_color": "#ef4444",
+            "item_type": "menu",
+            "display_order": 1,
+            "image_url": "/ads/pub2_risotto.webp"
+        },
+        {
+            "id": "menu_veget",
+            "category": "cat_veget",
+            "name": "Menu Végét'INT",
+            "description": "Le menu végétalien",
+            "items": [
+                "Risotto végétalien.",
+                "Donut au chocolat."
+            ],
+            "price": 1.00,
+            "tag": "Végétalien",
+            "accent_color": "#22c55e",
+            "item_type": "menu",
+            "display_order": 1,
+            "image_url": "/ads/pub4_exotint.webp"
+        }
+    ],
+    "boissons": [
+        {
+            "id": "drink_coca",
+            "name": "Coca",
+            "description": "33cl",
+            "price": 0,
+            "tag": "Froid",
+            "accent_color": "#ef4444",
+            "display_order": 1
+        },
+        {
+            "id": "drink_icetea",
+            "name": "Ice Tea",
+            "description": "33cl",
+            "price": 0,
+            "tag": "Froid",
+            "accent_color": "#f97316",
+            "display_order": 2
+        },
+        {
+            "id": "drink_eau",
+            "name": "Eau",
+            "description": "50cl",
+            "price": 0,
+            "tag": "Froid",
+            "accent_color": "#3b82f6",
+            "display_order": 3
+        }
+    ],
+    "extras": [
+        {
+            "id": "extra_chouffe",
+            "name": "Chouffe",
+            "description": "Bière forte",
+            "price": 0,
+            "tag": "Absinthe",
+            "accent_color": "#d97706",
+            "display_order": 2
+        },
+        {
+            "id": "extra_poulet",
+            "name": "Poulet roti",
+            "description": "Cuisse de poulet",
+            "price": 0,
+            "tag": "3A+",
+            "accent_color": "#9333ea",
+            "display_order": 3
+        }
+    ]
+}

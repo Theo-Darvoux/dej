@@ -159,10 +159,24 @@ const InfoPopup = ({
         parseFloat(amount.replace(',', '.').replace(' €', '')) * 100
       )
 
-      // Get user info from reservationData or use defaults
-      const payerFirstName = 'Client'
-      const payerLastName = "Mc'INT"
-      const payerEmail = localStorage.getItem('user_email') || 'client@mcint.fr'
+      // Fetch user info from API
+      let payerFirstName = 'Client'
+      let payerLastName = "Mc'INT"
+      let payerEmail = 'client@mcint.fr'
+
+      try {
+        const userResponse = await fetch('/api/users/me', {
+          credentials: 'include'
+        })
+        if (userResponse.ok) {
+          const userData = await userResponse.json()
+          if (userData.prenom) payerFirstName = userData.prenom
+          if (userData.nom) payerLastName = userData.nom
+          if (userData.email) payerEmail = userData.email
+        }
+      } catch (e) {
+        console.warn('Could not fetch user info, using defaults')
+      }
 
       // Create checkout intent
       const response = await fetch('/api/payments/checkout', {

@@ -102,6 +102,19 @@ const LandingPage = ({ onStart, onViewRecap }: LandingPageProps) => {
                     {hasCompletedOrder ? "Tu as déjà une commande confirmée" : "Appuyez sur l'écran pour commencer"}
                 </p>
             </div>
+
+            {/* Contact Info */}
+            <div className="landing__contact">
+                <p>📞 Pour tout changement ou réclamation&nbsp;:</p>
+                <div className="landing__contact-people">
+                    <a href="tel:+33661737785" onClick={(e) => e.stopPropagation()}>
+                        <strong>Solène CHAMPION</strong><br />06 61 73 77 85
+                    </a>
+                    <a href="tel:+33762357719" onClick={(e) => e.stopPropagation()}>
+                        <strong>Théo DARVOUX</strong><br />07 62 35 77 19
+                    </a>
+                </div>
+            </div>
         </div>
     )
 }

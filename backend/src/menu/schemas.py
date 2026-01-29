@@ -9,8 +9,11 @@ class CategoryResponse(BaseModel):
 
 
 class MenuItemResponse(BaseModel):
+    id: str
+    category_id: str
     title: str
     subtitle: str
+    items: list[str] | None = None
     tag: str | None = None
     accent: str | None = None
     item_type: str
