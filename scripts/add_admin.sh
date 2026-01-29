@@ -104,7 +104,7 @@ remove_admin() {
 
     # Verifier si l'utilisateur existe et est admin
     local current_type
-    current_type=$(query_sql "SELECT user_type FROM users WHERE normalized_email = '$normalized_email';")
+    current_type=$(query_sql "SELECT user_type FROM users WHERE email = '$email';")
 
     if [ -z "$current_type" ]; then
         echo -e "${RED}Erreur: Utilisateur '$email' non trouve.${NC}"
@@ -117,7 +117,7 @@ remove_admin() {
     fi
 
     # Retirer les droits admin
-    run_sql "UPDATE users SET user_type = NULL WHERE normalized_email = '$normalized_email';" > /dev/null
+    run_sql "UPDATE users SET user_type = NULL WHERE email = '$email';" > /dev/null
     echo -e "${GREEN}Droits admin retires pour '$email'.${NC}"
 }
 
@@ -138,17 +138,20 @@ add_admin() {
     echo ""
 
     # Verifier si l'utilisateur existe deja
-    local existing
-    existing=$(query_sql "SELECT user_type FROM users WHERE normalized_email = '$normalized_email';")
+    local existing_email
+    existing_email=$(query_sql "SELECT email FROM users WHERE email = '$email';")
 
-    if [ -n "$existing" ]; then
-        if [ "$existing" = "admin" ]; then
+    if [ -n "$existing_email" ]; then
+        local current_type
+        current_type=$(query_sql "SELECT user_type FROM users WHERE email = '$email';")
+
+        if [ "$current_type" = "admin" ]; then
             echo -e "${GREEN}L'utilisateur '$email' est deja administrateur.${NC}"
             exit 0
         fi
 
         # Mettre a jour l'utilisateur existant
-        run_sql "UPDATE users SET user_type = 'admin' WHERE normalized_email = '$normalized_email';" > /dev/null
+        run_sql "UPDATE users SET user_type = 'admin' WHERE email = '$email';" > /dev/null
         echo -e "${GREEN}Utilisateur '$email' promu administrateur.${NC}"
     else
         # Creer un nouvel utilisateur admin
