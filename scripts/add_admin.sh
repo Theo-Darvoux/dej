@@ -56,7 +56,7 @@ fi
 
 # Fonctions SQL
 run_sql() {
-    docker exec "$DB_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$1" 2>/dev/null
+    docker exec "$DB_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$1"
 }
 
 query_sql() {
@@ -152,8 +152,8 @@ add_admin() {
         echo -e "${GREEN}Utilisateur '$email' promu administrateur.${NC}"
     else
         # Creer un nouvel utilisateur admin
-        run_sql "INSERT INTO users (email, normalized_email, user_type, email_verified, is_cotisant, created_at, updated_at)
-                 VALUES ('$email', '$normalized_email', 'admin', true, true, NOW(), NOW());" > /dev/null
+        run_sql "INSERT INTO users (email, normalized_email, user_type, email_verified, is_cotisant, created_at, updated_at, total_amount)
+                 VALUES ('$email', '$normalized_email', 'admin', true, true, NOW(), NOW(), 0);" > /dev/null
         echo -e "${GREEN}Nouvel administrateur '$email' cree.${NC}"
     fi
 
