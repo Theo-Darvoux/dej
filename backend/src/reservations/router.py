@@ -257,7 +257,21 @@ async def create_reservation(
     # VALIDATION 4: Vérifier que les items menu existent et correspondent au bon type
     # Groupes de catégories mutuellement exclusives pour les menus
     # On ne peut prendre qu'UN SEUL item parmi toutes ces catégories
-    EXCLUSIVE_MENU_CATEGORIES = ["BOULANGER'INT", "LE GRAS C'EST LA VIE", "EXOT'INT"]
+    EXCLUSIVE_MENU_CATEGORIES = []
+    # Dynamic loading of exclusive categories from JSON
+    # We identify "Menu" categories as those that contain items in the "menus" list
+    menu_data = load_menu_data()
+    
+    # Get all category IDs used by menus
+    menu_category_ids = set()
+    for m in menu_data.get("menus", []):
+        menu_category_ids.add(m.get("category"))
+        
+    # Get names for these categories
+    for cat in menu_data.get("categories", []):
+         if cat["id"] in menu_category_ids:
+             EXCLUSIVE_MENU_CATEGORIES.append(cat["name"])
+
     
     # VALIDATION MENU OBLIGATOIRE
     if not request.menu:
