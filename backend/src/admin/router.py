@@ -84,7 +84,12 @@ async def list_orders(
     """Liste toutes les commandes (utilisateurs avec réservations)"""
     require_admin(current_user)
     
-    query = db.query(User).filter(User.menu_id.isnot(None) | User.boisson_id.isnot(None) | User.bonus_id.isnot(None))
+    query = db.query(User).filter(
+        User.menu_id.isnot(None) | 
+        User.boisson_id.isnot(None) | 
+        User.bonus_id.isnot(None) | 
+        (User.payment_status == 'completed')
+    )
     
     if payment_status:
         query = query.filter(User.payment_status == payment_status)
