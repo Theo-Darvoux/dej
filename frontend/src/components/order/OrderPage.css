@@ -1521,6 +1521,19 @@
     outline: none;
 }
 
+.form-group input.input-error {
+    border-color: var(--mcdo-red, #DB0007);
+    background-color: #fff5f5;
+}
+
+.form-group .form-error {
+    display: block;
+    color: var(--mcdo-red, #DB0007);
+    font-size: 0.8rem;
+    margin-top: 6px;
+    font-weight: 500;
+}
+
 .form-row {
     display: flex;
     gap: 16px;

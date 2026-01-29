@@ -345,15 +345,21 @@ async def create_reservation(
     current_user.heure_reservation = reservation_time
     current_user.habite_residence = request.habite_residence
     
-    # VALIDATION téléphone: seulement chiffres et + au début
+    # VALIDATION téléphone: accepte formats français et internationaux
     if request.phone:
+        # Nettoyer: garder uniquement chiffres et + au début
         phone_cleaned = re.sub(r'[^\d+]', '', request.phone)
         # Le + ne peut être qu'au début
-        phone_cleaned = phone_cleaned[0] + phone_cleaned[1:].replace('+', '') if phone_cleaned.startswith('+') else phone_cleaned.replace('+', '')
-        if not re.match(r'^\+?\d{9,12}$', phone_cleaned):
+        if phone_cleaned.startswith('+'):
+            phone_cleaned = '+' + phone_cleaned[1:].replace('+', '')
+        else:
+            phone_cleaned = phone_cleaned.replace('+', '')
+
+        # Validation: 8-15 chiffres, optionnellement précédé de +
+        if not re.match(r'^\+?[0-9]{8,15}$', phone_cleaned):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Numéro de téléphone invalide (format attendu: 0612345678 ou +33612345678)"
+                detail="Numéro de téléphone invalide (ex: 0612345678, +33612345678 ou +32123456789)"
             )
         current_user.phone = phone_cleaned
     else:

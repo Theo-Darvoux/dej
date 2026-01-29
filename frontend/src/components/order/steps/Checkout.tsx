@@ -36,6 +36,51 @@ const Checkout = ({
     const [specialRequests, setSpecialRequests] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [phoneError, setPhoneError] = useState('')
+
+    // Validate phone number (French + international formats)
+    const validatePhone = (phone: string): boolean => {
+        // Remove all spaces, dots, dashes, parentheses
+        const cleaned = phone.replace(/[\s.\-()]/g, '')
+
+        // French formats:
+        // - 0X XX XX XX XX (10 digits starting with 0)
+        // - +33X XX XX XX XX (12 chars starting with +33)
+        // - 0033X XX XX XX XX (13 chars starting with 0033)
+        const frenchMobile = /^0[67]\d{8}$/
+        const frenchLandline = /^0[1-59]\d{8}$/
+        const frenchIntl = /^\+33[1-9]\d{8}$/
+        const frenchIntl2 = /^0033[1-9]\d{8}$/
+
+        // International format: +XX... (8-15 digits after +)
+        // Covers most international numbers
+        const international = /^\+[1-9]\d{7,14}$/
+
+        // Generic format: starts with 0 or digit, 8-15 digits total
+        const generic = /^[0-9]\d{7,14}$/
+
+        return frenchMobile.test(cleaned) ||
+               frenchLandline.test(cleaned) ||
+               frenchIntl.test(cleaned) ||
+               frenchIntl2.test(cleaned) ||
+               international.test(cleaned) ||
+               generic.test(cleaned)
+    }
+
+    const handlePhoneChange = (value: string) => {
+        setFormData({ ...formData, phone: value })
+
+        // Clear error while typing
+        if (phoneError) {
+            setPhoneError('')
+        }
+    }
+
+    const handlePhoneBlur = () => {
+        if (formData.phone && !validatePhone(formData.phone)) {
+            setPhoneError('Numéro de téléphone invalide (ex: 06 12 34 56 78 ou +32 123 456 789)')
+        }
+    }
 
     const total = cartItems.reduce((acc, item) => {
         const price = parseFloat(item.price.replace(',', '.').replace(' €', '') || '0')
@@ -44,6 +89,13 @@ const Checkout = ({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        // Validate phone before submitting
+        if (isInfoStep && formData.phone && !validatePhone(formData.phone)) {
+            setPhoneError('Numéro de téléphone invalide (ex: 06 12 34 56 78 ou +32 123 456 789)')
+            return
+        }
+
         setIsSubmitting(true)
 
         try {
@@ -193,9 +245,13 @@ const Checkout = ({
                             type="tel"
                             required
                             value={formData.phone}
-                            onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                            onChange={e => handlePhoneChange(e.target.value)}
+                            onBlur={handlePhoneBlur}
                             placeholder="06 12 34 56 78"
+                            className={phoneError ? 'input-error' : ''}
+                            autoComplete="tel"
                         />
+                        {phoneError && <span className="form-error">{phoneError}</span>}
                     </div>
 
                     <button
