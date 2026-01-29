@@ -190,6 +190,7 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
                         isInfoStep={false}
                         deliveryInfo={deliveryInfo}
                         userEmail={userEmail}
+                        userPhone={userInfo.phone}
                     />
                 )}
             </main>

@@ -13,6 +13,7 @@ type CheckoutProps = {
     isInfoStep?: boolean
     deliveryInfo?: DeliveryInfo | null
     userEmail?: string
+    userPhone?: string
     initialUserInfo?: UserInfo
     onInfoContinue?: (info: UserInfo) => void
 }
@@ -24,6 +25,7 @@ const Checkout = ({
     isInfoStep = false,
     deliveryInfo,
     userEmail,
+    userPhone,
     initialUserInfo,
     onInfoContinue
 }: CheckoutProps) => {
@@ -87,7 +89,50 @@ const Checkout = ({
             console.warn('Could not fetch user info, using defaults')
         }
 
-        // Create checkout intent
+        // Extract items by type from cart
+        const menuItem = cartItems.find(item => item.item_type === 'menu')
+        const boissonItem = cartItems.find(item => item.item_type === 'boisson')
+        const bonusItem = cartItems.find(item => item.item_type === 'upsell')
+
+        // Extract time slot start hour (format: "08:00-09:00" -> "08:00")
+        const timeSlotStart = deliveryInfo?.timeSlot?.split('-')[0] || '12:00'
+
+        // Step 1: Create reservation with order details
+        const reservationData = {
+            date_reservation: '2026-02-07',
+            heure_reservation: timeSlotStart,
+            habite_residence: deliveryInfo?.locationType === 'maisel',
+            numero_chambre: deliveryInfo?.room || null,
+            numero_immeuble: deliveryInfo?.building || null,
+            adresse: deliveryInfo?.address || null,
+            phone: userPhone || null,
+            special_requests: specialRequests || null,
+            menu: menuItem?.title || null,
+            boisson: boissonItem?.title || null,
+            bonus: bonusItem?.title || null,
+        }
+
+        console.log('[Checkout] Creating reservation:', reservationData)
+
+        const reservationResponse = await fetch('/api/reservations/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(reservationData),
+        })
+
+        if (!reservationResponse.ok) {
+            const errorData = await reservationResponse.json().catch(() => ({}))
+            throw new Error(errorData.detail || 'Erreur lors de la création de la réservation')
+        }
+
+        const reservation = await reservationResponse.json()
+        console.log('[Checkout] Reservation created:', reservation)
+
+        // Store reservation ID for payment
+        localStorage.setItem('pending_reservation_id', reservation.id?.toString() || '')
+
+        // Step 2: Create checkout intent
         const response = await fetch('/api/payments/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -98,7 +143,7 @@ const Checkout = ({
                 payer_email: payerEmail,
                 payer_first_name: payerFirstName,
                 payer_last_name: payerLastName,
-                reservation_id: parseInt(localStorage.getItem('pending_reservation_id') || '0'),
+                reservation_id: reservation.id,
             }),
         })
 
