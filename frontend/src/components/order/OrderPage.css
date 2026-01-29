@@ -2354,8 +2354,30 @@
 }
 
 .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 0.8rem;
     color: #666;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legend-dot.green {
+    background-color: #4caf50;
+}
+
+.legend-dot.orange {
+    background-color: #ff9800;
+}
+
+.legend-dot.gray {
+    background-color: #9e9e9e;
 }
 
 /* Continue Button */

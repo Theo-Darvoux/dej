@@ -342,9 +342,9 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
                     </div>
                 )}
                 <div className="time-slots-legend">
-                    <span className="legend-item available">Disponible</span>
-                    <span className="legend-item limited">Dernières places</span>
-                    <span className="legend-item full">Complet</span>
+                    <span className="legend-item available"><span className="legend-dot green"></span> Disponible</span>
+                    <span className="legend-item limited"><span className="legend-dot orange"></span> Dernières places</span>
+                    <span className="legend-item full"><span className="legend-dot gray"></span> Complet</span>
                 </div>
             </div>
 
