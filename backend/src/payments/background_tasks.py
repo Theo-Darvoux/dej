@@ -35,11 +35,9 @@ async def check_pending_payments():
             try:
                 # Find all users with pending payments
                 # Only check payments that have a checkout_intent_id
-                pending_users = db.query(User).options(
-                    joinedload(User.menu_item),
-                    joinedload(User.boisson_item),
-                    joinedload(User.bonus_item)
-                ).filter(
+                # Find all users with pending payments
+                # Only check payments that have a checkout_intent_id
+                pending_users = db.query(User).filter(
                     User.payment_status == "pending",
                     User.payment_intent_id.isnot(None)
                 ).all()

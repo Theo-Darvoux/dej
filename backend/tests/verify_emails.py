@@ -10,7 +10,6 @@ sys.path.append("/app")
 
 from src.auth.service import normalize_email, request_verification_code, ALLOWED_DOMAINS
 from src.users.models import User
-from src.menu.models import MenuItem # Import MenuItem to register its table
 from src.db.base import Base
 from src.core.exceptions import InvalidEmailException
 
