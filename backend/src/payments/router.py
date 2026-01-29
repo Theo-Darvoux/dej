@@ -119,19 +119,53 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
 
         # Store checkout_intent_id on user for later retrieval
         # This is crucial since HelloAsso may not return metadata in GET requests
-        if checkout_request.reservation_id:
-            db = SessionLocal()
-            try:
+        db = SessionLocal()
+        try:
+            user = None
+
+            # Strategy 1: Find by reservation_id if provided
+            if checkout_request.reservation_id:
                 user = db.query(User).filter(User.id == checkout_request.reservation_id).first()
                 if user:
-                    user.payment_intent_id = checkout_intent_id
-                    # Generate status_token if missing
-                    if not user.status_token:
-                        user.status_token = secrets.token_urlsafe(32)
-                    db.commit()
-                    print(f"[DEBUG] Stored checkout_intent_id {checkout_intent_id} for user {user.id}")
-            finally:
-                db.close()
+                    print(f"[DEBUG] Found user by reservation_id: {user.id}")
+
+            # Strategy 2: Fallback to finding by email with pending payment
+            if not user and checkout_request.payer_email:
+                from src.auth.service import normalize_email
+                try:
+                    _, identity = normalize_email(checkout_request.payer_email)
+                except Exception:
+                    identity = None
+
+                query = db.query(User).filter(
+                    User.menu_id.isnot(None),  # Has an order
+                    User.payment_status.in_([None, "pending"]),  # Not yet paid
+                )
+                if identity:
+                    query = query.filter(
+                        or_(
+                            User.normalized_email == identity,
+                            User.email == checkout_request.payer_email
+                        )
+                    )
+                else:
+                    query = query.filter(User.email == checkout_request.payer_email)
+
+                user = query.order_by(User.created_at.desc()).first()
+                if user:
+                    print(f"[DEBUG] Found user by email fallback: {user.id} ({user.email})")
+
+            if user:
+                user.payment_intent_id = checkout_intent_id
+                # Generate status_token if missing
+                if not user.status_token:
+                    user.status_token = secrets.token_urlsafe(32)
+                db.commit()
+                print(f"[DEBUG] Stored checkout_intent_id {checkout_intent_id} for user {user.id}")
+            else:
+                print(f"[WARNING] No user found for checkout (reservation_id: {checkout_request.reservation_id}, email: {checkout_request.payer_email})")
+        finally:
+            db.close()
 
         return CheckoutResponse(
             redirect_url=result["redirectUrl"],
