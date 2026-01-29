@@ -9,7 +9,7 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import joinedload
 
 # Interval between payment checks (in seconds)
-PAYMENT_CHECK_INTERVAL = 60
+PAYMENT_CHECK_INTERVAL = 300
 
 
 async def check_pending_payments():

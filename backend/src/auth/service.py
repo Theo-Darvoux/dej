@@ -22,8 +22,6 @@ from src.auth.schemas import TokenResponse
 
 ALLOWED_DOMAINS = [
     "imt-bs.eu",
-    "imtbs-tsp.eu",
-    "it-sudparis.eu",
     "telecom-sudparis.eu"
 ]
 
@@ -182,10 +180,8 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
         user.code_created_at = None
         db.commit()
         raise CodeExpiredException()
-    #TODO FIN
-    # Vérifier avec BDE API
+
     is_cotisant = await verify_with_bde(email)
-    #is_cotisant=True # TODO: à supprimer
 
     # Extraire prénom/nom depuis l'email (format prenom.nom@...)
     try:
@@ -196,7 +192,6 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
             user.prenom = prenom_raw.strip().capitalize()
             user.nom = nom_raw.strip().capitalize()
     except Exception:
-        # Ne bloque pas la vérification si parsing échoue
         user.prenom = ""
         user.nom = ""
         pass

@@ -4,25 +4,15 @@ from pathlib import Path
 from typing import List
 
 from .schemas import CategoryResponse, MenuItemResponse
+from .utils import load_menu_data
 
 router = APIRouter(tags=["menu"])
 
-def load_menu_json():
-    # Helper to load JSON data
-    # Assuming the json is at src/db/menu_data.json relative to project root or similar
-    # Adjust path as necessary. based on init_menu.py: src/db/menu_data.json
-    try:
-        json_path = Path(__file__).parent.parent / "db" / "menu_data.json"
-        with open(json_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"Error loading menu data: {e}")
-        return {"categories": [], "menus": [], "boissons": [], "extras": []}
 
 @router.get("/categories", response_model=List[CategoryResponse])
 def get_categories():
     """Get all active menu categories."""
-    data = load_menu_json()
+    data = load_menu_data()
     
     categories = []
     for cat in data.get("categories", []):
@@ -39,7 +29,7 @@ def get_categories():
 @router.get("/items", response_model=List[MenuItemResponse])
 def get_menu_items(category_id: str | None = None):
     """Get all available menu items, optionally filtered by category."""
-    data = load_menu_json()
+    data = load_menu_data()
     all_items = []
     
     # Process Menus
