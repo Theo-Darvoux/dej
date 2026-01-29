@@ -159,7 +159,10 @@ async def delete_order(
     user.date_reservation = None
     user.heure_reservation = None
     user.total_amount = 0.0
-    user.payment_status = "pending"
+    user.payment_status = None
+    user.payment_intent_id = None
+    user.payment_date = None
+    user.payment_attempts = 0
     user.status = "confirmed"
     
     db.commit()
