@@ -22,32 +22,36 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
     Create a HelloAsso Checkout Intent.
     Returns a redirect URL to send the user to HelloAsso payment page.
     """
+    from src.db.session import SessionLocal
+    from src.users.models import User
+    import secrets
+
     try:
         # Build URLs for HelloAsso redirects (must be HTTPS!)
         # Use HELLOASSO_REDIRECT_BASE_URL if set, otherwise fall back to FRONTEND_URL
         redirect_base = settings.HELLOASSO_REDIRECT_BASE_URL
         if not redirect_base:
             redirect_base = settings.FRONTEND_URL or "http://localhost:5173"
-        
+
         # Remove trailing slash to avoid double slashes
         redirect_base = redirect_base.rstrip('/')
-        
+
         # Ensure HTTPS for HelloAsso (required by their API)
         if not redirect_base.startswith("https://"):
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="HelloAsso requiert une URL HTTPS. Configure HELLOASSO_REDIRECT_BASE_URL dans .env"
             )
-        
+
         return_url = f"{redirect_base}/payment/success"
         error_url = f"{redirect_base}/payment/error"
         back_url = f"{redirect_base}/order"
-        
+
         # Build metadata
         metadata = checkout_request.metadata or {}
         if checkout_request.reservation_id:
             metadata["reservation_id"] = checkout_request.reservation_id
-        
+
         # Create checkout intent
         result = await helloasso_service.create_checkout_intent(
             total_amount=checkout_request.amount,
@@ -61,12 +65,30 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
             metadata=metadata,
             contains_donation=False
         )
-        
+
+        checkout_intent_id = result["id"]
+
+        # Store checkout_intent_id on user for later retrieval
+        # This is crucial since HelloAsso may not return metadata in GET requests
+        if checkout_request.reservation_id:
+            db = SessionLocal()
+            try:
+                user = db.query(User).filter(User.id == checkout_request.reservation_id).first()
+                if user:
+                    user.payment_intent_id = checkout_intent_id
+                    # Generate status_token if missing
+                    if not user.status_token:
+                        user.status_token = secrets.token_urlsafe(32)
+                    db.commit()
+                    print(f"[DEBUG] Stored checkout_intent_id {checkout_intent_id} for user {user.id}")
+            finally:
+                db.close()
+
         return CheckoutResponse(
             redirect_url=result["redirectUrl"],
-            checkout_intent_id=result["id"]
+            checkout_intent_id=checkout_intent_id
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -109,6 +131,8 @@ async def verify_payment(checkout_intent_id: str):
             db = SessionLocal()
             try:
                 user = None
+
+                # Strategy 1: Find by reservation_id from metadata
                 if res_id:
                     user = db.query(User).options(
                         joinedload(User.menu_item),
@@ -117,7 +141,19 @@ async def verify_payment(checkout_intent_id: str):
                     ).filter(User.id == int(res_id)).first()
                     if user:
                         print(f"[DEBUG] User found by reservation_id: {user.id} ({user.email})")
-                
+
+                # Strategy 2: Find by checkout_intent_id stored in payment_intent_id
+                if not user:
+                    print(f"[DEBUG] Attempting to find user by checkout_intent_id: {checkout_intent_id}")
+                    user = db.query(User).options(
+                        joinedload(User.menu_item),
+                        joinedload(User.boisson_item),
+                        joinedload(User.bonus_item)
+                    ).filter(User.payment_intent_id == checkout_intent_id).first()
+                    if user:
+                        print(f"[DEBUG] User found by checkout_intent_id: {user.id} ({user.email})")
+
+                # Strategy 3: Find by payer email (more lenient than before)
                 if not user and payer_email:
                     print(f"[DEBUG] Attempting fallback: finding user by payer email {payer_email}")
 
@@ -128,13 +164,13 @@ async def verify_payment(checkout_intent_id: str):
                     except Exception as e:
                         print(f"[DEBUG] Could not normalize email: {e}")
 
-                    # Recherche robuste : user avec commande valide non-expirée
+                    # Recherche robuste : user avec commande valide
+                    # Don't require payment_status == "pending" anymore (webhook may have changed it)
                     query = db.query(User).options(
                         joinedload(User.menu_item),
                         joinedload(User.boisson_item),
                         joinedload(User.bonus_item)
                     ).filter(
-                        User.payment_status == "pending",  # Seulement en attente de paiement
                         User.menu_id.isnot(None),          # A une commande
                         User.total_amount > 0,             # Montant valide
                     )
@@ -158,27 +194,31 @@ async def verify_payment(checkout_intent_id: str):
                         )
                     )
 
-                    user = query.order_by(User.created_at.desc()).first()
+                    # Prioritize users without completed payment, then by creation date
+                    user = query.order_by(
+                        (User.payment_status != "completed").desc(),
+                        User.created_at.desc()
+                    ).first()
 
                     if user:
-                        print(f"[DEBUG] User found by email fallback: {user.id} (identity: {identity})")
+                        print(f"[DEBUG] User found by email fallback: {user.id} (identity: {identity}, status: {user.payment_status})")
                     else:
-                        print(f"[WARNING] No valid pending user found for email {payer_email} (identity: {identity})")
+                        print(f"[WARNING] No valid user found for email {payer_email} (identity: {identity})")
 
                 if user:
                     # Refresh to ensure we have the latest data from DB (in case of concurrent updates)
                     db.refresh(user)
-                    
+
                     # Log what we found to debug empty emails
-                    print(f"[DEBUG] User {user.id} data: total={user.total_amount}, menu={user.menu_id}, drink={user.boisson_id}, bonus={user.bonus_id}")
-                    
-                    # Générer status_token si absent
+                    print(f"[DEBUG] User {user.id} data: total={user.total_amount}, menu={user.menu_id}, drink={user.boisson_id}, bonus={user.bonus_id}, payment_status={user.payment_status}")
+
+                    # Générer status_token si absent (CRITICAL for order tracking)
                     if not user.status_token:
                         print(f"[DEBUG] Generating new status_token for user {user.id}")
                         user.status_token = secrets.token_urlsafe(32)
                         db.commit()
                     status_token = user.status_token
-                    
+
                     if user.payment_status != "completed":
                         print(f"[DEBUG] Updating payment status to completed for user {user.id}")
                         user.payment_status = "completed"
@@ -186,7 +226,7 @@ async def verify_payment(checkout_intent_id: str):
                         user.payment_date = datetime.now(timezone.utc)
                         db.commit()
                         db.refresh(user)
-                        
+
                         # Envoyer l'email de confirmation
                         try:
                             print(f"[DEBUG] Sending order confirmation email to {user.email}")
@@ -199,6 +239,8 @@ async def verify_payment(checkout_intent_id: str):
                             db.commit()
                         except Exception as e:
                             print(f"[ERROR] Exception during envoi email: {e}")
+                    else:
+                        print(f"[DEBUG] Payment already completed for user {user.id}, skipping email")
                 else:
                     print(f"[ERROR] No user found for this payment (intent: {checkout_intent_id})")
 
