@@ -6,14 +6,63 @@ from src.payments.schemas import (
     CheckoutRequest,
     CheckoutResponse,
     PaymentVerifyRequest,
-    PaymentVerifyResponse
+    PaymentVerifyResponse,
+    PaymentStatusResponse
 )
 from src.payments import helloasso_service
 from src.core.config import settings
 from src.auth.service import normalize_email
 from sqlalchemy import or_
+from sqlalchemy.orm import Session, joinedload
+from datetime import datetime, timezone
+import secrets
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
+
+
+async def complete_payment(user, checkout_intent_id: str, db: Session) -> bool:
+    """
+    Mark a payment as completed and send confirmation email.
+    Returns True if this was a new completion, False if already completed.
+
+    This function is used by:
+    - /status/{checkout_intent_id} endpoint (frontend polling)
+    - /verify/{checkout_intent_id} endpoint (legacy)
+    - /webhook endpoint (HelloAsso callback)
+    - Background task (periodic checking)
+    """
+    from src.mail import send_order_confirmation
+
+    if user.payment_status == "completed":
+        print(f"[DEBUG] complete_payment: user {user.id} already completed, skipping")
+        return False  # Already done
+
+    print(f"[DEBUG] complete_payment: completing payment for user {user.id}")
+
+    user.payment_status = "completed"
+    user.payment_intent_id = checkout_intent_id
+    user.payment_date = datetime.now(timezone.utc)
+
+    if not user.status_token:
+        user.status_token = secrets.token_urlsafe(32)
+
+    db.commit()
+    db.refresh(user)
+
+    # Send confirmation email
+    try:
+        print(f"[DEBUG] complete_payment: sending confirmation email to {user.email}")
+        email_sent = await send_order_confirmation(user)
+        if email_sent:
+            print(f"[DEBUG] complete_payment: email sent successfully to {user.email}")
+        else:
+            print(f"[WARNING] complete_payment: email failed for {user.email}")
+        # Save any changes from email (status_token if modified)
+        db.commit()
+    except Exception as e:
+        print(f"[ERROR] complete_payment: exception during email send: {e}")
+
+    return True
 
 
 @router.post("/checkout", response_model=CheckoutResponse)
@@ -91,6 +140,77 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/status/{checkout_intent_id}", response_model=PaymentStatusResponse)
+async def get_payment_status(checkout_intent_id: str):
+    """
+    Get payment status by polling HelloAsso API.
+    Updates database if payment is newly completed.
+
+    This is the primary endpoint for frontend polling after payment return.
+    """
+    from src.db.session import SessionLocal
+    from src.users.models import User
+
+    db = SessionLocal()
+    try:
+        # Find user by payment_intent_id (stored during checkout creation)
+        user = db.query(User).options(
+            joinedload(User.menu_item),
+            joinedload(User.boisson_item),
+            joinedload(User.bonus_item)
+        ).filter(User.payment_intent_id == checkout_intent_id).first()
+
+        if not user:
+            print(f"[DEBUG] get_payment_status: no user found for intent {checkout_intent_id}")
+            raise HTTPException(status_code=404, detail="Commande introuvable")
+
+        print(f"[DEBUG] get_payment_status: found user {user.id}, current status: {user.payment_status}")
+
+        # If already completed, return immediately without calling HelloAsso
+        if user.payment_status == "completed":
+            return PaymentStatusResponse(
+                payment_status="completed",
+                status_token=user.status_token,
+                checkout_intent_id=checkout_intent_id
+            )
+
+        # Query HelloAsso API for current status
+        try:
+            result = await helloasso_service.get_checkout_intent(checkout_intent_id)
+            print(f"[DEBUG] get_payment_status: HelloAsso result keys: {list(result.keys())}")
+
+            order = result.get("order")
+
+            if order:
+                # Payment completed - update user
+                await complete_payment(user, checkout_intent_id, db)
+
+                return PaymentStatusResponse(
+                    payment_status="completed",
+                    status_token=user.status_token,
+                    checkout_intent_id=checkout_intent_id
+                )
+            else:
+                # Still pending
+                return PaymentStatusResponse(
+                    payment_status="pending",
+                    status_token=None,
+                    checkout_intent_id=checkout_intent_id
+                )
+
+        except Exception as e:
+            print(f"[ERROR] get_payment_status: HelloAsso API error: {e}")
+            # Return current DB status on API error
+            return PaymentStatusResponse(
+                payment_status=user.payment_status or "pending",
+                status_token=user.status_token,
+                checkout_intent_id=checkout_intent_id
+            )
+
+    finally:
+        db.close()
 
 
 @router.get("/verify/{checkout_intent_id}", response_model=PaymentVerifyResponse)
@@ -279,61 +399,73 @@ async def payment_webhook(request: Request):
     """
     Webhook endpoint for HelloAsso notifications.
     HelloAsso will POST here when a payment is completed.
+
+    This is a backup confirmation method - the primary method is frontend
+    polling via /status/{checkout_intent_id} and the background task.
     """
     from src.db.session import SessionLocal
     from src.users.models import User
-    from src.mail import send_order_confirmation
-    from datetime import datetime, timezone
 
     try:
         body = await request.json()
-        
+
         event_type = body.get("eventType")
         data = body.get("data", {})
-        
+
         # Log the webhook for debugging
-        print(f"HelloAsso Webhook: {event_type}")
-        
+        print(f"[WEBHOOK] HelloAsso event: {event_type}")
+
         # Handle different event types
         if event_type == "Payment":
             # A payment was made
             order_id = data.get("order", {}).get("id")
-            
-            # Fetch the checkout intent to get metadata
-            # Note: The webhook data might not contain metadata directly depending on HelloAsso version
-            # It's safer to fetch the intent if it's not in the 'data'
-            checkout_intent_id = data.get("checkoutIntentId") # Verify if this is in the webhook payload
-            
-            # Fallback/Alternative: use order metadata if available
+            checkout_intent_id = data.get("checkoutIntentId")
             metadata = data.get("metadata", {})
             res_id = metadata.get("reservation_id")
-            
-            if res_id:
-                db = SessionLocal()
-                try:
-                    from sqlalchemy.orm import joinedload
+
+            print(f"[WEBHOOK] Payment event - order_id: {order_id}, checkout_intent_id: {checkout_intent_id}, res_id: {res_id}")
+
+            db = SessionLocal()
+            try:
+                user = None
+
+                # Strategy 1: Find by reservation_id from metadata
+                if res_id:
                     user = db.query(User).options(
                         joinedload(User.menu_item),
                         joinedload(User.boisson_item),
                         joinedload(User.bonus_item)
                     ).filter(User.id == int(res_id)).first()
-                    
-                    if user and user.payment_status != "completed":
-                        user.payment_status = "completed"
-                        user.payment_intent_id = checkout_intent_id or f"ORDER_{order_id}"
-                        user.payment_date = datetime.now(timezone.utc)
-                        db.commit()
-                        db.refresh(user)
-                        
-                        print(f"[DEBUG] Webhook: Sending order confirmation email to {user.email}")
-                        # Envoyer l'email de confirmation
-                        await send_order_confirmation(user)
-                        print(f"DEBUG: Reservation {res_id} updated via Webhook")
-                finally:
-                    db.close()
-            
+                    if user:
+                        print(f"[WEBHOOK] Found user by reservation_id: {user.id}")
+
+                # Strategy 2: Find by checkout_intent_id
+                if not user and checkout_intent_id:
+                    user = db.query(User).options(
+                        joinedload(User.menu_item),
+                        joinedload(User.boisson_item),
+                        joinedload(User.bonus_item)
+                    ).filter(User.payment_intent_id == checkout_intent_id).first()
+                    if user:
+                        print(f"[WEBHOOK] Found user by checkout_intent_id: {user.id}")
+
+                if user:
+                    intent_id = checkout_intent_id or user.payment_intent_id or f"ORDER_{order_id}"
+                    was_new = await complete_payment(user, intent_id, db)
+                    if was_new:
+                        print(f"[WEBHOOK] Payment completed for user {user.id} ({user.email})")
+                    else:
+                        print(f"[WEBHOOK] User {user.id} was already completed")
+                else:
+                    print(f"[WEBHOOK] No user found for this payment (res_id: {res_id}, intent: {checkout_intent_id})")
+
+            finally:
+                db.close()
+
         return {"status": "ok"}
-        
+
     except Exception as e:
-        print(f"Webhook error: {e}")
+        print(f"[WEBHOOK] Error: {e}")
+        import traceback
+        traceback.print_exc()
         return {"status": "error", "message": str(e)}

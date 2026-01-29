@@ -37,3 +37,10 @@ class PaymentVerifyResponse(BaseModel):
     message: Optional[str] = None
     status_token: Optional[str] = None  # Token pour accéder à la page de statut
 
+
+class PaymentStatusResponse(BaseModel):
+    """Response from status check endpoint"""
+    payment_status: str  # "pending", "completed", "failed"
+    status_token: Optional[str] = None
+    checkout_intent_id: str
+

@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,6 +11,7 @@ from src.menu.router import router as menu_router
 from src.print.router import router as print_router
 from src.payments.router import router as payments_router
 from src.terminal.router import router as terminal_router
+from src.payments.background_tasks import start_background_tasks
 from src.core.config import settings
 from src.db.base import Base
 from src.db.session import engine
@@ -28,11 +31,34 @@ init_menu_data()
 # Désactiver la documentation en production
 is_production = settings.ENVIRONMENT == "production"
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for FastAPI app.
+    Starts background tasks on startup and cancels them on shutdown.
+    """
+    # Startup: Start background tasks
+    print("[STARTUP] Starting background tasks...")
+    background_task = await start_background_tasks()
+
+    yield
+
+    # Shutdown: Cancel background tasks
+    print("[SHUTDOWN] Cancelling background tasks...")
+    background_task.cancel()
+    try:
+        await background_task
+    except asyncio.CancelledError:
+        print("[SHUTDOWN] Background tasks cancelled")
+
+
 app = FastAPI(
     title="MC INT API",
     description="API pour réservations MC INT avec auth email/code, BDE check et paiement HelloAsso",
     version="1.0.0",
     root_path="/api",
+    lifespan=lifespan,
     # Désactiver /docs, /redoc et /openapi.json en production
     docs_url=None if is_production else "/docs",
     redoc_url=None if is_production else "/redoc",
