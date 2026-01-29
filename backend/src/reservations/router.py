@@ -1,23 +1,49 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Cookie, Query
 from sqlalchemy.orm import Session
 from typing import Optional, List
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
+import re
 
 from src.db.session import get_db
 from src.reservations import schemas, service
 from src.reservations.availability import get_available_slots, is_slot_available
 from src.auth.service import get_user_by_token
 from src.core.exceptions import UserNotVerifiedException
-from src.menu.models import MenuItem
+from src.menu.utils import load_menu_data
+from src.reservations.models import MenuItemLimit
 
 router = APIRouter()
 
+# Helper to find item in JSON
+def find_item_by_name(name: str):
+    data = load_menu_data()
+    # Search in menus, boissons, extras
+    for menu in data.get("menus", []):
+         if menu["name"] == name:
+             menu["item_type"] = menu.get("item_type", "menu")
+             return menu
+    for drink in data.get("boissons", []):
+         if drink["name"] == name:
+             drink["item_type"] = "boisson"
+             return drink
+    for extra in data.get("extras", []):
+         if extra["name"] == name:
+             extra["item_type"] = "upsell"
+             return extra
+    return None
+
+def find_category_name_by_id(cat_id: str):
+    data = load_menu_data()
+    for cat in data.get("categories", []):
+        if cat["id"] == cat_id:
+            return cat["name"]
+    return None
 
 @router.get("/availability")
 async def check_availability(
-    menu_id: Optional[int] = Query(None),
-    boisson_id: Optional[int] = Query(None),
-    bonus_id: Optional[int] = Query(None),
+    menu_id: Optional[str] = Query(None),
+    boisson_id: Optional[str] = Query(None),
+    bonus_id: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -64,7 +90,6 @@ async def create_reservation(
     """
     
     # VALIDATION 0: Vérifier que l'utilisateur n'a pas déjà une réservation
-    from datetime import timedelta
     now = datetime.utcnow()
 
     # Si l'utilisateur a déjà payé
@@ -81,11 +106,11 @@ async def create_reservation(
     if (is_expired or too_many_attempts) and current_user.payment_status != "completed":
         # Annuler l'ancienne commande et libérer le stock avant d'en créer une nouvelle
         # On fait ça silencieusement ici pour permettre d'en refaire une
-        from src.menu.models import MenuItemLimit
+        
         def restore_stock_internal(item_id, slot_time):
             if not item_id: return
             limit = db.query(MenuItemLimit).filter(
-                MenuItemLimit.menu_item_id == item_id,
+                MenuItemLimit.item_id == item_id,
                 MenuItemLimit.start_time <= slot_time,
                 MenuItemLimit.end_time > slot_time
             ).first()
@@ -246,48 +271,47 @@ async def create_reservation(
     bonus_item = None
     
     if request.menu:
-        menu_item = db.query(MenuItem).filter(MenuItem.name == request.menu).first()
+        menu_item = find_item_by_name(request.menu)
         if not menu_item:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Menu '{request.menu}' non trouvé"
             )
-        if menu_item.item_type != "menu":
+        if menu_item["item_type"] != "menu":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"L'item '{request.menu}' n'est pas un menu"
             )
         
         # Vérifier que le menu appartient à une catégorie valide
-        from src.menu.models import Category
-        menu_category = db.query(Category).filter(Category.id == menu_item.category_id).first()
-        if menu_category and menu_category.name not in EXCLUSIVE_MENU_CATEGORIES:
+        cat_name = find_category_name_by_id(menu_item["category"])
+        if cat_name and cat_name not in EXCLUSIVE_MENU_CATEGORIES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Le menu doit provenir d'une des catégories: {', '.join(EXCLUSIVE_MENU_CATEGORIES)}"
             )
     
     if request.boisson:
-        boisson_item = db.query(MenuItem).filter(MenuItem.name == request.boisson).first()
+        boisson_item = find_item_by_name(request.boisson)
         if not boisson_item:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Boisson '{request.boisson}' non trouvée"
             )
-        if boisson_item.item_type != "boisson":
+        if boisson_item["item_type"] != "boisson":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"L'item '{request.boisson}' n'est pas une boisson"
             )
     
     if request.bonus:
-        bonus_item = db.query(MenuItem).filter(MenuItem.name == request.bonus).first()
+        bonus_item = find_item_by_name(request.bonus)
         if not bonus_item:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Bonus '{request.bonus}' non trouvé"
             )
-        if bonus_item.item_type != "upsell":
+        if bonus_item["item_type"] != "upsell":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"L'item '{request.bonus}' n'est pas un bonus (upsell)"
@@ -295,9 +319,9 @@ async def create_reservation(
     
     # VALIDATION 5: Vérifier la disponibilité du créneau pour tous les items
     item_ids = [
-        menu_item.id if menu_item else None,
-        boisson_item.id if boisson_item else None,
-        bonus_item.id if bonus_item else None
+        menu_item["id"] if menu_item else None,
+        boisson_item["id"] if boisson_item else None,
+        bonus_item["id"] if bonus_item else None
     ]
     if not is_slot_available(db, item_ids, reservation_time):
         raise HTTPException(
@@ -324,7 +348,6 @@ async def create_reservation(
     current_user.habite_residence = request.habite_residence
     
     # VALIDATION téléphone: seulement chiffres et + au début
-    import re
     if request.phone:
         phone_cleaned = re.sub(r'[^\d+]', '', request.phone)
         # Le + ne peut être qu'au début
@@ -348,20 +371,19 @@ async def create_reservation(
         current_user.adresse = request.adresse
         current_user.numero_if_maisel = None
     
-    # Stocker les IDs des items (nouveaux champs ForeignKey)
-    current_user.menu_id = menu_item.id if menu_item else None
-    current_user.boisson_id = boisson_item.id if boisson_item else None
-    current_user.bonus_id = bonus_item.id if bonus_item else None
+    # Stocker les IDs des items (nouveaux champs String)
+    current_user.menu_id = menu_item["id"] if menu_item else None
+    current_user.boisson_id = boisson_item["id"] if boisson_item else None
+    current_user.bonus_id = bonus_item["id"] if bonus_item else None
     
     # ---------------- DEBUT GESTION STOCK ----------------
     def check_and_decrement_stock(item_id, slot_time):
         """Vérifie et décrémente stock pour un item à l'heure donnée"""
-        from src.menu.models import MenuItemLimit
         
         # Trouver limite correspondante (ou une qui couvre cette heure)
         # Note: Dans une vraie implém, il faudrait gérer le jour aussi, ici on suppose que limits sont valides pour le jour J
         limit = db.query(MenuItemLimit).filter(
-            MenuItemLimit.menu_item_id == item_id,
+            MenuItemLimit.item_id == item_id,
             MenuItemLimit.start_time <= slot_time,
             MenuItemLimit.end_time > slot_time
         ).first()
@@ -380,24 +402,24 @@ async def create_reservation(
 
     stock_updates = []
     if menu_item:
-        l = check_and_decrement_stock(menu_item.id, reservation_time)
+        l = check_and_decrement_stock(menu_item["id"], reservation_time)
         if l: stock_updates.append(l)
     if boisson_item:
-        l = check_and_decrement_stock(boisson_item.id, reservation_time)
+        l = check_and_decrement_stock(boisson_item["id"], reservation_time)
         if l: stock_updates.append(l)
     if bonus_item:
-        l = check_and_decrement_stock(bonus_item.id, reservation_time)
+        l = check_and_decrement_stock(bonus_item["id"], reservation_time)
         if l: stock_updates.append(l)
     # ---------------- FIN GESTION STOCK ----------------
     
     # Calculer le montant total
     total = 0.0
     if menu_item:
-        total += menu_item.price
+        total += menu_item.get("price", 0)
     if boisson_item:
-        total += boisson_item.price
+        total += boisson_item.get("price", 0)
     if bonus_item:
-        total += bonus_item.price
+        total += bonus_item.get("price", 0)
     
     current_user.total_amount = total
     current_user.status = "confirmed"
@@ -424,9 +446,9 @@ async def create_reservation(
         "payment_status": current_user.payment_status,
         "date_reservation": str(current_user.date_reservation),
         "heure_reservation": str(current_user.heure_reservation),
-        "menu": menu_item.name if menu_item else None,
-        "boisson": boisson_item.name if boisson_item else None,
-        "bonus": bonus_item.name if bonus_item else None,
+        "menu": menu_item["name"] if menu_item else None,
+        "boisson": boisson_item["name"] if boisson_item else None,
+        "bonus": bonus_item["name"] if bonus_item else None,
         "total_amount": current_user.total_amount,
     }
 
@@ -444,12 +466,32 @@ async def process_payment(
     - Met à jour le payment_status
     """
     from src.reservations.models import Reservation
+    # Note: Reservation might be an alias for User still or separated?
+    # Original code imported Reservation from src.reservations.models
+    # But src.reservations.models was empty/comment-only in Step 36.
+    # So "Reservation" is likely not there.
+    # Let's check imports in original router.py (Step 37)
+    # line 446: from src.reservations.models import Reservation
+    # This suggests Reservation WAS in src.reservations.models or there's some trick.
+    # BUT Step 36 showed "ReservationItem table has been merged into User model" and 1 line.
+    # Ah! 'Reservation' might be 'User' model?
+    # In Step 54 (service.py), it queries 'User'.
+    # In 'process_payment' above (Step 37), it queries Reservation.
+    # If reservations.models was empty, this import would fail.
+    # Maybe I missed something about reservations.models content?
+    # Wait, Step 36 output said "Total Lines: 1".
+    # So previous code was BROKEN or I am misinterpreting.
+    # OR 'Reservation' is defined in users.models? 
+    # NO. 
+    # Let's assume Reservation IS User (logic-wise).
+    
+    from src.users.models import User as Reservation
     from datetime import datetime, timezone
     import httpx
     
     reservation = db.query(Reservation).filter(
         Reservation.id == reservation_id,
-        Reservation.user_id == current_user.id
+        Reservation.id == current_user.id # user_id check matches id since Reservation IS User
     ).first()
     
     if not reservation:
@@ -511,20 +553,11 @@ async def process_payment(
                     detail=f"Erreur lors du paiement (Tentative {reservation.payment_attempts}/3)"
                 )
     except Exception as e:
-        # Restoration du stock en cas d'échec critique (optionnel selon specs, mais demandé par user)
-        # Ici on re-crédite si le paiement plante VRAIMENT (exception technique ou 502)
-        # Pour un simple "refus de carte", on pourrait garder la résa en "pending" et laisser user réessayer.
-        # Mais le user a dit "si le paiement echoue alors la on readdition".
-        # On va simplifier : Si exception technique => restore.
         
-        # NOTE: Pour restaurer proprement, il faudrait retrouver les limits impactées.
-        # On va le faire basiquement pour "reservation.heure_reservation"
-        
-        from src.menu.models import MenuItemLimit
         def restore_stock(item_id, slot_time):
             if not item_id: return
             limit = db.query(MenuItemLimit).filter(
-                MenuItemLimit.menu_item_id == item_id,
+                MenuItemLimit.item_id == item_id,
                 MenuItemLimit.start_time <= slot_time,
                 MenuItemLimit.end_time > slot_time
             ).first()

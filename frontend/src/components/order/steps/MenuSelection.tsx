@@ -4,12 +4,6 @@ type MenuSelectionProps = {
     onSelect: (menu: MenuItem) => void
 }
 
-const FEATURED_MENUS = [
-    "Menu Boulanger'INT",
-    "Menu Gourmand'INT",
-    "Menu Végét'INT"
-]
-
 const MenuSelection = ({ onSelect }: MenuSelectionProps) => {
     const { allItems, isLoading } = useMenu()
 
@@ -17,13 +11,10 @@ const MenuSelection = ({ onSelect }: MenuSelectionProps) => {
         return <div className="menu-selection-loading">Chargement des menus...</div>
     }
 
-    // Filter to get only the featured menus
+    // Filter to get all menus
     const featuredItems = allItems.filter(item =>
-        FEATURED_MENUS.includes(item.title)
-    ).sort((a, b) => {
-        // Enforce specific order
-        return FEATURED_MENUS.indexOf(a.title) - FEATURED_MENUS.indexOf(b.title)
-    })
+        item.item_type === 'menu'
+    )
 
     return (
         <div className="menu-selection">

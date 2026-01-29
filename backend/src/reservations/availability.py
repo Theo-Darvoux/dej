@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from datetime import time
 from typing import Optional
 
-from src.menu.models import MenuItemLimit
+from src.reservations.models import MenuItemLimit
 
 
 # Créneaux horaires disponibles (7h-8h à 19h-20h)
@@ -28,7 +28,7 @@ TIME_SLOTS = [
 
 def get_available_slots(
     db: Session, 
-    item_ids: list[int]
+    item_ids: list[str]
 ) -> list[dict]:
     """
     Retourne les créneaux disponibles pour une liste d'items du panier.
@@ -61,7 +61,7 @@ def get_available_slots(
             for item_id in valid_item_ids:
                 # Chercher la limite pour cet item et ce créneau
                 limit = db.query(MenuItemLimit).filter(
-                    MenuItemLimit.menu_item_id == item_id,
+                    MenuItemLimit.item_id == item_id,
                     MenuItemLimit.start_time <= slot["start"],
                     MenuItemLimit.end_time > slot["start"]
                 ).first()
@@ -83,7 +83,7 @@ def get_available_slots(
 
 def is_slot_available(
     db: Session,
-    item_ids: list[int],
+    item_ids: list[str],
     slot_time: time
 ) -> bool:
     """
@@ -104,7 +104,7 @@ def is_slot_available(
     
     for item_id in valid_item_ids:
         limit = db.query(MenuItemLimit).filter(
-            MenuItemLimit.menu_item_id == item_id,
+            MenuItemLimit.item_id == item_id,
             MenuItemLimit.start_time <= slot_time,
             MenuItemLimit.end_time > slot_time
         ).first()

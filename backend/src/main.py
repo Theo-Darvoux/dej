@@ -16,17 +16,13 @@ from src.core.config import settings
 from src.db.base import Base
 from src.db.session import engine
 from src.db.init_db import init_db
-from src.db.init_menu import init_menu_data
-
 # Importer les modèles pour que SQLAlchemy les enregistre
 from src.users.models import User
-from src.menu.models import Category, MenuItem
 
 # Créer les tables (à remplacer par Alembic en prod)
 Base.metadata.create_all(bind=engine)
 
 init_db()  # Lance au démarrage de l'app
-init_menu_data()
 
 # Désactiver la documentation en production
 is_production = settings.ENVIRONMENT == "production"

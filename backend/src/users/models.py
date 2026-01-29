@@ -52,14 +52,10 @@ class User(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
-    # Choix de commande - ForeignKey vers MenuItem
-    menu_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True)
-    boisson_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True)
-    bonus_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True)
+    # Choix de commande - IDs from JSON (Strings)
+    menu_id = Column(String, nullable=True)
+    boisson_id = Column(String, nullable=True)
+    bonus_id = Column(String, nullable=True)
     
-    # Relations
-    menu_item = relationship("MenuItem", foreign_keys=[menu_id])
-    boisson_item = relationship("MenuItem", foreign_keys=[boisson_id])
-    bonus_item = relationship("MenuItem", foreign_keys=[bonus_id])
-    
+    # Relations removed as we interpret IDs from JSON now
 
