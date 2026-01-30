@@ -226,11 +226,11 @@ def get_contact_section() -> str:
                     <tr>
                         <td width="50%" style="padding-right: 10px; vertical-align: top;">
                             <div style="font-weight: 600; color: {COLORS['dark']}; font-size: 13px;">Théo DARVOUX</div>
-                            <a href="mailto:theo.darvoux@telecom-sudparis.eu" style="color: {COLORS['blue']}; font-size: 11px; text-decoration: none;">theo.darvoux@tsp.eu</a>
+                            <a href="tel:+33762357719" style="color: {COLORS['blue']}; font-size: 11px; text-decoration: none;">+33762357719</a>
                         </td>
                         <td width="50%" style="padding-left: 10px; vertical-align: top;">
                             <div style="font-weight: 600; color: {COLORS['dark']}; font-size: 13px;">Solène CHAMPION</div>
-                            <a href="mailto:solene.champion@telecom-sudparis.eu" style="color: {COLORS['blue']}; font-size: 11px; text-decoration: none;">solene.champion@tsp.eu</a>
+                            <a href="tel:+33661737785" style="color: {COLORS['blue']}; font-size: 11px; text-decoration: none;">+33661737785</a>
                         </td>
                     </tr>
                 </table>

@@ -133,11 +133,11 @@ async def get_order_status(
         "contacts": {
             "responsable1": {
                 "name": "Théo DARVOUX",
-                "email": "theo.darvoux@telecom-sudparis.eu"
+                "phone": "+33762357719"
             },
             "responsable2": {
                 "name": "Solène CHAMPION",
-                "email": "solene.champion@telecom-sudparis.eu"
+                "phone": "+33661737785"
             }
         }
     }
