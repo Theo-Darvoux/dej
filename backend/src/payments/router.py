@@ -456,37 +456,34 @@ async def payment_webhook(request: Request):
         if event_type == "Payment":
             # A payment was made
             order_id = data.get("order", {}).get("id")
-            checkout_intent_id = data.get("checkoutIntentId")
-            metadata = data.get("metadata", {})
-            res_id = metadata.get("reservation_id")
+            payer_email = data.get("payer", {}).get("email")
 
-            print(f"[WEBHOOK] Payment event - order_id: {order_id}, checkout_intent_id: {checkout_intent_id}, res_id: {res_id}")
+            print(f"[WEBHOOK] Payment event - order_id: {order_id}, payer_email: {payer_email}")
+
+            if not payer_email:
+                print(f"[WEBHOOK] No payer email in webhook, cannot process")
+                return {"status": "ok"}
 
             db = SessionLocal()
             try:
-                user = None
-
-                # Strategy 1: Find by reservation_id from metadata
-                if res_id:
-                    user = db.query(User).filter(User.id == int(res_id)).first()
-                    if user:
-                        print(f"[WEBHOOK] Found user by reservation_id: {user.id}")
-
-                # Strategy 2: Find by checkout_intent_id
-                if not user and checkout_intent_id:
-                    user = db.query(User).filter(User.payment_intent_id == checkout_intent_id).first()
-                    if user:
-                        print(f"[WEBHOOK] Found user by checkout_intent_id: {user.id}")
+                # Find user by payer email with pending payment
+                user = db.query(User).filter(
+                    User.email == payer_email,
+                    User.payment_status == "pending",
+                    User.menu_id.isnot(None),
+                    User.payment_intent_id.isnot(None)  # Has started checkout
+                ).order_by(User.created_at.desc()).first()
 
                 if user:
-                    intent_id = checkout_intent_id or user.payment_intent_id or f"ORDER_{order_id}"
-                    was_new = await complete_payment(user, intent_id, db)
+                    print(f"[WEBHOOK] Found user {user.id} by email {payer_email}")
+                    intent_id = user.payment_intent_id or f"ORDER_{order_id}"
+                    was_new = await complete_payment(user, str(intent_id), db)
                     if was_new:
                         print(f"[WEBHOOK] Payment completed for user {user.id} ({user.email})")
                     else:
                         print(f"[WEBHOOK] User {user.id} was already completed")
                 else:
-                    print(f"[WEBHOOK] No user found for this payment (res_id: {res_id}, intent: {checkout_intent_id})")
+                    print(f"[WEBHOOK] No pending user found for email: {payer_email}")
 
             finally:
                 db.close()
