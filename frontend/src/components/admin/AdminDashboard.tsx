@@ -50,7 +50,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
             const url = filterStatus
                 ? `/api/admin/orders?payment_status=${filterStatus}`
                 : '/api/admin/orders'
-            const response = await fetch(url)
+            const response = await fetch(url, { credentials: 'include' })
             if (!response.ok) {
                 if (response.status === 403) throw new Error("Accès refusé - Admin seulement")
                 throw new Error("Erreur lors de la récupération des commandes")
@@ -67,7 +67,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
 
     const fetchMenuItems = async () => {
         try {
-            const response = await fetch('/api/menu/items')
+            const response = await fetch('/api/menu/items', { credentials: 'include' })
             if (response.ok) {
                 const data = await response.json()
                 setMenuItems(data)
@@ -87,11 +87,15 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
         if (!window.confirm("Es-tu sûr de vouloir supprimer cette commande ?")) return
 
         try {
-            const response = await fetch(`/api/admin/orders/${id}`, { method: 'DELETE' })
+            const response = await fetch(`/api/admin/orders/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            })
             if (response.ok) {
                 fetchOrders()
             } else {
-                alert("Erreur lors de la suppression")
+                const data = await response.json().catch(() => ({}))
+                alert(data.detail || "Erreur lors de la suppression")
             }
         } catch {
             alert("Erreur réseau")
@@ -106,6 +110,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
             const response = await fetch(`/api/admin/orders/${editingOrder.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
                     prenom: editingOrder.prenom,
                     nom: editingOrder.nom,
@@ -113,7 +118,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                     status: editingOrder.status,
                     menu_id: editingOrder.menu_item?.id || null,
                     boisson_id: editingOrder.boisson_item?.id || null,
-                    bonus_ids: editingOrder.extras_items?.map(e => e.id) || []
+                    bonus_ids: editingOrder.extras_items?.map(item => item.id) || []
                 })
             })
 
@@ -121,7 +126,8 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                 setEditingOrder(null)
                 fetchOrders()
             } else {
-                alert("Erreur lors de la mise à jour")
+                const data = await response.json().catch(() => ({}))
+                alert(data.detail || "Erreur lors de la mise à jour")
             }
         } catch {
             alert("Erreur réseau")
@@ -147,7 +153,9 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
     const handlePrintAllTickets = async () => {
         setPrintingPdf(true)
         try {
-            const response = await fetch('/api/print/get_printPDF?start_time=00:00&end_time=23:59')
+            const response = await fetch('/api/print/get_printPDF?start_time=00:00&end_time=23:59', {
+                credentials: 'include'
+            })
             if (!response.ok) {
                 if (response.status === 404) {
                     alert('Aucune commande payée à imprimer')
@@ -165,6 +173,31 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
         }
     }
 
+    // Toggle extra selection
+    const toggleExtra = (extraItem: MenuItem) => {
+        if (!editingOrder) return
+
+        const currentExtras = editingOrder.extras_items || []
+        const isSelected = currentExtras.some(e => e.id === extraItem.id)
+
+        if (isSelected) {
+            // Remove extra
+            setEditingOrder({
+                ...editingOrder,
+                extras_items: currentExtras.filter(e => e.id !== extraItem.id)
+            })
+        } else {
+            // Add extra
+            setEditingOrder({
+                ...editingOrder,
+                extras_items: [
+                    ...currentExtras,
+                    { id: extraItem.id, name: extraItem.title, price: extraItem.price, item_type: extraItem.item_type }
+                ]
+            })
+        }
+    }
+
     // Calculate stats
     const stats = {
         total: orders.length,
@@ -172,6 +205,9 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
         pending: orders.filter(o => o.payment_status === 'pending').length,
         failed: orders.filter(o => o.payment_status === 'failed').length
     }
+
+    // Get available extras from menu items
+    const availableExtras = menuItems.filter(m => m.item_type === 'upsell')
 
     return (
         <div className="admin-dashboard">
@@ -270,7 +306,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                     </td>
                                     <td><small>{formatDate(order.created_at)}</small></td>
                                     <td>
-                                        <button className="btn-icon btn-icon--edit" onClick={() => setEditingOrder(order)} title="Modifier">
+                                        <button className="btn-icon btn-icon--edit" onClick={() => setEditingOrder({...order})} title="Modifier">
                                             ✏️
                                         </button>
                                         <button className="btn-icon btn-icon--delete" onClick={() => handleDelete(order.id)} title="Supprimer">
@@ -293,7 +329,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                 <label>Prénom</label>
                                 <input
                                     type="text"
-                                    value={editingOrder.prenom}
+                                    value={editingOrder.prenom || ''}
                                     onChange={(e) => setEditingOrder({ ...editingOrder, prenom: e.target.value })}
                                 />
                             </div>
@@ -301,14 +337,14 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                 <label>Nom</label>
                                 <input
                                     type="text"
-                                    value={editingOrder.nom}
+                                    value={editingOrder.nom || ''}
                                     onChange={(e) => setEditingOrder({ ...editingOrder, nom: e.target.value })}
                                 />
                             </div>
                             <div className="admin-form-group">
                                 <label>Status Paiement</label>
                                 <select
-                                    value={editingOrder.payment_status}
+                                    value={editingOrder.payment_status || 'pending'}
                                     onChange={(e) => setEditingOrder({ ...editingOrder, payment_status: e.target.value })}
                                 >
                                     <option value="pending">En attente (pending)</option>
@@ -359,6 +395,29 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                         <option key={m.id} value={m.id}>{m.title}</option>
                                     ))}
                                 </select>
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Extras</label>
+                                <div className="admin-extras-list">
+                                    {availableExtras.length === 0 ? (
+                                        <p className="admin-extras-empty">Aucun extra disponible</p>
+                                    ) : (
+                                        availableExtras.map(extra => {
+                                            const isSelected = editingOrder.extras_items?.some(e => e.id === extra.id) || false
+                                            return (
+                                                <label key={extra.id} className={`admin-extra-item ${isSelected ? 'selected' : ''}`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => toggleExtra(extra)}
+                                                    />
+                                                    <span className="admin-extra-item__name">{extra.title}</span>
+                                                    <span className="admin-extra-item__price">{extra.price}</span>
+                                                </label>
+                                            )
+                                        })
+                                    )}
+                                </div>
                             </div>
                             <div className="admin-modal__actions">
                                 <button type="button" onClick={() => setEditingOrder(null)}>

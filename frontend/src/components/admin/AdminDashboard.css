@@ -396,6 +396,67 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
+/* Extras Selection */
+.admin-extras-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.admin-extras-empty {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 12px;
+    margin: 0;
+}
+
+.admin-extra-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-extra-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.admin-extra-item.selected {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: rgba(76, 175, 80, 0.5);
+}
+
+.admin-extra-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #4caf50;
+    cursor: pointer;
+}
+
+.admin-extra-item__name {
+    flex: 1;
+    font-weight: 500;
+    color: #fff;
+}
+
+.admin-extra-item__price {
+    font-size: 0.85rem;
+    color: #FFC72C;
+    font-weight: 600;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     .admin-dashboard {
