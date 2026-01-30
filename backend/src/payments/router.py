@@ -412,6 +412,13 @@ async def verify_payment(checkout_intent_id: str):
         )
 
 
+@router.get("/webhook")
+async def webhook_test():
+    """Test endpoint to verify webhook URL is accessible."""
+    print("[WEBHOOK] GET request received - webhook URL is accessible")
+    return {"status": "ok", "message": "Webhook endpoint is accessible. Use POST for actual webhooks."}
+
+
 @router.post("/webhook")
 async def payment_webhook(request: Request):
     """
@@ -424,8 +431,20 @@ async def payment_webhook(request: Request):
     from src.db.session import SessionLocal
     from src.users.models import User
 
+    # Log immédiatement que la requête est arrivée
+    print(f"[WEBHOOK] ========== INCOMING REQUEST ==========")
+    print(f"[WEBHOOK] Method: {request.method}")
+    print(f"[WEBHOOK] URL: {request.url}")
+    print(f"[WEBHOOK] Client: {request.client}")
+    print(f"[WEBHOOK] Headers: {dict(request.headers)}")
+
     try:
-        body = await request.json()
+        raw_body = await request.body()
+        print(f"[WEBHOOK] Raw body length: {len(raw_body)} bytes")
+        print(f"[WEBHOOK] Raw body preview: {raw_body[:500] if raw_body else 'EMPTY'}")
+
+        import json
+        body = json.loads(raw_body) if raw_body else {}
 
         event_type = body.get("eventType")
         data = body.get("data", {})
