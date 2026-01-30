@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Query
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func, cast
+from sqlalchemy.dialects.postgresql import JSONB
 from pydantic import EmailStr
 from typing import List, Optional
 
@@ -95,7 +97,7 @@ async def list_orders(
     query = db.query(User).filter(
         User.menu_id.isnot(None) |
         User.boisson_id.isnot(None) |
-        (User.bonus_ids.isnot(None) & (User.bonus_ids != [])) |
+        (User.bonus_ids.isnot(None) & (func.jsonb_array_length(User.bonus_ids) > 0)) |
         (User.payment_status == 'completed')
     )
     
