@@ -15,9 +15,9 @@ type ReservationData = {
   numero_immeuble?: string
   adresse?: string
   phone?: string
-  menu_id?: number
-  boisson_id?: number
-  bonus_id?: number
+  menu_id?: string
+  boisson_id?: string
+  bonus_ids?: string[]
 }
 
 type InfoPopupProps = {
@@ -61,7 +61,10 @@ const InfoPopup = ({
         const params = new URLSearchParams()
         if (reservationData?.menu_id) params.append('menu_id', reservationData.menu_id.toString())
         if (reservationData?.boisson_id) params.append('boisson_id', reservationData.boisson_id.toString())
-        if (reservationData?.bonus_id) params.append('bonus_id', reservationData.bonus_id.toString())
+        // Envoyer les bonus_ids comme liste séparée par des virgules
+        if (reservationData?.bonus_ids && reservationData.bonus_ids.length > 0) {
+          params.append('bonus_ids', reservationData.bonus_ids.join(','))
+        }
 
         const response = await fetch(`/api/reservations/availability?${params.toString()}`, {
           credentials: 'include'
@@ -97,7 +100,7 @@ const InfoPopup = ({
     }
 
     fetchAvailability()
-  }, [open, reservationData?.menu_id, reservationData?.boisson_id, reservationData?.bonus_id])
+  }, [open, reservationData?.menu_id, reservationData?.boisson_id, reservationData?.bonus_ids])
 
   const handleNext = async () => {
     if (!phone.trim()) {

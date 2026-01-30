@@ -42,14 +42,21 @@ def find_category_name_by_id(cat_id: str):
 async def check_availability(
     menu_id: Optional[str] = Query(None),
     boisson_id: Optional[str] = Query(None),
-    bonus_id: Optional[str] = Query(None),
+    bonus_ids: Optional[str] = Query(None),  # Liste d'IDs séparés par des virgules
     db: Session = Depends(get_db)
 ):
     """
     Retourne les créneaux horaires disponibles pour les items du panier.
     Un créneau est disponible si tous les items ont du stock.
+    bonus_ids: liste d'IDs d'extras séparés par des virgules (ex: "extra_poulet,extra_chouffe")
     """
-    item_ids = [menu_id, boisson_id, bonus_id]
+    item_ids = [menu_id, boisson_id]
+    # Parser les bonus_ids s'ils sont fournis
+    if bonus_ids:
+        for bonus_id in bonus_ids.split(','):
+            bonus_id = bonus_id.strip()
+            if bonus_id:
+                item_ids.append(bonus_id)
     slots = get_available_slots(db, item_ids)
     return {"slots": slots}
 
@@ -109,12 +116,12 @@ async def create_reservation(
         # Reset user reservation fields
         current_user.menu_id = None
         current_user.boisson_id = None
-        current_user.bonus_id = None
+        current_user.bonus_ids = []
         current_user.payment_status = "pending"
         current_user.payment_attempts = 0
         current_user.reservation_expires_at = None
         db.commit()
-    elif current_user.menu_id or current_user.boisson_id or current_user.bonus_id:
+    elif current_user.menu_id or current_user.boisson_id or (current_user.bonus_ids and len(current_user.bonus_ids) > 0):
          # Si une commande est en cours et pas encore expirée
          raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -266,8 +273,8 @@ async def create_reservation(
     
     menu_item = None
     boisson_item = None
-    bonus_item = None
-    
+    extra_items = []  # Liste d'extras validés
+
     if request.menu:
         menu_item = find_item_by_name(request.menu)
         if not menu_item:
@@ -280,7 +287,7 @@ async def create_reservation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"L'item '{request.menu}' n'est pas un menu"
             )
-        
+
         # Vérifier que le menu appartient à une catégorie valide
         cat_name = find_category_name_by_id(menu_item["category"])
         if cat_name and cat_name not in EXCLUSIVE_MENU_CATEGORIES:
@@ -288,7 +295,7 @@ async def create_reservation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Le menu doit provenir d'une des catégories: {', '.join(EXCLUSIVE_MENU_CATEGORIES)}"
             )
-    
+
     if request.boisson:
         boisson_item = find_item_by_name(request.boisson)
         if not boisson_item:
@@ -301,26 +308,36 @@ async def create_reservation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"L'item '{request.boisson}' n'est pas une boisson"
             )
-    
-    if request.bonus:
-        bonus_item = find_item_by_name(request.bonus)
-        if not bonus_item:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Bonus '{request.bonus}' non trouvé"
-            )
-        if bonus_item["item_type"] != "upsell":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"L'item '{request.bonus}' n'est pas un bonus (upsell)"
-            )
-    
+
+    # Validation des extras (liste)
+    if request.extras:
+        seen_ids = set()
+        for extra_name in request.extras:
+            extra_item = find_item_by_name(extra_name)
+            if not extra_item:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Extra '{extra_name}' non trouvé"
+                )
+            if extra_item["item_type"] != "upsell":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"L'item '{extra_name}' n'est pas un extra (upsell)"
+                )
+            # Vérifier les doublons
+            if extra_item["id"] in seen_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Vous ne pouvez pas prendre deux fois le même extra ({extra_name})"
+                )
+            seen_ids.add(extra_item["id"])
+            extra_items.append(extra_item)
+
     # VALIDATION 5: Vérifier la disponibilité du créneau pour tous les items
     item_ids = [
         menu_item["id"] if menu_item else None,
         boisson_item["id"] if boisson_item else None,
-        bonus_item["id"] if bonus_item else None
-    ]
+    ] + [extra["id"] for extra in extra_items]
     if not is_slot_available(db, item_ids, reservation_time):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -375,10 +392,10 @@ async def create_reservation(
         current_user.adresse = request.adresse
         current_user.numero_if_maisel = None
     
-    # Stocker les IDs des items (nouveaux champs String)
+    # Stocker les IDs des items
     current_user.menu_id = menu_item["id"] if menu_item else None
     current_user.boisson_id = boisson_item["id"] if boisson_item else None
-    current_user.bonus_id = bonus_item["id"] if bonus_item else None
+    current_user.bonus_ids = [extra["id"] for extra in extra_items] if extra_items else []
 
     # Note: La disponibilité des créneaux est gérée par comptage SQL dans availability.py
     # (MAX_ORDERS_PER_SLOT commandes max par créneau)
@@ -389,8 +406,8 @@ async def create_reservation(
         total += menu_item.get("price", 0)
     if boisson_item:
         total += boisson_item.get("price", 0)
-    if bonus_item:
-        total += bonus_item.get("price", 0)
+    for extra in extra_items:
+        total += extra.get("price", 0)
     
     current_user.total_amount = total
     current_user.status = "confirmed"
@@ -419,7 +436,7 @@ async def create_reservation(
         "heure_reservation": str(current_user.heure_reservation),
         "menu": menu_item["name"] if menu_item else None,
         "boisson": boisson_item["name"] if boisson_item else None,
-        "bonus": bonus_item["name"] if bonus_item else None,
+        "extras": [extra["name"] for extra in extra_items],
         "total_amount": current_user.total_amount,
     }
 

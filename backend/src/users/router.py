@@ -19,12 +19,12 @@ async def get_current_user_details(
     # Fetch user
     user = db.query(User).filter(User.id == current_user.id).first()
     
-    has_active_order = user.menu_id is not None or user.boisson_id is not None or user.bonus_id is not None
-    
+    has_active_order = user.menu_id is not None or user.boisson_id is not None or (user.bonus_ids and len(user.bonus_ids) > 0)
+
     # Helper to resolve item name/price
     from src.menu.utils import load_menu_data
     menu_data = load_menu_data()
-    
+
     def get_item_details(item_id):
         if not item_id: return None
         for cat in ["menus", "boissons", "extras"]:
@@ -35,7 +35,14 @@ async def get_current_user_details(
 
     menu_details = get_item_details(user.menu_id)
     boisson_details = get_item_details(user.boisson_id)
-    bonus_details = get_item_details(user.bonus_id)
+
+    # Récupérer tous les extras
+    extras_details = []
+    if user.bonus_ids:
+        for bonus_id in user.bonus_ids:
+            details = get_item_details(bonus_id)
+            if details:
+                extras_details.append(details["name"])
 
     return {
         "id": user.id,
@@ -47,7 +54,7 @@ async def get_current_user_details(
         "order": {
             "menu": menu_details["name"] if menu_details else None,
             "boisson": boisson_details["name"] if boisson_details else None,
-            "bonus": bonus_details["name"] if bonus_details else None,
+            "extras": extras_details,
             "total_amount": user.total_amount,
             "heure_reservation": user.heure_reservation.strftime("%H:%M") if user.heure_reservation else None,
             "adresse": user.adresse if not user.habite_residence else f"Maisel {user.adresse_if_maisel.value if user.adresse_if_maisel else ''} - Ch {user.numero_if_maisel}",
@@ -94,8 +101,7 @@ async def get_order_status(
         
     menu_details = get_item_details(user.menu_id)
     boisson_details = get_item_details(user.boisson_id)
-    bonus_details = get_item_details(user.bonus_id)
-    
+
     # Construire la liste des produits
     produits = []
     if menu_details:
@@ -110,12 +116,16 @@ async def get_order_status(
             "price": boisson_details.get("price", 0),
             "category": "Boisson"
         })
-    if bonus_details:
-        produits.append({
-            "name": bonus_details["name"],
-            "price": bonus_details.get("price", 0),
-            "category": "Supplément"
-        })
+    # Ajouter tous les extras
+    if user.bonus_ids:
+        for bonus_id in user.bonus_ids:
+            bonus_details = get_item_details(bonus_id)
+            if bonus_details:
+                produits.append({
+                    "name": bonus_details["name"],
+                    "price": bonus_details.get("price", 0),
+                    "category": "Supplément"
+                })
     
     return {
         "prenom": user.prenom,

@@ -144,7 +144,7 @@ const Checkout = ({
         // Extract items by type from cart
         const menuItem = cartItems.find(item => item.item_type === 'menu')
         const boissonItem = cartItems.find(item => item.item_type === 'boisson')
-        const bonusItem = cartItems.find(item => item.item_type === 'upsell')
+        const extraItems = cartItems.filter(item => item.item_type === 'upsell')
 
         // Extract time slot start hour (format: "08:00-09:00" -> "08:00")
         const timeSlotStart = deliveryInfo?.timeSlot?.split('-')[0] || '12:00'
@@ -161,7 +161,7 @@ const Checkout = ({
             special_requests: specialRequests || null,
             menu: menuItem?.title || null,
             boisson: boissonItem?.title || null,
-            bonus: bonusItem?.title || null,
+            extras: extraItems.map(item => item.title),
         }
 
         console.log('[Checkout] Creating reservation:', reservationData)

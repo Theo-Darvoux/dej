@@ -103,13 +103,20 @@ def get_print_summary(
     for res in reservations:
         menu_name = get_item_name(res.menu_id) or "Aucun"
         boisson_name = get_item_name(res.boisson_id) or "Aucune"
-        bonus_name = get_item_name(res.bonus_id) or "Aucun"
-        
-        combo_key = (menu_name, boisson_name, bonus_name)
+
+        # Récupérer tous les extras
+        extras_names = []
+        if res.bonus_ids:
+            for bonus_id in res.bonus_ids:
+                name = get_item_name(bonus_id)
+                if name:
+                    extras_names.append(name)
+
+        combo_key = (menu_name, boisson_name, tuple(sorted(extras_names)))
         combos_dict[combo_key] = combos_dict.get(combo_key, 0) + 1
 
     combos = [
-        OrderCombo(menu=k[0], boisson=k[1], bonus=k[2], quantity=v)
+        OrderCombo(menu=k[0], boisson=k[1], extras=list(k[2]), quantity=v)
         for k, v in combos_dict.items()
     ]
 
@@ -184,6 +191,14 @@ def get_orders_list(
     # Build response
     orders = []
     for res in reservations:
+        # Récupérer tous les extras
+        extras_names = []
+        if res.bonus_ids:
+            for bonus_id in res.bonus_ids:
+                name = get_name(bonus_id)
+                if name:
+                    extras_names.append(name)
+
         orders.append(OrderItem(
             id=res.id,
             prenom=res.prenom,
@@ -191,7 +206,7 @@ def get_orders_list(
             heure_reservation=res.heure_reservation.strftime("%H:%M") if res.heure_reservation else "",
             menu=get_name(res.menu_id),
             boisson=get_name(res.boisson_id),
-            bonus=get_name(res.bonus_id),
+            extras=extras_names,
             payment_status=res.payment_status or "pending",
             is_maisel=res.adresse_if_maisel is not None,
             adresse=res.adresse

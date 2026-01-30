@@ -353,7 +353,14 @@ async def send_order_confirmation(user) -> bool:
 
     menu_details = get_item_details(user.menu_id)
     boisson_details = get_item_details(user.boisson_id)
-    bonus_details = get_item_details(user.bonus_id)
+
+    # Récupérer tous les extras
+    extras_details = []
+    if user.bonus_ids:
+        for bonus_id in user.bonus_ids:
+            details = get_item_details(bonus_id)
+            if details:
+                extras_details.append(details)
 
     print(f"[DEBUG] send_order_confirmation: user={user.id}, email={user.email}, total_amount={user.total_amount}")
 
@@ -374,8 +381,8 @@ async def send_order_confirmation(user) -> bool:
         order_items_html += get_order_item(menu_details["name"], "menu", menu_details.get("price", 0))
     if boisson_details:
         order_items_html += get_order_item(boisson_details["name"], "boisson", boisson_details.get("price", 0))
-    if bonus_details:
-        order_items_html += get_order_item(bonus_details["name"], "bonus", bonus_details.get("price", 0))
+    for extra in extras_details:
+        order_items_html += get_order_item(extra["name"], "bonus", extra.get("price", 0))
 
     # Notes spéciales si présentes
     special_notes_html = ""

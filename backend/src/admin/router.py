@@ -50,15 +50,23 @@ def enrich_order(user):
     # Convert SQLAlchemy model to dict-like that Pydantic can parse
     # We can rely on Pydantic's from_attributes=True, but we need to inject the computed items
     user_dict = {
-        c.name: getattr(user, c.name) 
+        c.name: getattr(user, c.name)
         for c in user.__table__.columns
     }
-    
+
     # Inject items
     user_dict["menu_item"] = get_item_details(user.menu_id)
     user_dict["boisson_item"] = get_item_details(user.boisson_id)
-    user_dict["bonus_item"] = get_item_details(user.bonus_id)
-    
+
+    # Récupérer tous les extras
+    extras_items = []
+    if user.bonus_ids:
+        for bonus_id in user.bonus_ids:
+            details = get_item_details(bonus_id)
+            if details:
+                extras_items.append(details)
+    user_dict["extras_items"] = extras_items
+
     return user_dict
 
 
@@ -85,9 +93,9 @@ async def list_orders(
     require_admin(current_user)
     
     query = db.query(User).filter(
-        User.menu_id.isnot(None) | 
-        User.boisson_id.isnot(None) | 
-        User.bonus_id.isnot(None) | 
+        User.menu_id.isnot(None) |
+        User.boisson_id.isnot(None) |
+        (User.bonus_ids.isnot(None) & (User.bonus_ids != [])) |
         (User.payment_status == 'completed')
     )
     
@@ -160,7 +168,7 @@ async def delete_order(
     # Reset reservation fields instead of deleting the user
     user.menu_id = None
     user.boisson_id = None
-    user.bonus_id = None
+    user.bonus_ids = []
     user.date_reservation = None
     user.heure_reservation = None
     user.total_amount = 0.0

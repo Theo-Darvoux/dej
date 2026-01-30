@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from enum import Enum
 
@@ -33,7 +33,7 @@ class ReservationCreateRequest(BaseModel):
     special_requests: Optional[str] = None  # Demandes spéciales
     menu: Optional[str] = None
     boisson: Optional[str] = None
-    bonus: Optional[str] = None
+    extras: Optional[List[str]] = None  # Liste d'extras (ex: ["Poulet Rôti", "La Chouffe"])
 
 
 

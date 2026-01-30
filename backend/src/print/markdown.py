@@ -45,7 +45,6 @@ def generate_pdf_for_all_clients(reservations: List[Any]) -> bytes:
         # Préparation des produits
         menu_details = get_item_details(user.menu_id)
         boisson_details = get_item_details(user.boisson_id)
-        bonus_details = get_item_details(user.bonus_id)
 
         produits = []
         if menu_details:
@@ -60,12 +59,16 @@ def generate_pdf_for_all_clients(reservations: List[Any]) -> bytes:
                 "prix": boisson_details.get("price", 0),
                 "type": "boisson"
             })
-        if bonus_details:
-            produits.append({
-                "nom": bonus_details["name"],
-                "prix": bonus_details.get("price", 0),
-                "type": "extra"
-            })
+        # Ajouter tous les extras
+        if user.bonus_ids:
+            for bonus_id in user.bonus_ids:
+                bonus_details = get_item_details(bonus_id)
+                if bonus_details:
+                    produits.append({
+                        "nom": bonus_details["name"],
+                        "prix": bonus_details.get("price", 0),
+                        "type": "extra"
+                    })
 
         # Adresse / Logement
         if user.habite_residence:

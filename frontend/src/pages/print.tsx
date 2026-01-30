@@ -7,7 +7,7 @@ interface OrderItem {
   heure_reservation: string;
   menu: string | null;
   boisson: string | null;
-  bonus: string | null;
+  extras: string[];
   payment_status: string;
   is_maisel: boolean;
   adresse: string | null;
@@ -229,7 +229,7 @@ function PrintPage() {
               <th>Lieu</th>
               <th>Menu</th>
               <th>Boisson</th>
-              <th>Bonus</th>
+              <th>Extras</th>
               <th>Paiement</th>
             </tr>
           </thead>
@@ -245,7 +245,7 @@ function PrintPage() {
                 </td>
                 <td>{order.menu || '-'}</td>
                 <td>{order.boisson || '-'}</td>
-                <td>{order.bonus || '-'}</td>
+                <td>{order.extras?.length > 0 ? order.extras.join(', ') : '-'}</td>
                 <td>
                   <span className={`badge ${order.payment_status}`}>
                     {order.payment_status === 'completed' ? '✅ Payé' : '⏳ En attente'}

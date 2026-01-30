@@ -8,7 +8,7 @@ interface TerminalOrder {
     batiment: string | null;
     menu: string | null;
     boisson: string | null;
-    bonus: string | null;
+    extras: string[];
 }
 
 interface TerminalData {
@@ -120,7 +120,9 @@ function TerminalPage() {
                         <div className="card-items">
                             {order.menu && <div className="item">🍔 {order.menu}</div>}
                             {order.boisson && <div className="item">🥤 {order.boisson}</div>}
-                            {order.bonus && <div className="item">🎁 {order.bonus}</div>}
+                            {order.extras?.map((extra, idx) => (
+                                <div key={idx} className="item">🎁 {extra}</div>
+                            ))}
                         </div>
                     </div>
                 ))}

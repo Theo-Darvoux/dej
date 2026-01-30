@@ -348,7 +348,7 @@ async def verify_payment(checkout_intent_id: str):
                     db.refresh(user)
 
                     # Log what we found to debug empty emails
-                    print(f"[DEBUG] User {user.id} data: total={user.total_amount}, menu={user.menu_id}, drink={user.boisson_id}, bonus={user.bonus_id}, payment_status={user.payment_status}")
+                    print(f"[DEBUG] User {user.id} data: total={user.total_amount}, menu={user.menu_id}, drink={user.boisson_id}, extras={user.bonus_ids}, payment_status={user.payment_status}")
 
                     # Générer status_token si absent (CRITICAL for order tracking)
                     if not user.status_token:

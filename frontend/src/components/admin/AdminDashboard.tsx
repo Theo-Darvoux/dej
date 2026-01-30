@@ -20,7 +20,7 @@ interface Order {
     heure_reservation: string
     menu_item?: OrderItem
     boisson_item?: OrderItem
-    bonus_item?: OrderItem
+    extras_items?: OrderItem[]
     created_at: string
 }
 
@@ -105,7 +105,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                     status: editingOrder.status,
                     menu_id: editingOrder.menu_item?.id,
                     boisson_id: editingOrder.boisson_item?.id,
-                    bonus_id: editingOrder.bonus_item?.id
+                    bonus_ids: editingOrder.extras_items?.map(e => e.id) || []
                 })
             })
 
@@ -214,7 +214,9 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                         <small>
                                             {order.menu_item?.name && <div>🍔 {order.menu_item.name}</div>}
                                             {order.boisson_item?.name && <div>🥤 {order.boisson_item.name}</div>}
-                                            {order.bonus_item?.name && <div>🍟 {order.bonus_item.name}</div>}
+                                            {order.extras_items?.map((extra, idx) => (
+                                                <div key={idx}>🍟 {extra.name}</div>
+                                            ))}
                                         </small>
                                     </td>
                                     <td>{order.heure_reservation || 'N/A'}</td>

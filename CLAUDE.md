@@ -150,7 +150,7 @@ The menu system uses JSON-based configuration instead of database models:
 - **Loading:** `load_menu_data()` utility in `src/menu/utils.py`
 - **Caching:** Admin panel uses `get_menu_data_cached()` for performance
 
-User menu selections are stored as string IDs (`menu_id`, `boisson_id`, `bonus_id`) in the User model, not as foreign keys.
+User menu selections are stored as string IDs (`menu_id`, `boisson_id`) and JSON array (`bonus_ids`) in the User model, not as foreign keys. Multiple extras can be selected.
 
 ### Authentication Flow
 

@@ -11,7 +11,7 @@ class TerminalOrder(BaseModel):
     batiment: Optional[str]  # U1-U7 if Maisel
     menu: Optional[str]
     boisson: Optional[str]
-    bonus: Optional[str]
+    extras: List[str] = []
 
     class Config:
         from_attributes = True

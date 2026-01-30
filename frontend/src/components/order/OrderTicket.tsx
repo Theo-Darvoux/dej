@@ -3,7 +3,7 @@ import './OrderTicket.css'
 type OrderData = {
     menu?: string
     boisson?: string
-    bonus?: string
+    extras?: string[]
     total_amount: number
     heure_reservation: string
     adresse: string
@@ -59,13 +59,13 @@ const OrderTicket = ({ order, onClose }: OrderTicketProps) => {
                                 <span>-</span>
                             </div>
                         )}
-                        {order.bonus && (
-                            <div className="ticket__item">
+                        {order.extras?.map((extra, idx) => (
+                            <div key={idx} className="ticket__item">
                                 <span>1</span>
-                                <span>{order.bonus}</span>
+                                <span>{extra}</span>
                                 <span>-</span>
                             </div>
-                        )}
+                        ))}
                     </div>
 
                     <div className="ticket__divider">-------------------------</div>

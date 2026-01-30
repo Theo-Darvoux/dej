@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator
-from typing import Optional
+from typing import Optional, List
 from datetime import date, time
 
 
@@ -19,17 +19,9 @@ class ReservationData(BaseModel):
     numero_immeuble: Optional[str] = None
     adresse: Optional[str] = None
     phone: str
-    menu_id: Optional[int] = None
-    boisson_id: Optional[int] = None
-    bonus_id: Optional[int] = None
-    
-    @field_validator('menu_id', 'boisson_id', 'bonus_id')
-    @classmethod
-    def validate_positive_ids(cls, v: Optional[int]) -> Optional[int]:
-        """Valider que les IDs sont positifs s'ils sont fournis"""
-        if v is not None and v <= 0:
-            raise ValueError("L'ID doit être un entier positif")
-        return v
+    menu_id: Optional[str] = None
+    boisson_id: Optional[str] = None
+    bonus_ids: Optional[List[str]] = None  # Liste d'IDs d'extras
     
     @field_validator('phone')
     @classmethod
@@ -70,7 +62,7 @@ class UserWithReservationResponse(BaseModel):
     # Items de menu
     menu_item: Optional[MenuItemResponse]
     boisson_item: Optional[MenuItemResponse]
-    bonus_item: Optional[MenuItemResponse]
+    extras_items: Optional[List[MenuItemResponse]] = None  # Liste d'extras
     
     # Paiement
     payment_status: str

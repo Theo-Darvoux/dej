@@ -138,11 +138,21 @@ add_column_if_not_exists "users" "last_ip" "VARCHAR"
 add_column_if_not_exists "users" "user_type" "VARCHAR"
 add_column_if_not_exists "users" "status" "VARCHAR" "'confirmed'"
 add_column_if_not_exists "users" "status_token" "VARCHAR"
-add_column_if_not_exists "users" "menu_id" "INTEGER"
-add_column_if_not_exists "users" "boisson_id" "INTEGER"
-add_column_if_not_exists "users" "bonus_id" "INTEGER"
+add_column_if_not_exists "users" "menu_id" "VARCHAR"
+add_column_if_not_exists "users" "boisson_id" "VARCHAR"
+add_column_if_not_exists "users" "bonus_ids" "JSONB" "'[]'"
 add_column_if_not_exists "users" "date_reservation" "DATE"
 add_column_if_not_exists "users" "heure_reservation" "TIME"
+
+# Migration: convertir bonus_id en bonus_ids si nécessaire
+echo ""
+echo "🔄 Migration bonus_id -> bonus_ids..."
+BONUS_ID_EXISTS=$(query_sql "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='users' AND column_name='bonus_id'")
+if [ "$BONUS_ID_EXISTS" = "1" ]; then
+    echo "   Migration des données bonus_id existantes..."
+    run_sql "UPDATE users SET bonus_ids = jsonb_build_array(bonus_id) WHERE bonus_id IS NOT NULL AND (bonus_ids IS NULL OR bonus_ids = '[]');" > /dev/null 2>&1
+    echo "   ✓ Données migrées"
+fi
 
 echo ""
 echo "📇 Index..."

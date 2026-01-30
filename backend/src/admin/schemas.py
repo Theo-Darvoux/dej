@@ -29,7 +29,7 @@ class AdminOrderResponse(BaseModel):
     
     menu_item: Optional[AdminOrderItem] = None
     boisson_item: Optional[AdminOrderItem] = None
-    bonus_item: Optional[AdminOrderItem] = None
+    extras_items: Optional[List[AdminOrderItem]] = []
 
     class Config:
         from_attributes = True
@@ -48,4 +48,4 @@ class AdminOrderUpdate(BaseModel):
     special_requests: Optional[str] = None
     menu_id: Optional[str] = None
     boisson_id: Optional[str] = None
-    bonus_id: Optional[str] = None
+    bonus_ids: Optional[List[str]] = None

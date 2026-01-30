@@ -68,6 +68,14 @@ def get_terminal_orders(
     # Build response
     orders = []
     for res in reservations:
+        # Récupérer tous les extras
+        extras_names = []
+        if res.bonus_ids:
+            for bonus_id in res.bonus_ids:
+                name = get_item_name(bonus_id)
+                if name:
+                    extras_names.append(name)
+
         orders.append(TerminalOrder(
             id=res.id,
             prenom=res.prenom,
@@ -76,7 +84,7 @@ def get_terminal_orders(
             batiment=res.adresse_if_maisel.value if res.adresse_if_maisel else None,
             menu=get_item_name(res.menu_id),
             boisson=get_item_name(res.boisson_id),
-            bonus=get_item_name(res.bonus_id)
+            extras=extras_names
         ))
 
     return TerminalOrdersResponse(

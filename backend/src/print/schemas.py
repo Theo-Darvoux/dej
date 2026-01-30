@@ -4,7 +4,7 @@ from typing import List, Optional
 class OrderCombo(BaseModel):
     menu: Optional[str]
     boisson: Optional[str]
-    bonus: Optional[str]
+    extras: List[str] = []
     quantity: int
 
 class PrintSummaryResponse(BaseModel):
@@ -22,7 +22,7 @@ class OrderItem(BaseModel):
     heure_reservation: str
     menu: Optional[str]
     boisson: Optional[str]
-    bonus: Optional[str]
+    extras: List[str] = []
     payment_status: str
     is_maisel: bool  # True if Maisel residence, False if Evry
     adresse: Optional[str]
