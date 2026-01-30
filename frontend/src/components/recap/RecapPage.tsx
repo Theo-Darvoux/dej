@@ -11,11 +11,20 @@ type OrderData = {
     phone: string | null
 }
 
+type Contact = {
+    name: string
+    phone: string
+}
+
 type UserData = {
     prenom: string | null
     nom: string | null
     email: string
     order: OrderData | null
+    contacts?: {
+        responsable1: Contact
+        responsable2: Contact
+    }
 }
 
 type RecapPageProps = {
@@ -82,10 +91,12 @@ const RecapPage = ({ onBackToHome }: RecapPageProps) => {
 
     const { order } = userData
 
-    // Format time for display
-    const formatTime = (time: string | null) => {
-        if (!time) return '--:--'
-        return time.replace(':', 'h')
+    // Format time slot for display (e.g., "12h00 - 13h00")
+    const formatTimeSlot = (time: string | null) => {
+        if (!time) return '--:-- - --:--'
+        const [hours, minutes] = time.split(':').map(Number)
+        const endHour = hours + 1
+        return `${hours}h${minutes.toString().padStart(2, '0')} - ${endHour}h${minutes.toString().padStart(2, '0')}`
     }
 
     return (
@@ -116,7 +127,7 @@ const RecapPage = ({ onBackToHome }: RecapPageProps) => {
                     <section className="recap-time-section">
                         <div className="recap-time-label">Créneau de livraison</div>
                         <div className="recap-time-display">
-                            <span className="recap-time-value">{formatTime(order.heure_reservation)}</span>
+                            <span className="recap-time-value">{formatTimeSlot(order.heure_reservation)}</span>
                         </div>
                         <div className="recap-date">7 février 2026</div>
                     </section>
@@ -211,6 +222,30 @@ const RecapPage = ({ onBackToHome }: RecapPageProps) => {
                             </div>
                         </div>
                     </section>
+
+                    {/* Contacts Section */}
+                    {userData.contacts && (
+                        <section className="recap-section recap-section--contacts">
+                            <h3 className="recap-section__title">
+                                <span className="recap-section__icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                    </svg>
+                                </span>
+                                Un problème ? Contactez-nous
+                            </h3>
+                            <div className="recap-contacts">
+                                <a href={`tel:${userData.contacts.responsable1.phone}`} className="recap-contact">
+                                    <span className="recap-contact__name">{userData.contacts.responsable1.name}</span>
+                                    <span className="recap-contact__phone">{userData.contacts.responsable1.phone}</span>
+                                </a>
+                                <a href={`tel:${userData.contacts.responsable2.phone}`} className="recap-contact">
+                                    <span className="recap-contact__name">{userData.contacts.responsable2.name}</span>
+                                    <span className="recap-contact__phone">{userData.contacts.responsable2.phone}</span>
+                                </a>
+                            </div>
+                        </section>
+                    )}
 
                     {/* Action Button */}
                     <button className="recap-btn recap-btn--primary" onClick={onBackToHome}>

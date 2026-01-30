@@ -32,6 +32,8 @@ const AdminPage = ({ onGoHome }: AdminPageProps) => {
     }
 
     useEffect(() => {
+        // Check admin status on mount - intentional state initialization
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         checkAdminStatus()
     }, [])
 

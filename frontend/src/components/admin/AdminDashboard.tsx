@@ -2,9 +2,16 @@ import { useState, useEffect } from 'react'
 import './AdminDashboard.css'
 
 interface OrderItem {
-    id: number
+    id: string
     name: string
-    price: number
+    price: number | string
+    item_type: string
+}
+
+interface MenuItem {
+    id: string
+    title: string
+    price: string
     item_type: string
 }
 
@@ -34,7 +41,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
     const [filterStatus, setFilterStatus] = useState('')
     const [error, setError] = useState<string | null>(null)
     const [editingOrder, setEditingOrder] = useState<Order | null>(null)
-    const [menuItems, setMenuItems] = useState<OrderItem[]>([])
+    const [menuItems, setMenuItems] = useState<MenuItem[]>([])
     const [printingPdf, setPrintingPdf] = useState(false)
 
     const fetchOrders = async () => {
@@ -73,6 +80,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
     useEffect(() => {
         fetchOrders()
         fetchMenuItems()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filterStatus])
 
     const handleDelete = async (id: number) => {
@@ -85,7 +93,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
             } else {
                 alert("Erreur lors de la suppression")
             }
-        } catch (err) {
+        } catch {
             alert("Erreur réseau")
         }
     }
@@ -103,8 +111,8 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                     nom: editingOrder.nom,
                     payment_status: editingOrder.payment_status,
                     status: editingOrder.status,
-                    menu_id: editingOrder.menu_item?.id,
-                    boisson_id: editingOrder.boisson_item?.id,
+                    menu_id: editingOrder.menu_item?.id || null,
+                    boisson_id: editingOrder.boisson_item?.id || null,
                     bonus_ids: editingOrder.extras_items?.map(e => e.id) || []
                 })
             })
@@ -115,7 +123,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
             } else {
                 alert("Erreur lors de la mise à jour")
             }
-        } catch (err) {
+        } catch {
             alert("Erreur réseau")
         }
     }
@@ -127,6 +135,13 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
             hour: '2-digit',
             minute: '2-digit'
         })
+    }
+
+    const formatTimeSlot = (time: string | null) => {
+        if (!time) return 'N/A'
+        const [hours, minutes] = time.split(':').map(Number)
+        const endHour = hours + 1
+        return `${hours}h${minutes.toString().padStart(2, '0')} - ${endHour}h${minutes.toString().padStart(2, '0')}`
     }
 
     const handlePrintAllTickets = async () => {
@@ -150,24 +165,51 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
         }
     }
 
+    // Calculate stats
+    const stats = {
+        total: orders.length,
+        completed: orders.filter(o => o.payment_status === 'completed').length,
+        pending: orders.filter(o => o.payment_status === 'pending').length,
+        failed: orders.filter(o => o.payment_status === 'failed').length
+    }
+
     return (
         <div className="admin-dashboard">
             <header className="admin-header">
                 <h1>Dashboard Admin</h1>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div className="admin-header__actions">
                     <button
                         onClick={handlePrintAllTickets}
-                        className="payment-return__btn"
-                        style={{ width: 'auto', padding: '0.5rem 1rem', background: '#333', color: '#fff' }}
+                        className="admin-btn admin-btn--dark"
                         disabled={printingPdf}
                     >
-                        {printingPdf ? 'Chargement...' : 'Imprimer tickets'}
+                        {printingPdf ? 'Chargement...' : '🖨️ Imprimer tickets'}
                     </button>
-                    <button onClick={onGoHome} className="payment-return__btn" style={{ width: 'auto', padding: '0.5rem 1rem' }}>
-                        Retour Accueil
+                    <button onClick={onGoHome} className="admin-btn admin-btn--primary">
+                        🏠 Retour Accueil
                     </button>
                 </div>
             </header>
+
+            {/* Stats */}
+            <div className="admin-stats">
+                <div className="admin-stat">
+                    <div className="admin-stat__value">{stats.total}</div>
+                    <div className="admin-stat__label">Total</div>
+                </div>
+                <div className="admin-stat">
+                    <div className="admin-stat__value">{stats.completed}</div>
+                    <div className="admin-stat__label">Payées</div>
+                </div>
+                <div className="admin-stat">
+                    <div className="admin-stat__value">{stats.pending}</div>
+                    <div className="admin-stat__label">En attente</div>
+                </div>
+                <div className="admin-stat">
+                    <div className="admin-stat__value">{stats.failed}</div>
+                    <div className="admin-stat__label">Échouées</div>
+                </div>
+            </div>
 
             <div className="admin-filters">
                 <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
@@ -176,12 +218,12 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                     <option value="completed">Payé (completed)</option>
                     <option value="failed">Échoué (failed)</option>
                 </select>
-                <button onClick={fetchOrders} className="payment-return__btn" style={{ width: 'auto', padding: '0.5rem 1rem', background: '#eee', color: '#333' }}>
+                <button onClick={fetchOrders} className="admin-btn admin-btn--secondary">
                     🔄 Rafraîchir
                 </button>
             </div>
 
-            {error && <div className="verify-error" style={{ marginBottom: '1rem' }}>{error}</div>}
+            {error && <div className="admin-error">{error}</div>}
 
             <div className="orders-table-container">
                 {loading ? (
@@ -195,7 +237,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                 <th>Client</th>
                                 <th>Contact</th>
                                 <th>Commande</th>
-                                <th>Heure</th>
+                                <th>Créneau</th>
                                 <th>Total</th>
                                 <th>Paiement</th>
                                 <th>Date</th>
@@ -211,15 +253,15 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                     </td>
                                     <td>{order.phone || 'N/A'}</td>
                                     <td>
-                                        <small>
+                                        <div className="order-items">
                                             {order.menu_item?.name && <div>🍔 {order.menu_item.name}</div>}
                                             {order.boisson_item?.name && <div>🥤 {order.boisson_item.name}</div>}
                                             {order.extras_items?.map((extra, idx) => (
                                                 <div key={idx}>🍟 {extra.name}</div>
                                             ))}
-                                        </small>
+                                        </div>
                                     </td>
-                                    <td>{order.heure_reservation || 'N/A'}</td>
+                                    <td>{formatTimeSlot(order.heure_reservation)}</td>
                                     <td>{order.total_amount.toFixed(2)}€</td>
                                     <td>
                                         <span className={`status-badge status-badge--${order.payment_status}`}>
@@ -243,8 +285,8 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
             </div>
 
             {editingOrder && (
-                <div className="admin-modal">
-                    <div className="admin-modal__content">
+                <div className="admin-modal" onClick={() => setEditingOrder(null)}>
+                    <div className="admin-modal__content" onClick={(e) => e.stopPropagation()}>
                         <h2 className="admin-modal__header">Modifier la commande #{editingOrder.id}</h2>
                         <form onSubmit={handleUpdate}>
                             <div className="admin-form-group">
@@ -279,21 +321,50 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                 <select
                                     value={editingOrder.menu_item?.id || ''}
                                     onChange={(e) => {
-                                        const item = menuItems.find(m => m.id === parseInt(e.target.value))
-                                        setEditingOrder({ ...editingOrder, menu_item: item })
+                                        const item = menuItems.find(m => m.id === e.target.value)
+                                        if (item) {
+                                            setEditingOrder({
+                                                ...editingOrder,
+                                                menu_item: { id: item.id, name: item.title, price: item.price, item_type: item.item_type }
+                                            })
+                                        } else {
+                                            setEditingOrder({ ...editingOrder, menu_item: undefined })
+                                        }
                                     }}
                                 >
                                     <option value="">Aucun</option>
                                     {menuItems.filter(m => m.item_type === 'menu').map(m => (
-                                        <option key={m.id} value={m.id}>{m.name}</option>
+                                        <option key={m.id} value={m.id}>{m.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Boisson</label>
+                                <select
+                                    value={editingOrder.boisson_item?.id || ''}
+                                    onChange={(e) => {
+                                        const item = menuItems.find(m => m.id === e.target.value)
+                                        if (item) {
+                                            setEditingOrder({
+                                                ...editingOrder,
+                                                boisson_item: { id: item.id, name: item.title, price: item.price, item_type: item.item_type }
+                                            })
+                                        } else {
+                                            setEditingOrder({ ...editingOrder, boisson_item: undefined })
+                                        }
+                                    }}
+                                >
+                                    <option value="">Aucune</option>
+                                    {menuItems.filter(m => m.item_type === 'boisson').map(m => (
+                                        <option key={m.id} value={m.id}>{m.title}</option>
                                     ))}
                                 </select>
                             </div>
                             <div className="admin-modal__actions">
-                                <button type="button" className="payment-return__btn payment-return__btn--secondary" onClick={() => setEditingOrder(null)}>
+                                <button type="button" onClick={() => setEditingOrder(null)}>
                                     Annuler
                                 </button>
-                                <button type="submit" className="payment-return__btn payment-return__btn--primary">
+                                <button type="submit">
                                     Enregistrer
                                 </button>
                             </div>

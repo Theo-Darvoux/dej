@@ -32,14 +32,14 @@ def get_ticket_pdf(
     except ValueError:
         return Response(content="Format d'heure invalide (HH:MM)", status_code=400)
 
-    # Récupérer les réservations filtrées
+    # Récupérer les réservations filtrées, triées par heure de créneau
     reservations = db.query(User).filter(
         and_(
             User.payment_status == "completed",
             User.heure_reservation >= t_start,
             User.heure_reservation <= t_end
         )
-    ).all()
+    ).order_by(User.heure_reservation).all()
 
     if not reservations:
         return Response(content="Aucune réservation trouvée pour ce créneau", status_code=404)

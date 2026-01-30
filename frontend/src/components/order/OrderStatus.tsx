@@ -63,10 +63,12 @@ const OrderStatus = () => {
         }
     }, [token])
 
-    // Format time for display
-    const formatTime = (time: string | null) => {
-        if (!time) return '--:--'
-        return time.replace(':', 'h')
+    // Format time slot for display (e.g., "12h00 - 13h00")
+    const formatTimeSlot = (time: string | null) => {
+        if (!time) return '--:-- - --:--'
+        const [hours, minutes] = time.split(':').map(Number)
+        const endHour = hours + 1
+        return `${hours}h${minutes.toString().padStart(2, '0')} - ${endHour}h${minutes.toString().padStart(2, '0')}`
     }
 
     // Get badge info based on payment status
@@ -182,7 +184,7 @@ const OrderStatus = () => {
                     <section className="status-time-section">
                         <div className="status-time-label">Créneau de livraison</div>
                         <div className="status-time-display">
-                            <span className="status-time-value">{formatTime(order.heure_reservation)}</span>
+                            <span className="status-time-value">{formatTimeSlot(order.heure_reservation)}</span>
                         </div>
                         <div className="status-date">7 février 2026</div>
                     </section>

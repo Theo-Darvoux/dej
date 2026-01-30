@@ -2,7 +2,7 @@
 .admin-page {
     min-height: 100vh;
     min-height: 100dvh;
-    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -45,14 +45,15 @@
     margin-top: 24px;
     background: none;
     border: none;
-    color: #666;
+    color: rgba(255, 255, 255, 0.6);
     font-size: 0.95rem;
     cursor: pointer;
     text-decoration: underline;
+    transition: color 0.2s ease;
 }
 
 .admin-page__home-btn:hover {
-    color: #333;
+    color: #fff;
 }
 
 /* Login Card */
@@ -62,10 +63,11 @@
 }
 
 .admin-login__card {
-    background: white;
+    background: #2d2d2d;
     border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .admin-login__header {
@@ -95,20 +97,38 @@
 }
 
 .admin-login__info {
-    color: #555;
+    color: rgba(255, 255, 255, 0.7);
     line-height: 1.5;
     margin: 0;
     font-size: 0.95rem;
 }
 
+.admin-login__form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.admin-login__form .form-group label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+}
+
 .admin-login__input {
     width: 100%;
     padding: 14px 16px;
-    border: 2px solid #e0e0e0;
+    border: 2px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     font-size: 1rem;
     transition: border-color 0.2s ease;
     box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.admin-login__input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .admin-login__input:focus {
@@ -138,36 +158,36 @@
 }
 
 .admin-login__btn--primary:disabled {
-    background: #ccc;
+    background: #555;
     cursor: not-allowed;
 }
 
 .admin-login__btn--secondary {
-    background: white;
-    color: #DA291C;
-    border: 2px solid #DA291C;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .admin-login__btn--secondary:hover:not(:disabled) {
-    background: #fff5f5;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .admin-login__error {
-    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
-    border: 2px solid #DA291C;
+    background: linear-gradient(135deg, rgba(244, 67, 54, 0.2), rgba(211, 47, 47, 0.2));
+    border: 2px solid rgba(244, 67, 54, 0.5);
     border-radius: 12px;
     padding: 14px 16px;
-    color: #DA291C;
+    color: #ff8a80;
     font-weight: 500;
     font-size: 0.9rem;
 }
 
 .admin-login__success {
-    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-    border: 2px solid #4caf50;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(56, 142, 60, 0.2));
+    border: 2px solid rgba(76, 175, 80, 0.5);
     border-radius: 12px;
     padding: 14px 16px;
-    color: #2e7d32;
+    color: #81c784;
     font-weight: 600;
     text-align: center;
 }
@@ -177,20 +197,21 @@
     flex-direction: column;
     gap: 4px;
     padding: 14px 18px;
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.2), rgba(25, 118, 210, 0.2));
     border-radius: 12px;
+    border: 1px solid rgba(33, 150, 243, 0.3);
 }
 
 .admin-login__email-label {
     font-size: 0.85rem;
-    color: #1565c0;
+    color: #64b5f6;
     font-weight: 500;
 }
 
 .admin-login__email-value {
     font-size: 1rem;
     font-weight: 700;
-    color: #0d47a1;
+    color: #90caf9;
     word-break: break-all;
 }
 
@@ -206,9 +227,10 @@
     font-weight: 700;
     text-align: center;
     letter-spacing: 4px;
-    border: 3px solid #e0e0e0;
+    border: 3px solid rgba(255, 255, 255, 0.2);
     border-radius: 12px;
-    background: white;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
     transition: border-color 0.2s ease;
 }
 
@@ -224,11 +246,12 @@
 }
 
 .admin-access-denied__card {
-    background: white;
+    background: #2d2d2d;
     border-radius: 20px;
     padding: 40px 32px;
     text-align: center;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .admin-access-denied__icon {
@@ -246,13 +269,13 @@
 
 .admin-access-denied__card p {
     margin: 0 0 8px 0;
-    color: #555;
+    color: rgba(255, 255, 255, 0.7);
     line-height: 1.5;
 }
 
 .admin-access-denied__hint {
     font-size: 0.9rem;
-    color: #888 !important;
+    color: rgba(255, 255, 255, 0.5) !important;
     margin-top: 16px !important;
 }
 
@@ -282,12 +305,13 @@
 }
 
 .admin-access-denied__btn--secondary {
-    background: white;
-    color: #DA291C;
-    border: 2px solid #DA291C;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .admin-access-denied__btn--secondary:hover {
-    background: #fff5f5;
-    box-shadow: 0 4px 12px rgba(218, 41, 28, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    transform: translateY(-2px);
 }

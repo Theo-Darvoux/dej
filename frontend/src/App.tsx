@@ -24,53 +24,12 @@ function App() {
     if (path === '/admin') return 'admin'
     return 'landing'
   })
-  const [isVerifying, setIsVerifying] = useState(() => window.location.pathname === '/auth/verify')
-  const [verifyError, setVerifyError] = useState<string | null>(null)
-
-  const handleAutoVerify = async (email: string, code: string) => {
-    setIsVerifying(true)
-    setVerifyError(null)
-    try {
-      const response = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.detail || 'La vérification a échoué')
-      }
-
-      // Success! Move to order page and clean URL
-      window.history.pushState({}, '', '/')
-      setView('order')
-    } catch (err) {
-      setVerifyError(err instanceof Error ? err.message : 'Une erreur est survenue')
-      setTimeout(() => {
-        window.history.pushState({}, '', '/')
-        setView('landing')
-        setVerifyError(null)
-      }, 3000)
-    } finally {
-      setIsVerifying(false)
-    }
-  }
 
   // Check URL path on mount for payment return pages
   useEffect(() => {
     const path = window.location.pathname
-    const params = new URLSearchParams(window.location.search)
 
-    if (path === '/auth/verify') {
-      const email = params.get('email')
-      const code = params.get('code')
-      if (email && code) {
-        handleAutoVerify(email, code)
-      } else {
-        setView('landing')
-      }
-    } else if (path === '/payment/success') {
+    if (path === '/payment/success') {
       setView('payment-success')
     } else if (path === '/payment/error') {
       setView('payment-error')
@@ -98,17 +57,7 @@ function App() {
 
   return (
     <MenuProvider>
-      {isVerifying && (
-        <div className="verify-overlay">
-          <div className="verify-content">
-            <div className="verify-spinner">🍟</div>
-            <h2>Vérification de ton accès...</h2>
-            {verifyError && <p className="verify-error">{verifyError}</p>}
-          </div>
-        </div>
-      )}
-
-      {view === 'landing' && !isVerifying && (
+      {view === 'landing' && (
         <LandingPage
           onStart={() => {
             window.history.pushState({}, '', '/')
@@ -118,23 +67,23 @@ function App() {
         />
       )}
 
-      {view === 'order' && !isVerifying && (
+      {view === 'order' && (
         <OrderPage onBackToHome={handleGoHome} />
       )}
 
-      {view === 'order-status' && !isVerifying && (
+      {view === 'order-status' && (
         <OrderStatus />
       )}
 
-      {view === 'recap' && !isVerifying && (
+      {view === 'recap' && (
         <RecapPage onBackToHome={handleGoHome} />
       )}
 
-      {view === 'payment-success' && !isVerifying && (
+      {view === 'payment-success' && (
         <PaymentSuccess onClose={handleGoHome} />
       )}
 
-      {view === 'payment-error' && !isVerifying && (
+      {view === 'payment-error' && (
         <PaymentError onClose={() => setView('order')} />
       )}
 
@@ -154,4 +103,3 @@ function App() {
 }
 
 export default App
-

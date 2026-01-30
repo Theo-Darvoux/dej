@@ -132,8 +132,8 @@ const Supplements = ({ initialSelectedItems = [], onBack, onContinue }: Suppleme
                     {extras.map(item => {
                         const name = item.title.toLowerCase()
                         let bannerImg = null
-                        if (name.includes('chouffe')) bannerImg = '/images/BiereAbsinthe.png'
-                        if (name.includes('poulet')) bannerImg = '/images/PouletRoti.png'
+                        if (name.includes('chouffe')) bannerImg = '/images/BiereAbsinthe.webp'
+                        if (name.includes('poulet')) bannerImg = '/images/PouletRoti.webp'
 
                         if (bannerImg) {
                             return (

@@ -256,8 +256,6 @@ async def send_verification_email(recipient_email: str, code: str) -> bool:
     """
     Envoie un email de vérification avec code à 6 chiffres.
     """
-    verify_link = f"{settings.FRONTEND_URL}/auth/verify?email={recipient_email}&code={code}"
-
     content = f"""
     {get_email_header()}
 
@@ -277,18 +275,6 @@ async def send_verification_email(recipient_email: str, code: str) -> bool:
             <td style="background: linear-gradient(135deg, {COLORS['yellow']} 0%, {COLORS['yellow_light']} 100%); border-radius: 16px; padding: 32px; text-align: center;">
                 <div style="font-size: 11px; font-weight: 600; color: rgba(0,0,0,0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Ton code de vérification</div>
                 <div style="font-size: 48px; font-weight: 800; color: {COLORS['dark']}; font-family: 'Courier New', monospace; letter-spacing: 8px;">{code}</div>
-            </td>
-        </tr>
-    </table>
-
-    <!-- Bouton alternatif -->
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 24px; text-align: center;">
-        <tr>
-            <td>
-                <div style="font-size: 13px; color: {COLORS['gray']}; margin-bottom: 16px;">Ou clique directement sur ce bouton :</div>
-                <a href="{verify_link}" style="display: inline-block; background: linear-gradient(135deg, {COLORS['red']}, {COLORS['red_dark']}); color: {COLORS['white']}; padding: 14px 28px; border-radius: 12px; font-size: 15px; font-weight: 700; text-decoration: none;">
-                    ✓ Vérifier mon email
-                </a>
             </td>
         </tr>
     </table>
@@ -372,8 +358,14 @@ async def send_order_confirmation(user) -> bool:
     # Lien vers la page de statut
     status_url = f"{settings.FRONTEND_URL}/order/status/{user.status_token}"
 
-    # Formater l'heure
-    time_str = user.heure_reservation.strftime("%Hh%M") if user.heure_reservation else "--:--"
+    # Formater le créneau horaire (début - fin)
+    if user.heure_reservation:
+        start_hour = user.heure_reservation.hour
+        start_min = user.heure_reservation.minute
+        end_hour = start_hour + 1
+        time_str = f"{start_hour}h{start_min:02d} - {end_hour}h{start_min:02d}"
+    else:
+        time_str = "--:-- - --:--"
 
     # Construire les lignes de produits
     order_items_html = ""

@@ -453,6 +453,54 @@
     transform: translateY(0);
 }
 
+/* Contacts Section */
+.recap-section--contacts {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px dashed #eee;
+}
+
+.recap-contacts {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.recap-contact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid #bae6fd;
+}
+
+.recap-contact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+}
+
+.recap-contact:active {
+    transform: translateY(0);
+}
+
+.recap-contact__name {
+    font-weight: 600;
+    color: #0369a1;
+    font-size: 0.9rem;
+}
+
+.recap-contact__phone {
+    font-weight: 700;
+    color: #0ea5e9;
+    font-size: 0.95rem;
+    font-family: 'Courier New', monospace;
+}
+
 /* ============================================
    RESPONSIVE DESIGN
    ============================================ */

@@ -59,7 +59,17 @@ async def get_current_user_details(
             "heure_reservation": user.heure_reservation.strftime("%H:%M") if user.heure_reservation else None,
             "adresse": user.adresse if not user.habite_residence else f"Maisel {user.adresse_if_maisel.value if user.adresse_if_maisel else ''} - Ch {user.numero_if_maisel}",
             "phone": user.phone
-        } if has_active_order else None
+        } if has_active_order else None,
+        "contacts": {
+            "responsable1": {
+                "name": "Théo DARVOUX",
+                "phone": "+33762357719"
+            },
+            "responsable2": {
+                "name": "Solène CHAMPION",
+                "phone": "+33661737785"
+            }
+        }
     }
 
 
