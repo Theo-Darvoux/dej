@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # HelloAsso (OAuth2)
     HELLOASSO_CLIENT_ID: str = os.getenv("HELLOASSO_CLIENT_ID", "")
     HELLOASSO_CLIENT_SECRET: str = os.getenv("HELLOASSO_CLIENT_SECRET", "")
+
+    # Webhook secret (for secure webhook URL)
+    WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "change-me-in-production")
     HELLOASSO_URL_TOKEN: str = os.getenv("HELLOASSO_URL_TOKEN", "https://api.helloasso.com/oauth2")
     HELLOASSO_API: str = os.getenv("HELLOASSO_API", "https://api.helloasso.com/v5")
     

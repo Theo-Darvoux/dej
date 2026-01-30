@@ -412,15 +412,17 @@ async def verify_payment(checkout_intent_id: str):
         )
 
 
-@router.get("/webhook")
-async def webhook_test():
+@router.get("/webhook-{secret}")
+async def webhook_test(secret: str):
     """Test endpoint to verify webhook URL is accessible."""
+    if secret != settings.WEBHOOK_SECRET:
+        raise HTTPException(status_code=404, detail="Not found")
     print("[WEBHOOK] GET request received - webhook URL is accessible")
     return {"status": "ok", "message": "Webhook endpoint is accessible. Use POST for actual webhooks."}
 
 
-@router.post("/webhook")
-async def payment_webhook(request: Request):
+@router.post("/webhook-{secret}")
+async def payment_webhook(secret: str, request: Request):
     """
     Webhook endpoint for HelloAsso notifications.
     HelloAsso will POST here when a payment is completed.
@@ -428,6 +430,9 @@ async def payment_webhook(request: Request):
     This is a backup confirmation method - the primary method is frontend
     polling via /status/{checkout_intent_id} and the background task.
     """
+    if secret != settings.WEBHOOK_SECRET:
+        raise HTTPException(status_code=404, detail="Not found")
+
     from src.db.session import SessionLocal
     from src.users.models import User
 

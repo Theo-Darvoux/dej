@@ -38,6 +38,10 @@ async def lifespan(app: FastAPI):
     print("[STARTUP] Starting background tasks...")
     background_task = await start_background_tasks()
 
+    # Log webhook URL for configuration
+    webhook_url = f"{settings.HELLOASSO_REDIRECT_BASE_URL}/api/payments/webhook-{settings.WEBHOOK_SECRET}"
+    print(f"[STARTUP] HelloAsso webhook URL: {webhook_url}")
+
     yield
 
     # Shutdown: Cancel background tasks
