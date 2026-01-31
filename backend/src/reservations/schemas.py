@@ -23,7 +23,6 @@ class ReservationItemCreate(BaseModel):
 
 class ReservationCreateRequest(BaseModel):
     """Création d'une réservation avec menu/boisson/bonus (sans items)"""
-    date_reservation: str  # Format: YYYY-MM-DD
     heure_reservation: str  # Format: HH:MM
     habite_residence: bool
     numero_chambre: Optional[str] = None  # Si habite_residence=True

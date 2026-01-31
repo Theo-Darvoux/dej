@@ -100,8 +100,7 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
                     })) || []
 
                 setAddressSuggestions(suggestions)
-            } catch (err) {
-                console.error('Address search error:', err)
+            } catch {
                 setAddressSuggestions([])
             } finally {
                 setIsLoadingAddresses(false)

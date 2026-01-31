@@ -74,8 +74,7 @@ const InfoPopup = ({
           const data = await response.json()
           setTimeSlots(data.slots || [])
         } else {
-          console.error('Erreur chargement disponibilités')
-          // Fallback: tous les créneaux disponibles
+          // Fallback: tous les créneaux indisponibles
           setTimeSlots([
             { slot: "07:00 - 08:00", start: "07:00", available: false },
             { slot: "08:00 - 09:00", start: "08:00", available: false },
@@ -92,8 +91,8 @@ const InfoPopup = ({
             { slot: "19:00 - 20:00", start: "19:00", available: false },
           ])
         }
-      } catch (err) {
-        console.error('Erreur fetch availability:', err)
+      } catch {
+        // Network error - keep loading state
       } finally {
         setLoadingSlots(false)
       }
@@ -177,8 +176,8 @@ const InfoPopup = ({
           if (userData.nom) payerLastName = userData.nom
           if (userData.email) payerEmail = userData.email
         }
-      } catch (e) {
-        console.warn('Could not fetch user info, using defaults')
+      } catch {
+        // Use default values if user info fetch fails
       }
 
       // Create checkout intent

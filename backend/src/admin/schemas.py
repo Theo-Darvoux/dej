@@ -35,11 +35,14 @@ class AdminOrderResponse(BaseModel):
         from_attributes = True
 
 class AdminOrderUpdate(BaseModel):
+    """
+    Schema for admin order updates.
+    Note: payment_status is intentionally excluded - only the payment system can modify it.
+    """
     prenom: Optional[str] = None
     nom: Optional[str] = None
     phone: Optional[str] = None
-    payment_status: Optional[str] = None
-    date_reservation: Optional[date] = None
+    # payment_status removed for security - only payment system can modify
     heure_reservation: Optional[time] = None
     habite_residence: Optional[bool] = None
     adresse_if_maisel: Optional[BatimentMaisel] = None

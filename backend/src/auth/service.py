@@ -194,7 +194,6 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
     except Exception:
         user.prenom = ""
         user.nom = ""
-        pass
 
     # Marquer email comme vérifié et log IP
     user.email_verified = True

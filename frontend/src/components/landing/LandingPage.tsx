@@ -33,8 +33,8 @@ const LandingPage = ({ onStart, onViewRecap }: LandingPageProps) => {
                         setHasCompletedOrder(true)
                     }
                 }
-            } catch (err) {
-                console.error('Failed to fetch user status:', err)
+            } catch {
+                // User not logged in or network error - show default view
             } finally {
                 setIsLoading(false)
             }

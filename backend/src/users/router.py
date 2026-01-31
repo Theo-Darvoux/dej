@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Cookie
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from typing import Optional
 
 from src.db.session import get_db

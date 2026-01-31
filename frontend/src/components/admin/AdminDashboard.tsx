@@ -72,8 +72,8 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                 const data = await response.json()
                 setMenuItems(data)
             }
-        } catch (err) {
-            console.error("Failed to fetch menu items", err)
+        } catch {
+            // Silently fail - menu items are optional for admin view
         }
     }
 

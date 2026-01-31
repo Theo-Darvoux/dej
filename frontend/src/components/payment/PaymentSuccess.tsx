@@ -52,13 +52,10 @@ const PaymentSuccess = ({ onClose }: PaymentSuccessProps) => {
             setPollCount(currentPollCount + 1)
 
             try {
-                console.log(`[Poll ${currentPollCount + 1}/${MAX_POLLS}] Checking payment status...`)
-
                 const response = await fetch(`/api/payments/status/${checkoutIntentId}`)
 
                 if (!response.ok) {
                     if (response.status === 404) {
-                        console.error('Payment intent not found')
                         clearPolling()
                         setStatus('error')
                         setMessage('Commande introuvable. Vérifie ton email ou contacte le support.')
@@ -68,7 +65,6 @@ const PaymentSuccess = ({ onClose }: PaymentSuccessProps) => {
                 }
 
                 const data = await response.json()
-                console.log(`[Poll ${currentPollCount + 1}] Status: ${data.payment_status}`)
 
                 if (data.payment_status === 'completed') {
                     clearPolling()
@@ -91,9 +87,7 @@ const PaymentSuccess = ({ onClose }: PaymentSuccessProps) => {
                     setStatus('timeout')
                     setMessage('La confirmation prend plus de temps que prévu...')
                 }
-            } catch (err) {
-                console.error('Polling error:', err)
-
+            } catch {
                 // Don't fail immediately on network errors, keep polling unless timeout
                 if (currentPollCount >= MAX_POLLS - 1) {
                     clearPolling()

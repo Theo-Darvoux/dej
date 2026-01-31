@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { MenuProvider } from './context/MenuContext'
 import LandingPage from './components/landing/LandingPage'
 import OrderPage from './components/order/OrderPage'
@@ -13,62 +13,72 @@ import './App.css'
 
 type ViewState = 'landing' | 'order' | 'order-status' | 'payment-success' | 'payment-error' | 'recap' | 'admin' | 'admin-print' | 'admin-terminal'
 
+function getViewFromPath(path: string): ViewState {
+  if (path === '/payment/success') return 'payment-success'
+  if (path === '/payment/error') return 'payment-error'
+  if (path === '/order') return 'order'
+  if (path.startsWith('/order/status/')) return 'order-status'
+  if (path === '/recap') return 'recap'
+  if (path === '/admin') return 'admin'
+  return 'landing'
+}
+
 function App() {
-  const [view, setView] = useState<ViewState>(() => {
-    const path = window.location.pathname
-    if (path === '/payment/success') return 'payment-success'
-    if (path === '/payment/error') return 'payment-error'
-    if (path === '/order') return 'order'
-    if (path.startsWith('/order/status/')) return 'order-status'
-    if (path === '/recap') return 'recap'
-    if (path === '/admin') return 'admin'
-    return 'landing'
-  })
+  const [view, setView] = useState<ViewState>(() => getViewFromPath(window.location.pathname))
 
-  // Check URL path on mount for payment return pages
+  // Initialize history state on mount (for proper back navigation)
   useEffect(() => {
-    const path = window.location.pathname
-
-    if (path === '/payment/success') {
-      setView('payment-success')
-    } else if (path === '/payment/error') {
-      setView('payment-error')
-    } else if (path === '/order') {
-      setView('order')
-    } else if (path.startsWith('/order/status/')) {
-      setView('order-status')
-    } else if (path === '/recap') {
-      setView('recap')
-    } else if (path === '/admin') {
-      setView('admin')
+    const initialView = getViewFromPath(window.location.pathname)
+    // Only replace if no state exists (initial page load)
+    if (!window.history.state?.view) {
+      window.history.replaceState({ view: initialView }, '', window.location.pathname)
     }
   }, [])
 
-  const handleGoHome = () => {
-    // Clear URL and go to landing
-    window.history.pushState({}, '', '/')
-    setView('landing')
-  }
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      // If state has view info, use it; otherwise derive from URL
+      if (event.state?.view) {
+        setView(event.state.view)
+      } else {
+        setView(getViewFromPath(window.location.pathname))
+      }
+    }
 
-  const handleViewRecap = () => {
-    window.history.pushState({}, '', '/recap')
-    setView('recap')
-  }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  // Navigation helper that pushes state with view info
+  const navigateTo = useCallback((newView: ViewState, path: string) => {
+    window.history.pushState({ view: newView }, '', path)
+    setView(newView)
+  }, [])
+
+  const handleGoHome = useCallback(() => {
+    navigateTo('landing', '/')
+  }, [navigateTo])
+
+  const handleViewRecap = useCallback(() => {
+    navigateTo('recap', '/recap')
+  }, [navigateTo])
+
+  const handleStartOrder = useCallback(() => {
+    navigateTo('order', '/order')
+  }, [navigateTo])
 
   return (
     <MenuProvider>
       {view === 'landing' && (
         <LandingPage
-          onStart={() => {
-            window.history.pushState({}, '', '/')
-            setView('order')
-          }}
+          onStart={handleStartOrder}
           onViewRecap={handleViewRecap}
         />
       )}
 
       {view === 'order' && (
-        <OrderPage onBackToHome={handleGoHome} />
+        <OrderPage />
       )}
 
       {view === 'order-status' && (

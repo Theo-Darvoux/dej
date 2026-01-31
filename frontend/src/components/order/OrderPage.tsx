@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useMenu, type MenuItem } from '../../context/MenuContext'
 import MenuSelection from './steps/MenuSelection'
 import MenuDetail from './steps/MenuDetail'
@@ -8,17 +8,13 @@ import EmailVerification from './steps/EmailVerification'
 import Checkout from './steps/Checkout'
 import './OrderPage.css'
 
-type OrderPageProps = {
-    onBackToHome: () => void
-}
-
 type Step = 'SELECTION' | 'DETAIL' | 'SUPPLEMENTS' | 'INFO' | 'DELIVERY' | 'VERIFICATION' | 'CHECKOUT'
 
 export type UserInfo = {
     phone: string
 }
 
-const OrderPage = ({ onBackToHome }: OrderPageProps) => {
+const OrderPage = () => {
     useMenu() // Initialize menu context
 
     // Wizard State
@@ -30,17 +26,43 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
     const [userEmail, setUserEmail] = useState('')
     const [userInfo, setUserInfo] = useState<UserInfo>({ phone: '' })
 
+    // Navigate to step with history push
+    const navigateToStep = useCallback((newStep: Step) => {
+        window.history.pushState({ step: newStep, view: 'order' }, '', '/order')
+        setStep(newStep)
+    }, [])
+
+    // Handle browser back/forward button
+    useEffect(() => {
+        const handlePopState = (event: PopStateEvent) => {
+            // Check if this is an order step navigation
+            if (event.state?.view === 'order' && event.state?.step) {
+                setStep(event.state.step)
+            }
+            // If navigating away from order view, App.tsx handles it via its own popstate listener
+        }
+
+        window.addEventListener('popstate', handlePopState)
+        return () => window.removeEventListener('popstate', handlePopState)
+    }, [])
+
+    // Push initial state on mount (so back from SELECTION works)
+    useEffect(() => {
+        // Replace current state with order view + SELECTION step
+        window.history.replaceState({ step: 'SELECTION', view: 'order' }, '', '/order')
+    }, [])
+
     // Step 1: Menu Selected
     const handleMenuSelect = (menu: MenuItem) => {
         setSelectedMenu(menu)
-        setStep('DETAIL')
+        navigateToStep('DETAIL')
     }
 
     // Step 2: Confirm Menu -> Go to Supplements
     const handleMenuConfirm = () => {
         if (selectedMenu) {
             setCartItems([selectedMenu])
-            setStep('SUPPLEMENTS')
+            navigateToStep('SUPPLEMENTS')
         }
     }
 
@@ -48,26 +70,26 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
     const handleSupplementsContinue = (supplements: MenuItem[]) => {
         setExtraItems(supplements)
         setCartItems(prev => [...prev, ...supplements])
-        setStep('INFO')
+        navigateToStep('INFO')
     }
 
     // Step 4: Info confirmed -> Go to Delivery (save user info)
     const handleInfoContinue = (info: UserInfo) => {
         setUserInfo(info)
-        setStep('DELIVERY')
+        navigateToStep('DELIVERY')
     }
 
     // Step 5: Delivery confirmed -> Go to Verification
     const handleDeliveryContinue = (info: DeliveryInfo) => {
         setDeliveryInfo(info)
-        setStep('VERIFICATION')
+        navigateToStep('VERIFICATION')
     }
 
     // Step 6: Email verified -> Go to Checkout
     const handleVerificationComplete = (isCotisant: boolean, email: string) => {
         if (isCotisant) {
             setUserEmail(email)
-            setStep('CHECKOUT')
+            navigateToStep('CHECKOUT')
         }
         // Non-cotisants are blocked in the verification component
     }
@@ -78,36 +100,11 @@ const OrderPage = ({ onBackToHome }: OrderPageProps) => {
         window.location.href = '/payment/success'
     }
 
-    // Back handlers
-    const handleBack = () => {
-        switch (step) {
-            case 'SELECTION':
-                onBackToHome()
-                break
-            case 'DETAIL':
-                setStep('SELECTION')
-                setSelectedMenu(null)
-                break
-            case 'SUPPLEMENTS':
-                setCartItems([])
-                setExtraItems([])
-                setStep('DETAIL')
-                break
-            case 'INFO':
-                if (selectedMenu) setCartItems([selectedMenu])
-                setStep('SUPPLEMENTS')
-                break
-            case 'DELIVERY':
-                setStep('INFO')
-                break
-            case 'VERIFICATION':
-                setStep('DELIVERY')
-                break
-            case 'CHECKOUT':
-                setStep('VERIFICATION')
-                break
-        }
-    }
+    // Back handlers (called by UI back buttons)
+    const handleBack = useCallback(() => {
+        // Use browser history to go back (triggers popstate)
+        window.history.back()
+    }, [])
 
     const getStepTitle = () => {
         switch (step) {

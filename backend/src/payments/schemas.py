@@ -7,12 +7,10 @@ from typing import Optional, Dict, Any
 
 class CheckoutRequest(BaseModel):
     """Request to create a HelloAsso checkout"""
-    amount: int  # Amount in centimes
-    item_name: str
     payer_email: EmailStr
     payer_first_name: str
     payer_last_name: str
-    reservation_id: Optional[int] = None
+    reservation_id: int  # Required - no fallback to email lookup
     metadata: Optional[Dict[str, Any]] = None
 
 

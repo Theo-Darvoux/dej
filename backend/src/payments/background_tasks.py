@@ -5,8 +5,6 @@ This module contains async background tasks that run periodically to check
 pending payments against the HelloAsso API.
 """
 import asyncio
-from datetime import datetime, timezone, timedelta
-from sqlalchemy.orm import joinedload
 
 # Interval between payment checks (in seconds)
 PAYMENT_CHECK_INTERVAL = 300
@@ -15,7 +13,7 @@ PAYMENT_CHECK_INTERVAL = 300
 async def check_pending_payments():
     """
     Background task that checks HelloAsso API for all pending payments.
-    Runs every 60 seconds.
+    Runs every 5 minutes (300 seconds).
 
     This provides a safety net for payments that:
     - User closed browser before returning from payment

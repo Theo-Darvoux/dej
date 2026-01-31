@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from src.db.session import get_db
 from src.auth import schemas, service
 from src.core.exceptions import UserNotVerifiedException
+from src.core.rate_limit import rate_limiter
 
 router = APIRouter()
 
@@ -19,6 +20,9 @@ async def request_code(
     - Envoie l'email avec code et lien
     - Crée/met à jour l'utilisateur en DB
     """
+    # Rate limit by email: 3 requests per 15 minutes
+    rate_limiter.check(f"email:{request.email}", max_requests=3, window_seconds=900)
+
     await service.request_verification_code(request.email, db)
     
     return schemas.RequestCodeResponse(
@@ -41,6 +45,9 @@ async def verify_code(
     - Émet JWT httpOnly + refresh token
     - Retourne is_cotisant pour guider vers l'étape suivante
     """
+    # Rate limit by email: 5 verification attempts per 15 minutes
+    rate_limiter.check(f"verify:{request_data.email}", max_requests=5, window_seconds=900)
+
     user_id, is_cotisant = await service.verify_code(
         request_data.email,
         request_data.code,

@@ -11,11 +11,10 @@ from src.payments.schemas import (
 )
 from src.payments import helloasso_service
 from src.core.config import settings
-from src.auth.service import normalize_email
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 import secrets
+import traceback
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
@@ -28,7 +27,6 @@ async def complete_payment(user, checkout_intent_id: str, db: Session) -> bool:
     This function is used by:
     - /status/{checkout_intent_id} endpoint (frontend polling)
     - /verify/{checkout_intent_id} endpoint (legacy)
-    - /webhook endpoint (HelloAsso callback)
     - Background task (periodic checking)
     """
     from src.mail import send_order_confirmation
@@ -73,7 +71,6 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
     """
     from src.db.session import SessionLocal
     from src.users.models import User
-    import secrets
 
     try:
         # Build URLs for HelloAsso redirects (must be HTTPS!)
@@ -103,8 +100,6 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
 
         # Create checkout intent
         result = await helloasso_service.create_checkout_intent(
-            total_amount=checkout_request.amount,
-            item_name=checkout_request.item_name,
             payer_email=checkout_request.payer_email,
             payer_first_name=checkout_request.payer_first_name,
             payer_last_name=checkout_request.payer_last_name,
@@ -121,49 +116,23 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
         # This is crucial since HelloAsso may not return metadata in GET requests
         db = SessionLocal()
         try:
-            user = None
+            # Find user by reservation_id (required, no email fallback for security)
+            user = db.query(User).filter(User.id == checkout_request.reservation_id).first()
 
-            # Strategy 1: Find by reservation_id if provided
-            if checkout_request.reservation_id:
-                user = db.query(User).filter(User.id == checkout_request.reservation_id).first()
-                if user:
-                    print(f"[DEBUG] Found user by reservation_id: {user.id}")
-
-            # Strategy 2: Fallback to finding by email with pending payment
-            if not user and checkout_request.payer_email:
-                from src.auth.service import normalize_email
-                try:
-                    _, identity = normalize_email(checkout_request.payer_email)
-                except Exception:
-                    identity = None
-
-                query = db.query(User).filter(
-                    User.menu_id.isnot(None),  # Has an order
-                    User.payment_status.in_([None, "pending"]),  # Not yet paid
+            if not user:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Réservation introuvable"
                 )
-                if identity:
-                    query = query.filter(
-                        or_(
-                            User.normalized_email == identity,
-                            User.email == checkout_request.payer_email
-                        )
-                    )
-                else:
-                    query = query.filter(User.email == checkout_request.payer_email)
 
-                user = query.order_by(User.created_at.desc()).first()
-                if user:
-                    print(f"[DEBUG] Found user by email fallback: {user.id} ({user.email})")
+            print(f"[DEBUG] Found user by reservation_id: {user.id}")
 
-            if user:
-                user.payment_intent_id = checkout_intent_id
-                # Generate status_token if missing
-                if not user.status_token:
-                    user.status_token = secrets.token_urlsafe(32)
-                db.commit()
-                print(f"[DEBUG] Stored checkout_intent_id {checkout_intent_id} for user {user.id}")
-            else:
-                print(f"[WARNING] No user found for checkout (reservation_id: {checkout_request.reservation_id}, email: {checkout_request.payer_email})")
+            user.payment_intent_id = checkout_intent_id
+            # Generate status_token if missing
+            if not user.status_token:
+                user.status_token = secrets.token_urlsafe(32)
+            db.commit()
+            print(f"[DEBUG] Stored checkout_intent_id {checkout_intent_id} for user {user.id}")
         finally:
             db.close()
 
@@ -253,9 +222,6 @@ async def verify_payment(checkout_intent_id: str):
     from src.users.models import User
     from src.mail import send_order_confirmation
 
-    from datetime import datetime, timezone
-    import secrets
-
     try:
         print(f"[DEBUG] Verifying payment for intent: {checkout_intent_id}")
         result = await helloasso_service.get_checkout_intent(checkout_intent_id)
@@ -295,53 +261,9 @@ async def verify_payment(checkout_intent_id: str):
                     if user:
                         print(f"[DEBUG] User found by checkout_intent_id: {user.id} ({user.email})")
 
-                # Strategy 3: Find by payer email (more lenient than before)
-                if not user and payer_email:
-                    print(f"[DEBUG] Attempting fallback: finding user by payer email {payer_email}")
-
-                    # Normaliser l'email pour la recherche par identité
-                    identity = None
-                    try:
-                        _, identity = normalize_email(payer_email)
-                    except Exception as e:
-                        print(f"[DEBUG] Could not normalize email: {e}")
-
-                    # Recherche robuste : user avec commande valide
-                    # Don't require payment_status == "pending" anymore (webhook may have changed it)
-                    query = db.query(User).filter(
-                        User.menu_id.isnot(None),          # A une commande
-                        User.total_amount > 0,             # Montant valide
-                    )
-
-                    # Chercher par identité normalisée OU email exact
-                    if identity:
-                        query = query.filter(
-                            or_(
-                                User.normalized_email == identity,
-                                User.email == payer_email
-                            )
-                        )
-                    else:
-                        query = query.filter(User.email == payer_email)
-
-                    # Vérifier que la réservation n'est pas expirée
-                    query = query.filter(
-                        or_(
-                            User.reservation_expires_at.is_(None),
-                            User.reservation_expires_at > datetime.now(timezone.utc)
-                        )
-                    )
-
-                    # Prioritize users without completed payment, then by creation date
-                    user = query.order_by(
-                        (User.payment_status != "completed").desc(),
-                        User.created_at.desc()
-                    ).first()
-
-                    if user:
-                        print(f"[DEBUG] User found by email fallback: {user.id} (identity: {identity}, status: {user.payment_status})")
-                    else:
-                        print(f"[WARNING] No valid user found for email {payer_email} (identity: {identity})")
+                # No email fallback for security - user must be found by reservation_id or checkout_intent_id
+                if not user:
+                    print(f"[ERROR] No user found for payment (intent: {checkout_intent_id}, res_id: {res_id})")
 
                 if user:
                     # Refresh to ensure we have the latest data from DB (in case of concurrent updates)
@@ -404,73 +326,9 @@ async def verify_payment(checkout_intent_id: str):
             
     except Exception as e:
         print(f"[ERROR] Exception in verify_payment: {e}")
-        import traceback
         traceback.print_exc()
         return PaymentVerifyResponse(
             success=False,
             message=str(e)
         )
 
-@router.post("/webhook-{secret}")
-async def payment_webhook(secret: str, request: Request):
-    """
-    Webhook endpoint for HelloAsso notifications.
-    """
-    if secret != settings.WEBHOOK_SECRET:
-        raise HTTPException(status_code=404, detail="Not found")
-
-    from src.db.session import SessionLocal
-    from src.users.models import User
-
-    try:
-        raw_body = await request.body()
-
-        import json
-        body = json.loads(raw_body) if raw_body else {}
-
-        event_type = body.get("eventType")
-        data = body.get("data", {})
-
-        print(f"[WEBHOOK] HelloAsso event: {event_type}")
-
-        if event_type == "Payment":
-            order_id = data.get("order", {}).get("id")
-            payer_email = data.get("payer", {}).get("email")
-
-            print(f"[WEBHOOK] Payment event - order_id: {order_id}, payer_email: {payer_email}")
-
-            if not payer_email:
-                print(f"[WEBHOOK] No payer email in webhook, cannot process")
-                return {"status": "ok"}
-
-            db = SessionLocal()
-            try:
-                # Find user by payer email with pending payment
-                user = db.query(User).filter(
-                    User.email == payer_email,
-                    User.payment_status == "pending",
-                    User.menu_id.isnot(None),
-                    User.payment_intent_id.isnot(None)  # Has started checkout
-                ).order_by(User.created_at.desc()).first()
-
-                if user:
-                    print(f"[WEBHOOK] Found user {user.id} by email {payer_email}")
-                    intent_id = user.payment_intent_id or f"ORDER_{order_id}"
-                    was_new = await complete_payment(user, str(intent_id), db)
-                    if was_new:
-                        print(f"[WEBHOOK] Payment completed for user {user.id} ({user.email})")
-                    else:
-                        print(f"[WEBHOOK] User {user.id} was already completed")
-                else:
-                    print(f"[WEBHOOK] No pending user found for email: {payer_email}")
-
-            finally:
-                db.close()
-
-        return {"status": "ok"}
-
-    except Exception as e:
-        print(f"[WEBHOOK] Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return {"status": "error", "message": str(e)}

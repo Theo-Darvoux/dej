@@ -42,8 +42,8 @@ const AptPopup = ({ open, onClose, onContinue, step, total }: AptPopupProps) => 
       const response = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&postcode=91000&limit=5`)
       const data = await response.json()
       setSuggestions(data.features || [])
-    } catch (err) {
-      console.error('Error fetching addresses:', err)
+    } catch {
+      // Address API error - suggestions will be empty
     } finally {
       setLoading(false)
     }

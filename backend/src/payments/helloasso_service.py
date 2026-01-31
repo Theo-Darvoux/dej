@@ -7,28 +7,29 @@ from typing import Optional, Dict, Any
 from src.core.config import settings
 
 
-# Cache for access token
+# Cache for OAuth tokens
 _token_cache: Dict[str, Any] = {
     "access_token": None,
+    "refresh_token": None,
     "expires_at": None
 }
 
 
-async def get_access_token() -> str:
-    """
-    Get a valid HelloAsso access token using OAuth2 client credentials.
-    Caches the token until it expires.
-    """
+def _update_token_cache(data: dict) -> str:
+    """Update the token cache with new token data."""
     global _token_cache
-    
-    # Check if we have a valid cached token
-    if _token_cache["access_token"] and _token_cache["expires_at"]:
-        if datetime.now() < _token_cache["expires_at"]:
-            return _token_cache["access_token"]
-    
-    # Request new token
+    _token_cache["access_token"] = data["access_token"]
+    _token_cache["refresh_token"] = data.get("refresh_token")
+    expires_in = data.get("expires_in", 3600)
+    # Cache with 5 min buffer before expiration
+    _token_cache["expires_at"] = datetime.now() + timedelta(seconds=expires_in - 300)
+    return _token_cache["access_token"]
+
+
+async def _request_token_with_credentials() -> str:
+    """Request a new token using client credentials grant."""
     token_url = f"{settings.HELLOASSO_URL_TOKEN}/token"
-    
+
     async with httpx.AsyncClient() as client:
         response = await client.post(
             token_url,
@@ -37,28 +38,66 @@ async def get_access_token() -> str:
                 "client_id": settings.HELLOASSO_CLIENT_ID,
                 "client_secret": settings.HELLOASSO_CLIENT_SECRET,
             },
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
-        
+
         if response.status_code != 200:
             raise Exception(f"HelloAsso auth failed: {response.status_code} - {response.text}")
-        
-        data = response.json()
-        access_token = data["access_token"]
-        expires_in = data.get("expires_in", 3600)  # Default 1 hour
-        
-        # Cache the token (with 5 min buffer)
-        _token_cache["access_token"] = access_token
-        _token_cache["expires_at"] = datetime.now() + timedelta(seconds=expires_in - 300)
-        
-        return access_token
+
+        return _update_token_cache(response.json())
+
+
+async def _refresh_access_token() -> str:
+    """Refresh the access token using the refresh token."""
+    global _token_cache
+    token_url = f"{settings.HELLOASSO_URL_TOKEN}/token"
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            token_url,
+            data={
+                "grant_type": "refresh_token",
+                "client_id": settings.HELLOASSO_CLIENT_ID,
+                "refresh_token": _token_cache["refresh_token"],
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+
+        if response.status_code != 200:
+            # Clear invalid refresh token
+            _token_cache["refresh_token"] = None
+            raise Exception(f"HelloAsso refresh failed: {response.status_code}")
+
+        return _update_token_cache(response.json())
+
+
+async def get_access_token() -> str:
+    """
+    Get a valid HelloAsso access token.
+
+    Uses cached token if valid, otherwise:
+    1. Tries to refresh using refresh_token
+    2. Falls back to client_credentials if refresh fails
+    """
+    global _token_cache
+
+    # Check if we have a valid cached token
+    if _token_cache["access_token"] and _token_cache["expires_at"]:
+        if datetime.now() < _token_cache["expires_at"]:
+            return _token_cache["access_token"]
+
+    # Try refresh token first if available
+    if _token_cache["refresh_token"]:
+        try:
+            return await _refresh_access_token()
+        except Exception:
+            pass  # Fall back to client_credentials
+
+    # Request new token with client credentials
+    return await _request_token_with_credentials()
 
 
 async def create_checkout_intent(
-    total_amount: int,
-    item_name: str,
     payer_email: str,
     payer_first_name: str,
     payer_last_name: str,
@@ -69,11 +108,11 @@ async def create_checkout_intent(
     contains_donation: bool = False
 ) -> Dict[str, Any]:
     """
-    Create a HelloAsso Checkout Intent.
-    
+    Create a HelloAsso Checkout Intent for breakfast order.
+
+    Note: All breakfast menus cost 1€, supplements are free.
+
     Args:
-        total_amount: Amount in centimes (e.g., 1000 = 10.00€)
-        item_name: Description of the purchase
         payer_email: Payer's email
         payer_first_name: Payer's first name
         payer_last_name: Payer's last name
@@ -82,22 +121,23 @@ async def create_checkout_intent(
         back_url: URL to redirect if user wants to go back
         metadata: Optional metadata to attach to the payment
         contains_donation: Whether the payment contains a donation
-        
+
     Returns:
         Dict with 'id' and 'redirectUrl'
     """
     access_token = await get_access_token()
-    
+
     org_slug = settings.HELLOASSO_ORGANIZATION_SLUG
     if not org_slug:
         raise Exception("HELLOASSO_ORGANIZATION_SLUG is not configured")
-    
+
     checkout_url = f"{settings.HELLOASSO_API}/organizations/{org_slug}/checkout-intents"
-    
+
+    # Prix fixe: tous les menus petit-déjeuner coûtent 1€, suppléments gratuits
     payload = {
-        "totalAmount": total_amount,
-        "initialAmount": total_amount,  # Full amount upfront (no installments)
-        "itemName": item_name,
+        "totalAmount": 100,  # 100 centimes = 1€
+        "initialAmount": 100,
+        "itemName": settings.HELLOASSO_ITEM_NAME,
         "backUrl": back_url,
         "errorUrl": error_url,
         "returnUrl": return_url,
@@ -132,10 +172,10 @@ async def create_checkout_intent(
                 error_json = response.json()
                 if "errors" in error_json:
                     error_detail = f"{response.status_code} - {error_json['errors']}"
-            except:
-                pass
+            except (ValueError, KeyError):
+                pass  # Response is not valid JSON, use raw text
             print(f"DEBUG: HelloAsso Error Response: {response.status_code} - {error_detail}")
-            raise Exception(f"HelloAsso checkout failed: {response.status_code} - {response.text}")
+            raise Exception(f"Il y a un problème avec HelloAsso. Veuillez réessayer plus tard.")
         
         data = response.json()
         return {

@@ -49,12 +49,12 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = os.getenv("FRONTEND_URL")
     HELLOASSO_REDIRECT_BASE_URL: str = os.getenv("HELLOASSO_REDIRECT_BASE_URL")
     HELLOASSO_ORGANIZATION_SLUG: str = os.getenv("HELLOASSO_ORGANIZATION_SLUG")
+    
     # HelloAsso (OAuth2)
     HELLOASSO_CLIENT_ID: str = os.getenv("HELLOASSO_CLIENT_ID", "")
     HELLOASSO_CLIENT_SECRET: str = os.getenv("HELLOASSO_CLIENT_SECRET", "")
+    HELLOASSO_ITEM_NAME: str = os.getenv("HELLOASSO_ITEM_NAME", "Petit-Déjeuner HYPNOS")
 
-    # Webhook secret (for secure webhook URL)
-    WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "change-me-in-production")
     HELLOASSO_URL_TOKEN: str = os.getenv("HELLOASSO_URL_TOKEN", "https://api.helloasso.com/oauth2")
     HELLOASSO_API: str = os.getenv("HELLOASSO_API", "https://api.helloasso.com/v5")
     

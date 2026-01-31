@@ -15,7 +15,22 @@ from src.core.exceptions import AdminException
 
 router = APIRouter()
 
-
+# Whitelist of fields that admins can update
+# SECURITY: payment_status is intentionally excluded - only the payment system can modify it
+ALLOWED_UPDATE_FIELDS = {
+    "prenom",
+    "nom",
+    "phone",
+    "heure_reservation",
+    "habite_residence",
+    "adresse_if_maisel",
+    "numero_if_maisel",
+    "adresse",
+    "special_requests",
+    "menu_id",
+    "boisson_id",
+    "bonus_ids",
+}
 
 from src.menu.utils import load_menu_data
 
@@ -137,20 +152,24 @@ async def update_order(
 ):
     """Met à jour une commande"""
     require_admin(current_user)
-    
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Commande non trouvée")
-    
+
     update_data = order_update.model_dump(exclude_unset=True)
+
+    # Filter out fields not in whitelist (security: prevents payment_status modification)
+    for field in list(update_data.keys()):
+        if field not in ALLOWED_UPDATE_FIELDS:
+            del update_data[field]
+
     for field, value in update_data.items():
         setattr(user, field, value)
-    
+
     db.commit()
     db.refresh(user)
-    
-    # Re-fetch for response
-    user = db.query(User).filter(User.id == user_id).first()
+
     return enrich_order(user)
 
 

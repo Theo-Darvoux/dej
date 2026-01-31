@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Cookie, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Cookie
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from datetime import datetime, date, time, timedelta
@@ -39,25 +39,12 @@ def find_category_name_by_id(cat_id: str):
     return None
 
 @router.get("/availability")
-async def check_availability(
-    menu_id: Optional[str] = Query(None),
-    boisson_id: Optional[str] = Query(None),
-    bonus_ids: Optional[str] = Query(None),  # Liste d'IDs séparés par des virgules
-    db: Session = Depends(get_db)
-):
+async def check_availability(db: Session = Depends(get_db)):
     """
-    Retourne les créneaux horaires disponibles pour les items du panier.
-    Un créneau est disponible si tous les items ont du stock.
-    bonus_ids: liste d'IDs d'extras séparés par des virgules (ex: "extra_poulet,extra_chouffe")
+    Retourne les créneaux horaires disponibles.
+    Un créneau est disponible s'il reste de la capacité (max 30 commandes par créneau).
     """
-    item_ids = [menu_id, boisson_id]
-    # Parser les bonus_ids s'ils sont fournis
-    if bonus_ids:
-        for bonus_id in bonus_ids.split(','):
-            bonus_id = bonus_id.strip()
-            if bonus_id:
-                item_ids.append(bonus_id)
-    slots = get_available_slots(db, item_ids)
+    slots = get_available_slots(db)
     return {"slots": slots}
 
 
@@ -94,10 +81,8 @@ async def create_reservation(
     - Pas de doublon de réservation
     - Créneau disponible
     """
-    
-    # VALIDATION 0: Vérifier que l'utilisateur n'a pas déjà une réservation
-    now = datetime.utcnow()
 
+    # VALIDATION 0: Vérifier que l'utilisateur n'a pas déjà une réservation payée
     # Si l'utilisateur a déjà payé
     if current_user.payment_status == "completed":
         raise HTTPException(
@@ -105,15 +90,12 @@ async def create_reservation(
             detail="Vous avez déjà une réservation payée. Une seule réservation par personne."
         )
     
-    # Si l'utilisateur a une réservation en attente mais expirée ou trop de tentatives
-    is_expired = current_user.reservation_expires_at and now > current_user.reservation_expires_at
-    too_many_attempts = current_user.payment_attempts >= 3
-    
-    if (is_expired or too_many_attempts) and current_user.payment_status != "completed":
-        # Annuler l'ancienne commande pour permettre d'en refaire une
-        # Le comptage par créneau se fait automatiquement via la requête SQL
+    # Si l'utilisateur a une commande en attente (non payée), on la remplace par la nouvelle
+    # Cela permet aux utilisateurs de modifier leur commande ou de recommencer si le paiement échoue
+    has_pending_order = current_user.menu_id or current_user.boisson_id or (current_user.bonus_ids and len(current_user.bonus_ids) > 0)
 
-        # Reset user reservation fields
+    if has_pending_order and current_user.payment_status != "completed":
+        # Reset user reservation fields to allow new order
         current_user.menu_id = None
         current_user.boisson_id = None
         current_user.bonus_ids = []
@@ -121,29 +103,9 @@ async def create_reservation(
         current_user.payment_attempts = 0
         current_user.reservation_expires_at = None
         db.commit()
-    elif current_user.menu_id or current_user.boisson_id or (current_user.bonus_ids and len(current_user.bonus_ids) > 0):
-         # Si une commande est en cours et pas encore expirée
-         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Vous avez déjà une commande en cours. Terminez le paiement ou attendez 1h."
-        )
     
-    # VALIDATION 1: Date de réservation doit être le 7 février 2026
-    try:
-        reservation_date = date.fromisoformat(request.date_reservation)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Format de date invalide (attendu: YYYY-MM-DD)"
-        )
+    reservation_date = date(2026, 2, 7)
     
-    if reservation_date != date(2026, 2, 7):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="La réservation doit être pour le 7 février 2026"
-        )
-    
-    # VALIDATION 2: Heure de réservation entre 7h et 18h, par tranches de 1h (minutes = 00)
     try:
         reservation_time = time.fromisoformat(request.heure_reservation)
     except ValueError:
@@ -192,8 +154,7 @@ async def create_reservation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="L'adresse est requise pour les non-résidents"
             )
-        
-        # Robust address validation using BAN API
+        # Vérifier que l'adresse est à Évry (91000) via API BAN
         import httpx
         try:
             async with httpx.AsyncClient() as client:
@@ -226,24 +187,21 @@ async def create_reservation(
                             detail=f"Désolé, nous ne livrons pas à {city_name} ({postcode}). Livraison réservée à Évry (91000)."
                         )
                 else:
-                    # Fail-safe logic if API is down
-                    lowercase_addr = request.adresse.lower()
-                    if not any(x in lowercase_addr for x in ["evry", "91000"]):
-                         raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Adresse invalide ou hors de la zone de livraison (Évry 91000)."
-                        )
+                    # API returned non-200 status
+                    print(f"Warning: BAN API returned status {response.status_code}")
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Service de validation d'adresse indisponible. Réessayez plus tard."
+                    )
         except HTTPException:
             raise
         except Exception as e:
-            # Si l'API BAN est injoignable, on fait un check basique
+            # If BAN API is unreachable, reject the request (no permissive fallback)
             print(f"Warning: BAN API unreachable: {str(e)}")
-            lowercase_addr = request.adresse.lower()
-            if not any(x in lowercase_addr for x in ["evry", "91000"]):
-                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Adresse hors de la zone de livraison (Évry 91000)."
-                )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service de validation d'adresse indisponible. Réessayez plus tard."
+            )
     
     # VALIDATION 4: Vérifier que les items menu existent et correspondent au bon type
     # Groupes de catégories mutuellement exclusives pour les menus
@@ -333,15 +291,11 @@ async def create_reservation(
             seen_ids.add(extra_item["id"])
             extra_items.append(extra_item)
 
-    # VALIDATION 5: Vérifier la disponibilité du créneau pour tous les items
-    item_ids = [
-        menu_item["id"] if menu_item else None,
-        boisson_item["id"] if boisson_item else None,
-    ] + [extra["id"] for extra in extra_items]
-    if not is_slot_available(db, item_ids, reservation_time):
+    # VALIDATION 5: Vérifier la disponibilité du créneau
+    if not is_slot_available(db, reservation_time):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ce créneau n'est plus disponible pour les items sélectionnés"
+            detail="Ce créneau n'est plus disponible"
         )
     
     # Vérification que l'utilisateur est bien vérifié et cotisant

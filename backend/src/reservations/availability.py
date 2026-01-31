@@ -4,7 +4,6 @@ Module de gestion des disponibilités des créneaux horaires.
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import time
-from typing import Optional
 
 from src.users.models import User
 
@@ -49,13 +48,12 @@ def count_reservations_for_slot(db: Session, slot_time: time) -> int:
     return count or 0
 
 
-def get_available_slots(db: Session, item_ids: list[str] = None) -> list[dict]:
+def get_available_slots(db: Session) -> list[dict]:
     """
     Retourne les créneaux avec leur disponibilité basée sur le nombre de commandes.
 
     Args:
         db: Session SQLAlchemy
-        item_ids: Ignoré (gardé pour compatibilité API)
 
     Returns:
         Liste de créneaux avec leur disponibilité:
@@ -87,13 +85,12 @@ def get_available_slots(db: Session, item_ids: list[str] = None) -> list[dict]:
     return result
 
 
-def is_slot_available(db: Session, item_ids: list[str], slot_time: time) -> bool:
+def is_slot_available(db: Session, slot_time: time) -> bool:
     """
     Vérifie si un créneau spécifique est disponible.
 
     Args:
         db: Session SQLAlchemy
-        item_ids: Ignoré (gardé pour compatibilité API)
         slot_time: L'heure du créneau (ex: time(8, 0) pour 8h)
 
     Returns:

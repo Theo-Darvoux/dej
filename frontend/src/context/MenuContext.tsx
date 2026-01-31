@@ -87,7 +87,6 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
             setMenuByCategory(grouped)
 
         } catch (err) {
-            console.error('Menu preloading error:', err)
             setError(err instanceof Error ? err.message : 'Une erreur est survenue lors du chargement du menu')
         } finally {
             setIsLoading(false)

@@ -40,23 +40,13 @@ const Checkout = ({
 
     // Validate phone number (French + international formats)
     const validatePhone = (phone: string): boolean => {
-        // Remove all spaces, dots, dashes, parentheses
         const cleaned = phone.replace(/[\s.\-()]/g, '')
 
-        // French formats:
-        // - 0X XX XX XX XX (10 digits starting with 0)
-        // - +33X XX XX XX XX (12 chars starting with +33)
-        // - 0033X XX XX XX XX (13 chars starting with 0033)
         const frenchMobile = /^0[67]\d{8}$/
         const frenchLandline = /^0[1-59]\d{8}$/
         const frenchIntl = /^\+33[1-9]\d{8}$/
         const frenchIntl2 = /^0033[1-9]\d{8}$/
-
-        // International format: +XX... (8-15 digits after +)
-        // Covers most international numbers
         const international = /^\+[1-9]\d{7,14}$/
-
-        // Generic format: starts with 0 or digit, 8-15 digits total
         const generic = /^[0-9]\d{7,14}$/
 
         return frenchMobile.test(cleaned) ||
@@ -107,7 +97,6 @@ const Checkout = ({
                 await handlePayWithHelloAsso()
             }
         } catch (err) {
-            console.error(err)
             setError(err instanceof Error ? err.message : "Erreur lors de la commande")
         } finally {
             setIsSubmitting(false)
@@ -116,16 +105,9 @@ const Checkout = ({
 
     const handlePayWithHelloAsso = async () => {
         setError('')
-
-        // Parse amount to centimes
-        const amountCentimes = Math.round(
-            parseFloat(total.replace(',', '.').replace(' €', '')) * 100
-        )
-
-        // Fetch user info from API
-        let payerFirstName = 'Client'
-        let payerLastName = "Mc'INT"
-        let payerEmail = userEmail || 'client@mcint.fr'
+        let payerFirstName = 'Prenom'
+        let payerLastName = "Nom"
+        let payerEmail = userEmail || 'email@domain.fr'
 
         try {
             const userResponse = await fetch('/api/users/me', {
@@ -137,19 +119,15 @@ const Checkout = ({
                 if (userData.nom) payerLastName = userData.nom
                 if (userData.email) payerEmail = userData.email
             }
-        } catch (e) {
-            console.warn('Could not fetch user info, using defaults')
+        } catch {
+            // Use default values if user info fetch fails
         }
 
-        // Extract items by type from cart
         const menuItem = cartItems.find(item => item.item_type === 'menu')
         const boissonItem = cartItems.find(item => item.item_type === 'boisson')
         const extraItems = cartItems.filter(item => item.item_type === 'upsell')
-
-        // Extract time slot start hour (format: "08:00-09:00" -> "08:00")
         const timeSlotStart = deliveryInfo?.timeSlot?.split('-')[0] || '12:00'
 
-        // Step 1: Create reservation with order details
         const reservationData = {
             date_reservation: '2026-02-07',
             heure_reservation: timeSlotStart,
@@ -164,8 +142,6 @@ const Checkout = ({
             extras: extraItems.map(item => item.title),
         }
 
-        console.log('[Checkout] Creating reservation:', reservationData)
-
         const reservationResponse = await fetch('/api/reservations/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -179,24 +155,18 @@ const Checkout = ({
         }
 
         const reservation = await reservationResponse.json()
-        console.log('[Checkout] Reservation created:', reservation)
 
-        // Store reservation ID for payment
         localStorage.setItem('pending_reservation_id', reservation.id?.toString() || '')
 
-        // Step 2: Create checkout intent
         const response = await fetch('/api/payments/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
-                amount: amountCentimes,
-                item_name: "Commande Mc'INT",
                 payer_email: payerEmail,
                 payer_first_name: payerFirstName,
                 payer_last_name: payerLastName,
-                reservation_id: reservation.id,
-                metadata: { source: "HYPNOS" },
+                reservation_id: reservation.id
             }),
         })
 

@@ -40,7 +40,7 @@ const PaymentPopup = ({ open, onClose, onPaymentSuccess, step, total, amount }: 
       } else {
         throw new Error('Payment failed')
       }
-    } catch (err) {
+    } catch {
       setLoading(false)
       setError('Erreur de paiement. Réessaye.')
     }
