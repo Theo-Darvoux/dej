@@ -411,24 +411,10 @@ async def verify_payment(checkout_intent_id: str):
             message=str(e)
         )
 
-
-@router.get("/webhook-{secret}")
-async def webhook_test(secret: str):
-    """Test endpoint to verify webhook URL is accessible."""
-    if secret != settings.WEBHOOK_SECRET:
-        raise HTTPException(status_code=404, detail="Not found")
-    print("[WEBHOOK] GET request received - webhook URL is accessible")
-    return {"status": "ok", "message": "Webhook endpoint is accessible. Use POST for actual webhooks."}
-
-
 @router.post("/webhook-{secret}")
 async def payment_webhook(secret: str, request: Request):
     """
     Webhook endpoint for HelloAsso notifications.
-    HelloAsso will POST here when a payment is completed.
-
-    This is a backup confirmation method - the primary method is frontend
-    polling via /status/{checkout_intent_id} and the background task.
     """
     if secret != settings.WEBHOOK_SECRET:
         raise HTTPException(status_code=404, detail="Not found")
@@ -436,17 +422,8 @@ async def payment_webhook(secret: str, request: Request):
     from src.db.session import SessionLocal
     from src.users.models import User
 
-    # Log immédiatement que la requête est arrivée
-    print(f"[WEBHOOK] ========== INCOMING REQUEST ==========")
-    print(f"[WEBHOOK] Method: {request.method}")
-    print(f"[WEBHOOK] URL: {request.url}")
-    print(f"[WEBHOOK] Client: {request.client}")
-    print(f"[WEBHOOK] Headers: {dict(request.headers)}")
-
     try:
         raw_body = await request.body()
-        print(f"[WEBHOOK] Raw body length: {len(raw_body)} bytes")
-        print(f"[WEBHOOK] Raw body preview: {raw_body[:500] if raw_body else 'EMPTY'}")
 
         import json
         body = json.loads(raw_body) if raw_body else {}
@@ -454,12 +431,9 @@ async def payment_webhook(secret: str, request: Request):
         event_type = body.get("eventType")
         data = body.get("data", {})
 
-        # Log the webhook for debugging
         print(f"[WEBHOOK] HelloAsso event: {event_type}")
 
-        # Handle different event types
         if event_type == "Payment":
-            # A payment was made
             order_id = data.get("order", {}).get("id")
             payer_email = data.get("payer", {}).get("email")
 

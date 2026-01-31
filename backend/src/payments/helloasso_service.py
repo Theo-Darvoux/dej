@@ -129,7 +129,6 @@ async def create_checkout_intent(
         if response.status_code not in [200, 201]:
             error_detail = response.text
             try:
-                # Try to parse JSON for a cleaner error message if possible
                 error_json = response.json()
                 if "errors" in error_json:
                     error_detail = f"{response.status_code} - {error_json['errors']}"

@@ -1197,6 +1197,144 @@
     font-weight: 500;
 }
 
+/* Menu Detail Responsive */
+@media (max-width: 480px) {
+    .menu-detail {
+        padding: 0 12px;
+    }
+
+    .menu-detail__back {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+        margin-bottom: 16px;
+    }
+
+    .menu-detail__card {
+        border-radius: 20px;
+    }
+
+    .menu-detail__hero {
+        height: 160px;
+    }
+
+    .menu-detail__emoji {
+        font-size: 56px;
+    }
+
+    .menu-detail__badge {
+        padding: 6px 14px;
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+    }
+
+    .menu-detail__float {
+        font-size: 1.4rem;
+    }
+
+    .menu-detail__body {
+        padding: 20px;
+    }
+
+    .menu-detail__header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .menu-detail__title {
+        font-size: 1.4rem;
+    }
+
+    .menu-detail__price-tag {
+        align-self: flex-start;
+        padding: 10px 16px;
+        min-width: auto;
+    }
+
+    .menu-detail__price {
+        font-size: 1.25rem;
+    }
+
+    .menu-detail__subtitle {
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+    }
+
+    .menu-detail__contents {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .menu-detail__contents-title {
+        font-size: 0.9rem;
+        margin-bottom: 12px;
+    }
+
+    .menu-detail__list {
+        gap: 8px;
+    }
+
+    .menu-detail__list-item {
+        font-size: 0.9rem;
+        gap: 10px;
+    }
+
+    .menu-detail__list-check {
+        width: 20px;
+        height: 20px;
+        font-size: 0.65rem;
+    }
+
+    .menu-detail__confirm-btn {
+        padding: 16px 20px;
+        font-size: 1rem;
+        border-radius: 12px;
+        box-shadow:
+            0 6px 0 #8b0000,
+            0 10px 24px rgba(218, 41, 28, 0.3);
+    }
+
+    .menu-detail__confirm-text {
+        font-size: 0.95rem;
+    }
+
+    .menu-detail__confirm-icon {
+        font-size: 1.2rem;
+    }
+
+    .menu-detail__hint {
+        font-size: 0.8rem;
+        margin-top: 12px;
+    }
+}
+
+@media (max-width: 360px) {
+    .menu-detail__hero {
+        height: 140px;
+    }
+
+    .menu-detail__emoji {
+        font-size: 48px;
+    }
+
+    .menu-detail__body {
+        padding: 16px;
+    }
+
+    .menu-detail__title {
+        font-size: 1.25rem;
+    }
+
+    .menu-detail__confirm-btn {
+        padding: 14px 16px;
+        gap: 8px;
+    }
+
+    .menu-detail__confirm-text {
+        font-size: 0.9rem;
+    }
+}
+
 /* STEP 3: SUPPLEMENTS */
 .supplements-step {
     animation: fadeIn 0.3s ease;
@@ -2101,6 +2239,129 @@
     }
 }
 
+/* Supplement Banner Responsive */
+@media (max-width: 768px) {
+    .supplement-banner-card {
+        height: auto;
+        min-height: 200px;
+    }
+
+    .supplement-banner-img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    }
+
+    .supplement-banner-info {
+        padding: 40px 20px 20px;
+    }
+
+    .supplement-banner-title {
+        font-size: 1.25rem;
+    }
+
+    .supplement-banner-price {
+        font-size: 1.1rem;
+        padding: 8px 14px;
+    }
+
+    .supplement-banner-check {
+        width: 40px;
+        height: 40px;
+        font-size: 1.4rem;
+        top: 12px;
+        right: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .supplements-step__title {
+        font-size: 1.5rem;
+        margin-bottom: 24px;
+    }
+
+    .supplements-section__title {
+        font-size: 1.1rem;
+        flex-wrap: wrap;
+    }
+
+    .drinks-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .drink-card {
+        padding: 16px 12px;
+    }
+
+    .drink-card__icon {
+        font-size: 2.2rem;
+    }
+
+    .drink-card__name {
+        font-size: 0.85rem;
+    }
+
+    .supplements-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .supplement-banner-card {
+        border-radius: 16px;
+        min-height: auto;
+    }
+
+    .supplement-banner-img {
+        max-height: 250px;
+        object-fit: cover;
+        object-position: center top;
+    }
+
+    .supplement-banner-info {
+        padding: 30px 16px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .supplement-banner-title {
+        font-size: 1.1rem;
+    }
+
+    .supplement-banner-title::after {
+        width: 40px;
+        bottom: -6px;
+    }
+
+    .supplement-banner-price {
+        font-size: 1rem;
+        padding: 6px 12px;
+        align-self: flex-end;
+        margin-top: -30px;
+    }
+
+    .supplement-banner-check {
+        width: 36px;
+        height: 36px;
+        font-size: 1.2rem;
+        top: 10px;
+        right: 10px;
+    }
+
+    .supplement-card {
+        padding: 14px;
+    }
+
+    .supplements-step__continue {
+        padding: 14px 32px;
+        font-size: 1rem;
+        bottom: 16px;
+        right: 16px;
+    }
+}
+
 /* ==========================================
    DELIVERY STEP STYLES
    ========================================== */
@@ -2207,6 +2468,17 @@
 
 .delivery-input.error {
     border-color: var(--mcdo-red, #DB0007);
+}
+
+/* Hide number input spinners */
+.delivery-input[type="number"]::-webkit-outer-spin-button,
+.delivery-input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.delivery-input[type="number"] {
+    -moz-appearance: textfield;
 }
 
 .form-error {

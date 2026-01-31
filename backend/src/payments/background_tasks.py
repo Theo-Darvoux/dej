@@ -33,10 +33,6 @@ async def check_pending_payments():
         try:
             db = SessionLocal()
             try:
-                # Find all users with pending payments
-                # Only check payments that have a checkout_intent_id
-                # Find all users with pending payments
-                # Only check payments that have a checkout_intent_id
                 pending_users = db.query(User).filter(
                     User.payment_status == "pending",
                     User.payment_intent_id.isnot(None)
@@ -47,12 +43,10 @@ async def check_pending_payments():
 
                 for user in pending_users:
                     try:
-                        # Query HelloAsso for this checkout intent
                         result = await helloasso_service.get_checkout_intent(user.payment_intent_id)
                         order = result.get("order")
 
                         if order:
-                            # Payment completed - update user
                             was_new = await complete_payment(user, user.payment_intent_id, db)
                             if was_new:
                                 print(f"[BACKGROUND] Payment completed for user {user.id} ({user.email})")
@@ -61,7 +55,6 @@ async def check_pending_payments():
 
                     except Exception as e:
                         print(f"[BACKGROUND] Error checking user {user.id}: {e}")
-                        # Continue to next user on error
                         continue
 
             finally:

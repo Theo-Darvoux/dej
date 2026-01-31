@@ -248,12 +248,14 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
                         <div className="form-group">
                             <label>Numéro de chambre</label>
                             <input
-                                type="text"
+                                type="number"
+                                inputMode="numeric"
                                 value={room}
                                 onChange={e => handleRoomChange(e.target.value)}
                                 placeholder="Ex: 3215"
                                 className={`delivery-input ${roomError ? 'error' : ''}`}
-                                maxLength={4}
+                                min={1001}
+                                max={7999}
                             />
                             {roomError && <span className="form-error">{roomError}</span>}
                             {room.length === 4 && !roomError && (

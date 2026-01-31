@@ -33,7 +33,6 @@ const Supplements = ({ initialSelectedItems = [], onBack, onContinue }: Suppleme
         const isSelected = selectedSupplements.some(i => i.id === item.id)
 
         if (isSelected) {
-            // Removing - always allow
             setSelectedSupplements(prev => prev.filter(i => i.id !== item.id))
             return
         }
