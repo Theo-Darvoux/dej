@@ -196,6 +196,7 @@ const Checkout = ({
                 payer_first_name: payerFirstName,
                 payer_last_name: payerLastName,
                 reservation_id: reservation.id,
+                metadata: { source: "HYPNOS" },
             }),
         })
 
