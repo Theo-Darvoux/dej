@@ -11,7 +11,6 @@ class HelloAssoClient:
     Documentation: https://api.helloasso.com/v5/docs
     - Authentification OAuth2 Client Credentials
     - Création d'un checkout
-    - Gestion webhooks pour confirmation paiement
     - Gestion des erreurs
     """
     
@@ -130,50 +129,6 @@ class HelloAssoClient:
             )
             response.raise_for_status()
             return response.json()
-    
-    async def handle_webhook(self, payload: dict) -> dict:
-        """
-        Traite un webhook HelloAsso (notification de paiement).
-        
-        Args:
-            payload: Corps du webhook
-        
-        Returns:
-            dict avec les données du paiement traitées
-        
-        Types de webhooks:
-        - Payment: état du paiement (Authorized, Refused, etc.)
-        - Order: commande créée
-        - Form: formulaire créé/modifié
-        
-        Documentation: https://api.helloasso.com/v5/docs
-        """
-        event_type = payload.get("eventType")
-        data = payload.get("data", {})
-        
-        if event_type == "Payment":
-            payment_state = data.get("state")
-            payment_id = data.get("id")
-            amount = data.get("amount")
-            order = data.get("order", {})
-            payer = data.get("payer", {})
-            
-            # Extraire les métadonnées personnalisées (ex: reservation_id)
-            order_meta = order.get("meta", {})
-            
-            return {
-                "event_type": event_type,
-                "payment_id": payment_id,
-                "payment_state": payment_state,
-                "amount": amount,
-                "payer_email": payer.get("email"),
-                "payer_name": f"{payer.get('firstName', '')} {payer.get('lastName', '')}",
-                "order_id": order.get("id"),
-                "order_date": order.get("date"),
-                "organization_slug": order.get("organizationSlug"),
-            }
-        
-        return {"event_type": event_type, "data": data}
 
 
 # Instance globale

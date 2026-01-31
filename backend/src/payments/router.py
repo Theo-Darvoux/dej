@@ -238,8 +238,6 @@ async def verify_payment(checkout_intent_id: str):
             order_id = order.get('id')
             payer_email = order.get("payer", {}).get("email")
             print(f"[DEBUG] Order found, ID: {order_id}, Payer: {payer_email}")
-            
-            # Update database if not already done by webhook
             res_id = metadata.get("reservation_id")
             
             print(f"[DEBUG] reservation_id from metadata: {res_id} (type: {type(res_id)})")

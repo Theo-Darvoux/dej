@@ -17,7 +17,6 @@ async def check_pending_payments():
 
     This provides a safety net for payments that:
     - User closed browser before returning from payment
-    - Webhook failed to fire or was delayed
     - Network issues prevented frontend polling from completing
     """
     from src.db.session import SessionLocal
