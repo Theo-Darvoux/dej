@@ -83,7 +83,7 @@ class HelloAssoClient:
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{self.api_url}/organizations/YOUR_ORG_SLUG/checkout-intents",
+                f"{self.api_url}/organizations/{settings.HELLOASSO_ORGANIZATION_SLUG}/checkout-intents",
                 json={
                     "totalAmount": amount,
                     "initialAmount": amount,
