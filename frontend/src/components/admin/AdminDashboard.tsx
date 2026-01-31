@@ -31,8 +31,131 @@ interface Order {
     created_at: string
 }
 
+interface StatsData {
+    total_orders: number
+    menu_distribution: { name: string; count: number }[]
+    drink_distribution: { name: string; count: number }[]
+    extras_distribution: { name: string; count: number }[]
+    time_slot_distribution: { slot: string; count: number }[]
+    order_hour_distribution: { hour: number; count: number }[]
+    total_extras: number
+    total_revenue: number
+}
+
 interface AdminDashboardProps {
     onGoHome: () => void
+}
+
+// Simple SVG Pie Chart component
+const PieChart = ({ data, title }: { data: { name: string; count: number }[]; title: string }) => {
+    if (!data || data.length === 0) {
+        return (
+            <div className="stats-chart">
+                <h3>{title}</h3>
+                <p className="stats-empty">Aucune donnée</p>
+            </div>
+        )
+    }
+
+    const total = data.reduce((sum, item) => sum + item.count, 0)
+    const colors = ['#DA291C', '#FFC72C', '#4caf50', '#2196f3', '#9c27b0', '#ff9800', '#00bcd4', '#e91e63']
+
+    let currentAngle = 0
+    const slices = data.map((item, index) => {
+        const percentage = item.count / total
+        const angle = percentage * 360
+        const startAngle = currentAngle
+        const endAngle = currentAngle + angle
+        currentAngle = endAngle
+
+        const startRad = (startAngle - 90) * (Math.PI / 180)
+        const endRad = (endAngle - 90) * (Math.PI / 180)
+
+        const x1 = 50 + 40 * Math.cos(startRad)
+        const y1 = 50 + 40 * Math.sin(startRad)
+        const x2 = 50 + 40 * Math.cos(endRad)
+        const y2 = 50 + 40 * Math.sin(endRad)
+
+        const largeArc = angle > 180 ? 1 : 0
+
+        const pathD = angle >= 359.99
+            ? `M 50 10 A 40 40 0 1 1 49.99 10 Z`
+            : `M 50 50 L ${x1} ${y1} A 40 40 0 ${largeArc} 1 ${x2} ${y2} Z`
+
+        return {
+            path: pathD,
+            color: colors[index % colors.length],
+            name: item.name,
+            count: item.count,
+            percentage: (percentage * 100).toFixed(1)
+        }
+    })
+
+    return (
+        <div className="stats-chart">
+            <h3>{title}</h3>
+            <div className="stats-chart__content">
+                <svg viewBox="0 0 100 100" className="pie-svg">
+                    {slices.map((slice, index) => (
+                        <path
+                            key={index}
+                            d={slice.path}
+                            fill={slice.color}
+                            stroke="#1a1a1a"
+                            strokeWidth="0.5"
+                        />
+                    ))}
+                </svg>
+                <div className="pie-legend">
+                    {slices.map((slice, index) => (
+                        <div key={index} className="pie-legend__item">
+                            <span className="pie-legend__color" style={{ backgroundColor: slice.color }}></span>
+                            <span className="pie-legend__name">{slice.name}</span>
+                            <span className="pie-legend__count">{slice.count} ({slice.percentage}%)</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// Bar Chart component for time-based data
+const BarChart = ({ data, title, xKey, yKey }: { data: { [key: string]: string | number }[]; title: string; xKey: string; yKey: string }) => {
+    if (!data || data.length === 0) {
+        return (
+            <div className="stats-chart">
+                <h3>{title}</h3>
+                <p className="stats-empty">Aucune donnée</p>
+            </div>
+        )
+    }
+
+    const maxValue = Math.max(...data.map(item => item[yKey] as number))
+
+    return (
+        <div className="stats-chart stats-chart--bar">
+            <h3>{title}</h3>
+            <div className="bar-chart">
+                {data.map((item, index) => {
+                    const height = maxValue > 0 ? ((item[yKey] as number) / maxValue) * 100 : 0
+                    return (
+                        <div key={index} className="bar-chart__item">
+                            <div className="bar-chart__bar-container">
+                                <div
+                                    className="bar-chart__bar"
+                                    style={{ height: `${height}%` }}
+                                >
+                                    <span className="bar-chart__value">{item[yKey]}</span>
+                                </div>
+                            </div>
+                            <span className="bar-chart__label">{item[xKey]}</span>
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    )
 }
 
 const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
@@ -43,6 +166,9 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
     const [editingOrder, setEditingOrder] = useState<Order | null>(null)
     const [menuItems, setMenuItems] = useState<MenuItem[]>([])
     const [printingPdf, setPrintingPdf] = useState(false)
+    const [activeTab, setActiveTab] = useState<'orders' | 'stats'>('orders')
+    const [statsData, setStatsData] = useState<StatsData | null>(null)
+    const [statsLoading, setStatsLoading] = useState(false)
 
     const fetchOrders = async () => {
         setLoading(true)
@@ -77,11 +203,32 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
         }
     }
 
+    const fetchStats = async () => {
+        setStatsLoading(true)
+        try {
+            const response = await fetch('/api/admin/stats', { credentials: 'include' })
+            if (response.ok) {
+                const data = await response.json()
+                setStatsData(data)
+            }
+        } catch {
+            // Silently fail
+        } finally {
+            setStatsLoading(false)
+        }
+    }
+
     useEffect(() => {
         fetchOrders()
         fetchMenuItems()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filterStatus])
+
+    useEffect(() => {
+        if (activeTab === 'stats' && !statsData) {
+            fetchStats()
+        }
+    }, [activeTab, statsData])
 
     const handleDelete = async (id: number) => {
         if (!window.confirm("Es-tu sûr de vouloir supprimer cette commande ?")) return
@@ -114,8 +261,6 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                 body: JSON.stringify({
                     prenom: editingOrder.prenom,
                     nom: editingOrder.nom,
-                    payment_status: editingOrder.payment_status,
-                    status: editingOrder.status,
                     menu_id: editingOrder.menu_item?.id || null,
                     boisson_id: editingOrder.boisson_item?.id || null,
                     bonus_ids: editingOrder.extras_items?.map(item => item.id) || []
@@ -227,27 +372,45 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                 </div>
             </header>
 
-            {/* Stats */}
-            <div className="admin-stats">
-                <div className="admin-stat">
-                    <div className="admin-stat__value">{stats.total}</div>
-                    <div className="admin-stat__label">Total</div>
-                </div>
-                <div className="admin-stat">
-                    <div className="admin-stat__value">{stats.completed}</div>
-                    <div className="admin-stat__label">Payées</div>
-                </div>
-                <div className="admin-stat">
-                    <div className="admin-stat__value">{stats.pending}</div>
-                    <div className="admin-stat__label">En attente</div>
-                </div>
-                <div className="admin-stat">
-                    <div className="admin-stat__value">{stats.failed}</div>
-                    <div className="admin-stat__label">Échouées</div>
-                </div>
+            {/* Tabs */}
+            <div className="admin-tabs">
+                <button
+                    className={`admin-tab ${activeTab === 'orders' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('orders')}
+                >
+                    📋 Commandes
+                </button>
+                <button
+                    className={`admin-tab ${activeTab === 'stats' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('stats')}
+                >
+                    📊 Statistiques
+                </button>
             </div>
 
-            <div className="admin-filters">
+            {activeTab === 'orders' && (
+                <>
+                    {/* Stats */}
+                    <div className="admin-stats">
+                        <div className="admin-stat">
+                            <div className="admin-stat__value">{stats.total}</div>
+                            <div className="admin-stat__label">Total</div>
+                        </div>
+                        <div className="admin-stat">
+                            <div className="admin-stat__value">{stats.completed}</div>
+                            <div className="admin-stat__label">Payées</div>
+                        </div>
+                        <div className="admin-stat">
+                            <div className="admin-stat__value">{stats.pending}</div>
+                            <div className="admin-stat__label">En attente</div>
+                        </div>
+                        <div className="admin-stat">
+                            <div className="admin-stat__value">{stats.failed}</div>
+                            <div className="admin-stat__label">Échouées</div>
+                        </div>
+                    </div>
+
+                    <div className="admin-filters">
                 <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                     <option value="">Tous les status</option>
                     <option value="pending">En attente (pending)</option>
@@ -319,6 +482,71 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                     </table>
                 )}
             </div>
+                </>
+            )}
+
+            {activeTab === 'stats' && (
+                <div className="admin-stats-panel">
+                    {statsLoading ? (
+                        <div className="no-orders">Chargement des statistiques...</div>
+                    ) : !statsData ? (
+                        <div className="no-orders">Impossible de charger les statistiques</div>
+                    ) : (
+                        <>
+                            {/* Summary Stats */}
+                            <div className="admin-stats">
+                                <div className="admin-stat">
+                                    <div className="admin-stat__value">{statsData.total_orders}</div>
+                                    <div className="admin-stat__label">Commandes payées</div>
+                                </div>
+                                <div className="admin-stat">
+                                    <div className="admin-stat__value">{statsData.total_revenue.toFixed(2)}€</div>
+                                    <div className="admin-stat__label">Chiffre d'affaires</div>
+                                </div>
+                                <div className="admin-stat">
+                                    <div className="admin-stat__value">{statsData.total_extras}</div>
+                                    <div className="admin-stat__label">Extras vendus</div>
+                                </div>
+                            </div>
+
+                            <button onClick={fetchStats} className="admin-btn admin-btn--secondary" style={{ marginBottom: '24px' }}>
+                                🔄 Rafraîchir les stats
+                            </button>
+
+                            {/* Charts Grid */}
+                            <div className="stats-grid">
+                                <PieChart
+                                    data={statsData.menu_distribution}
+                                    title="Menus les plus commandés"
+                                />
+                                <PieChart
+                                    data={statsData.drink_distribution}
+                                    title="Boissons les plus commandées"
+                                />
+                                <PieChart
+                                    data={statsData.extras_distribution}
+                                    title="Extras les plus commandés"
+                                />
+                                <BarChart
+                                    data={statsData.time_slot_distribution}
+                                    title="Créneaux de livraison les plus demandés"
+                                    xKey="slot"
+                                    yKey="count"
+                                />
+                                <BarChart
+                                    data={statsData.order_hour_distribution.map(item => ({
+                                        ...item,
+                                        hourLabel: `${item.hour}h`
+                                    }))}
+                                    title="Heures de commande (quand les clients commandent)"
+                                    xKey="hourLabel"
+                                    yKey="count"
+                                />
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
 
             {editingOrder && (
                 <div className="admin-modal" onClick={() => setEditingOrder(null)}>
@@ -340,17 +568,6 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                     value={editingOrder.nom || ''}
                                     onChange={(e) => setEditingOrder({ ...editingOrder, nom: e.target.value })}
                                 />
-                            </div>
-                            <div className="admin-form-group">
-                                <label>Status Paiement</label>
-                                <select
-                                    value={editingOrder.payment_status || 'pending'}
-                                    onChange={(e) => setEditingOrder({ ...editingOrder, payment_status: e.target.value })}
-                                >
-                                    <option value="pending">En attente (pending)</option>
-                                    <option value="completed">Payé (completed)</option>
-                                    <option value="failed">Échoué (failed)</option>
-                                </select>
                             </div>
                             <div className="admin-form-group">
                                 <label>Menu</label>

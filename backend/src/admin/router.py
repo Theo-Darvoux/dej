@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, cast
+from sqlalchemy import func, cast, extract
 from sqlalchemy.dialects.postgresql import JSONB
 from pydantic import EmailStr
 from typing import List, Optional
+from collections import Counter
 
 from src.reservations import schemas as res_schemas
 from src.admin import schemas as admin_schemas
@@ -211,9 +212,131 @@ async def get_user_by_email(
 ):
     """recherche d'un utilisateur par mail"""
     require_admin(current_user)
-    
+
     user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
-    
+
     return UserResponse.model_validate(user)
+
+
+@router.get("/stats")
+async def get_order_statistics(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_from_cookie)
+):
+    """
+    Get order statistics for the admin dashboard.
+    Returns stats on menus, drinks, extras, time slots, and order times.
+    """
+    require_admin(current_user)
+
+    # Get all completed orders
+    completed_orders = db.query(User).filter(
+        User.payment_status == "completed",
+        User.menu_id.isnot(None)
+    ).all()
+
+    total_orders = len(completed_orders)
+
+    if total_orders == 0:
+        return {
+            "total_orders": 0,
+            "menu_distribution": [],
+            "drink_distribution": [],
+            "extras_distribution": [],
+            "time_slot_distribution": [],
+            "order_hour_distribution": [],
+            "total_extras": 0,
+            "total_revenue": 0.0
+        }
+
+    menu_data = get_menu_data_cached()
+
+    # Helper to get item name from id
+    def get_item_name(item_id: str, category: str) -> str:
+        if not item_id:
+            return "Inconnu"
+        for item in menu_data.get(category, []):
+            if item["id"] == item_id:
+                return item["name"]
+        return item_id
+
+    # Menu distribution
+    menu_counts = Counter()
+    for order in completed_orders:
+        if order.menu_id:
+            menu_name = get_item_name(order.menu_id, "menus")
+            menu_counts[menu_name] += 1
+
+    menu_distribution = [
+        {"name": name, "count": count}
+        for name, count in menu_counts.most_common()
+    ]
+
+    # Drink distribution
+    drink_counts = Counter()
+    for order in completed_orders:
+        if order.boisson_id:
+            drink_name = get_item_name(order.boisson_id, "boissons")
+            drink_counts[drink_name] += 1
+
+    drink_distribution = [
+        {"name": name, "count": count}
+        for name, count in drink_counts.most_common()
+    ]
+
+    # Extras distribution
+    extras_counts = Counter()
+    total_extras = 0
+    for order in completed_orders:
+        if order.bonus_ids:
+            for extra_id in order.bonus_ids:
+                extra_name = get_item_name(extra_id, "extras")
+                extras_counts[extra_name] += 1
+                total_extras += 1
+
+    extras_distribution = [
+        {"name": name, "count": count}
+        for name, count in extras_counts.most_common()
+    ]
+
+    # Time slot distribution (reservation times)
+    slot_counts = Counter()
+    for order in completed_orders:
+        if order.heure_reservation:
+            hour = order.heure_reservation.hour
+            slot_label = f"{hour}h-{hour+1}h"
+            slot_counts[slot_label] += 1
+
+    # Sort by hour
+    time_slot_distribution = sorted(
+        [{"slot": slot, "count": count} for slot, count in slot_counts.items()],
+        key=lambda x: int(x["slot"].split("h")[0])
+    )
+
+    # Order hour distribution (when customers placed orders)
+    order_hour_counts = Counter()
+    for order in completed_orders:
+        if order.created_at:
+            hour = order.created_at.hour
+            order_hour_counts[hour] += 1
+
+    order_hour_distribution = sorted(
+        [{"hour": hour, "count": count} for hour, count in order_hour_counts.items()],
+        key=lambda x: x["hour"]
+    )
+
+    # Total revenue
+    total_revenue = sum(order.total_amount or 0 for order in completed_orders)
+
+    return {
+        "total_orders": total_orders,
+        "menu_distribution": menu_distribution,
+        "drink_distribution": drink_distribution,
+        "extras_distribution": extras_distribution,
+        "time_slot_distribution": time_slot_distribution,
+        "order_hour_distribution": order_hour_distribution,
+        "total_extras": total_extras,
+        "total_revenue": round(total_revenue, 2)
+    }
