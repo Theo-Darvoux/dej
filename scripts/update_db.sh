@@ -155,12 +155,64 @@ if [ "$BONUS_ID_EXISTS" = "1" ]; then
 fi
 
 echo ""
+echo "🔄 Migration menu_id et boisson_id vers String..."
+
+# Vérifier si menu_id est encore de type Integer
+MENU_ID_TYPE=$(query_sql "SELECT data_type FROM information_schema.columns WHERE table_name='users' AND column_name='menu_id'")
+BOISSON_ID_TYPE=$(query_sql "SELECT data_type FROM information_schema.columns WHERE table_name='users' AND column_name='boisson_id'")
+
+if [ "$MENU_ID_TYPE" = "integer" ]; then
+    echo "   Suppression des contraintes FK et conversion menu_id..."
+    run_sql "ALTER TABLE users DROP CONSTRAINT IF EXISTS users_menu_id_fkey;" > /dev/null 2>&1
+    run_sql "ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_menu_id_menu_items;" > /dev/null 2>&1
+    run_sql "ALTER TABLE users ALTER COLUMN menu_id TYPE VARCHAR USING CASE WHEN menu_id IS NULL THEN NULL ELSE menu_id::VARCHAR END;" > /dev/null 2>&1
+    echo "   ✓ menu_id converti en VARCHAR"
+else
+    echo "   ✓ menu_id déjà en VARCHAR"
+fi
+
+if [ "$BOISSON_ID_TYPE" = "integer" ]; then
+    echo "   Suppression des contraintes FK et conversion boisson_id..."
+    run_sql "ALTER TABLE users DROP CONSTRAINT IF EXISTS users_boisson_id_fkey;" > /dev/null 2>&1
+    run_sql "ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_boisson_id_menu_items;" > /dev/null 2>&1
+    run_sql "ALTER TABLE users ALTER COLUMN boisson_id TYPE VARCHAR USING CASE WHEN boisson_id IS NULL THEN NULL ELSE boisson_id::VARCHAR END;" > /dev/null 2>&1
+    echo "   ✓ boisson_id converti en VARCHAR"
+else
+    echo "   ✓ boisson_id déjà en VARCHAR"
+fi
+
+# Supprimer l'ancienne contrainte bonus_id si elle existe
+run_sql "ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_bonus_id_menu_items;" > /dev/null 2>&1
+run_sql "ALTER TABLE users DROP CONSTRAINT IF EXISTS users_bonus_id_fkey;" > /dev/null 2>&1
+
+echo ""
 echo "📇 Index..."
 
 add_index_if_not_exists "ix_users_status_token" "users" "status_token"
 add_index_if_not_exists "ix_users_email" "users" "email"
 add_index_if_not_exists "ix_users_normalized_email" "users" "normalized_email"
 add_index_if_not_exists "ix_users_email_verified" "users" "email_verified"
+
+echo ""
+echo "🔄 Exécution des migrations Alembic..."
+
+# Trouver le conteneur backend
+BACKEND_CONTAINER=$(docker ps --filter "name=mcint-backend" --filter "name=backend" --format "{{.Names}}" | head -n1)
+
+if [ -z "$BACKEND_CONTAINER" ]; then
+    BACKEND_CONTAINER=$(docker ps --filter "name=backend" --format "{{.Names}}" | grep -E "(mcint.*backend|backend)" | head -n1)
+fi
+
+if [ -z "$BACKEND_CONTAINER" ]; then
+    echo "⚠️  Conteneur backend non trouvé, migrations Alembic ignorées"
+else
+    echo "   Conteneur: $BACKEND_CONTAINER"
+    if docker exec "$BACKEND_CONTAINER" /app/.venv/bin/alembic upgrade head 2>&1; then
+        echo "   ✓ Migrations Alembic appliquées"
+    else
+        echo "   ⚠️  Erreur lors de l'exécution des migrations Alembic"
+    fi
+fi
 
 echo ""
 echo "✅ Mise à jour terminée !"

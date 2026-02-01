@@ -26,7 +26,6 @@ class ReservationCreateRequest(BaseModel):
     heure_reservation: str  # Format: HH:MM
     habite_residence: bool
     numero_chambre: Optional[str] = None  # Si habite_residence=True
-    numero_immeuble: Optional[str] = None  # Si habite_residence=True
     adresse: Optional[str] = None  # Si habite_residence=False
     phone: Optional[str] = None  # Téléphone pour livraison
     special_requests: Optional[str] = None  # Demandes spéciales

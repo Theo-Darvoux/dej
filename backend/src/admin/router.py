@@ -180,28 +180,18 @@ async def delete_order(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_from_cookie)
 ):
-    """Supprime une commande (reset les champs de réservation)"""
+    """Supprime une commande et le compte utilisateur associé"""
     require_admin(current_user)
     
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Commande non trouvée")
     
-    # Reset reservation fields instead of deleting the user
-    user.menu_id = None
-    user.boisson_id = None
-    user.bonus_ids = []
-    user.date_reservation = None
-    user.heure_reservation = None
-    user.total_amount = 0.0
-    user.payment_status = None
-    user.payment_intent_id = None
-    user.payment_date = None
-    user.payment_attempts = 0
-    user.status = "confirmed"
-    
+    # Delete the user account completely
+    db.delete(user)
     db.commit()
-    return {"message": "Commande supprimée avec succès"}
+    
+    return {"message": "Commande et compte utilisateur supprimés avec succès"}
 
 
 @router.get("/users/{email}", response_model=UserResponse)

@@ -7,23 +7,21 @@ export type Category = {
 
 export type MenuItem = {
     id: string
-    category_id: string // Added new field
+    category_id: string
     title: string
     subtitle: string
-    items?: string[]    // Liste des éléments du menu
+    items?: string[] 
     tag?: string
     accent?: string
     price: string
     image?: string
     item_type?: string
-    remaining_quantity?: number
-    low_stock_threshold?: number
 }
 
 type MenuContextType = {
     categories: Category[]
     menuByCategory: Record<string, MenuItem[]>
-    allItems: MenuItem[] // Flat list of all items
+    allItems: MenuItem[]
     isLoading: boolean
     error: string | null
     refreshMenu: () => void
@@ -38,58 +36,67 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
+    const sleep = (ms: number) => new Promise(res => setTimeout(res, ms))
+
     const fetchMenuData = async () => {
         setIsLoading(true)
         setError(null)
-        try {
-            // Fetch categories and items in parallel
-            const [categoriesRes, itemsRes] = await Promise.all([
-                fetch('/api/menu/categories'),
-                fetch('/api/menu/items')
-            ])
+        let success = false
+        let attempt = 0
+        while (!success) {
+            try {
+                // Fetch categories and items in parallel
+                const [categoriesRes, itemsRes] = await Promise.all([
+                    fetch('/api/menu/categories'),
+                    fetch('/api/menu/items')
+                ])
 
-            if (!categoriesRes.ok) throw new Error('Failed to fetch categories')
-            if (!itemsRes.ok) throw new Error('Failed to fetch menu items')
+                if (!categoriesRes.ok) throw new Error('Failed to fetch categories')
+                if (!itemsRes.ok) throw new Error('Failed to fetch menu items')
 
-            const categoriesData = await categoriesRes.json()
-            const itemsData = await itemsRes.json()
+                const categoriesData = await categoriesRes.json()
+                const itemsData = await itemsRes.json()
 
-            // Normalize categories
-            const categoriesList: Category[] = Array.isArray(categoriesData)
-                ? categoriesData
-                : (categoriesData as any)?.categories || []
+                // Normalize categories
+                const categoriesList: Category[] = Array.isArray(categoriesData)
+                    ? categoriesData
+                    : (categoriesData as any)?.categories || []
 
-            setCategories(categoriesList)
+                setCategories(categoriesList)
 
-            // Normalize items
-            const itemsList: MenuItem[] = Array.isArray(itemsData)
-                ? itemsData
-                : (itemsData as any)?.items || []
+                // Normalize items
+                const itemsList: MenuItem[] = Array.isArray(itemsData)
+                    ? itemsData
+                    : (itemsData as any)?.items || []
 
-            setAllItems(itemsList)
+                setAllItems(itemsList)
 
-            // Group items by category_id
-            const grouped: Record<string, MenuItem[]> = {}
+                // Group items by category_id
+                const grouped: Record<string, MenuItem[]> = {}
 
-            // Initialize empty arrays for all categories to avoid undefined checks
-            categoriesList.forEach(cat => {
-                grouped[cat.id] = []
-            })
+                // Initialize empty arrays for all categories to avoid undefined checks
+                categoriesList.forEach(cat => {
+                    grouped[cat.id] = []
+                })
 
-            itemsList.forEach(item => {
-                const catId = String(item.category_id)
-                if (!grouped[catId]) {
-                    grouped[catId] = []
-                }
-                grouped[catId].push(item)
-            })
+                itemsList.forEach(item => {
+                    const catId = String(item.category_id)
+                    if (!grouped[catId]) {
+                        grouped[catId] = []
+                    }
+                    grouped[catId].push(item)
+                })
 
-            setMenuByCategory(grouped)
-
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Une erreur est survenue lors du chargement du menu')
-        } finally {
-            setIsLoading(false)
+                setMenuByCategory(grouped)
+                success = true
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Une erreur est survenue lors du chargement du menu')
+                attempt++
+                // Exponential backoff: max 5s
+                await sleep(Math.min(500 * Math.pow(2, attempt), 5000))
+            } finally {
+                setIsLoading(!success)
+            }
         }
     }
 

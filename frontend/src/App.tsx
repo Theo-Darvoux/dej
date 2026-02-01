@@ -20,6 +20,8 @@ function getViewFromPath(path: string): ViewState {
   if (path.startsWith('/order/status/')) return 'order-status'
   if (path === '/recap') return 'recap'
   if (path === '/admin') return 'admin'
+  if (path === '/admin/print') return 'admin-print'
+  if (path === '/terminal') return 'admin-terminal'
   return 'landing'
 }
 

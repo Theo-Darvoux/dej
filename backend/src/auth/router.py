@@ -68,7 +68,16 @@ async def verify_code(
         httponly=True,
         secure=is_production,  # True en prod (HTTPS), False en dev (HTTP)
         samesite="lax",
-        max_age=7 * 24 * 60 * 60  # 7 jours
+        max_age=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60  # En secondes
+    )
+    
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens.refresh_token,
+        httponly=True,
+        secure=is_production,
+        samesite="lax",
+        max_age=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60  # 7 jours en secondes
     )
     
     return schemas.VerifyCodeResponse(
@@ -86,6 +95,66 @@ async def logout(response: Response):
     Logout: efface les cookies
     """
     response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
     
     return schemas.LogoutResponse(message="Déconnecté avec succès")
+
+
+@router.post("/refresh", response_model=schemas.TokenResponse)
+async def refresh_access_token(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    """
+    Rafraîchit l'access token en utilisant le refresh token
+    """
+    from src.core.security import decode_token
+    
+    refresh_token = request.cookies.get("refresh_token")
+    
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token manquant"
+        )
+    
+    # Décoder et valider le refresh token
+    token_data = decode_token(refresh_token, expected_type="refresh")
+    
+    # Vérifier que l'utilisateur existe toujours
+    user = service.get_user_by_token(refresh_token, db, expected_type="refresh")
+    
+    if not user or not user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Utilisateur invalide ou non vérifié"
+        )
+    
+    # Générer nouveaux tokens
+    tokens = await service.get_tokens(user.id, user.email)
+    
+    # Mettre à jour les cookies
+    from src.core.config import settings
+    is_production = settings.ENVIRONMENT == "production"
+    
+    response.set_cookie(
+        key="access_token",
+        value=tokens.access_token,
+        httponly=True,
+        secure=is_production,
+        samesite="lax",
+        max_age=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+    
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens.refresh_token,
+        httponly=True,
+        secure=is_production,
+        samesite="lax",
+        max_age=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+    )
+    
+    return tokens
 

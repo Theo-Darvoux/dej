@@ -6,6 +6,7 @@ from datetime import datetime
 class TokenResponse(BaseModel):
     """Réponse token (envoyé dans cookies, infos en body)"""
     access_token: str
+    refresh_token: str
     user_id: int
     email: str
 

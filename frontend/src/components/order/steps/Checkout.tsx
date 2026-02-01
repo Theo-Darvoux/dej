@@ -129,11 +129,9 @@ const Checkout = ({
         const timeSlotStart = deliveryInfo?.timeSlot?.split('-')[0] || '12:00'
 
         const reservationData = {
-            date_reservation: '2026-02-07',
             heure_reservation: timeSlotStart,
             habite_residence: deliveryInfo?.locationType === 'maisel',
             numero_chambre: deliveryInfo?.room || null,
-            numero_immeuble: deliveryInfo?.building || null,
             adresse: deliveryInfo?.address || null,
             phone: userPhone || null,
             special_requests: specialRequests || null,
@@ -237,7 +235,6 @@ const Checkout = ({
         )
     }
 
-    // Payment Step: Show summary with delivery info and payment button
     return (
         <div className="checkout-step">
             <button className="checkout-step__back" onClick={onBack}>← Retour</button>
@@ -266,7 +263,7 @@ const Checkout = ({
                         {deliveryInfo.locationType === 'maisel' ? (
                             <p>
                                 <strong>📍 Résidence Maisel</strong><br />
-                                Bâtiment {deliveryInfo.building}, Chambre {deliveryInfo.room}
+                                Bâtiment U{deliveryInfo.room?.[0]}, Chambre {deliveryInfo.room}
                             </p>
                         ) : (
                             <p>
@@ -294,7 +291,7 @@ const Checkout = ({
                 <textarea
                     value={specialRequests}
                     onChange={(e) => setSpecialRequests(e.target.value)}
-                    placeholder="Allergies, sans sauce, bien cuit... (optionnel)"
+                    placeholder="Allergies, livreur, bien cuit... (optionnel)"
                     rows={3}
                     maxLength={500}
                     className="checkout-special-textarea"

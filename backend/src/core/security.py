@@ -29,7 +29,23 @@ def create_access_token(email: str, user_id: int) -> str:
     return encoded_jwt
 
 
-def decode_token(token: str) -> TokenData:
+def create_refresh_token(email: str, user_id: int) -> str:
+    """Crée un JWT refresh token"""
+    to_encode = {
+        "sub": email,
+        "user_id": user_id,
+        "exp": datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS),
+        "type": "refresh"
+    }
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    return encoded_jwt
+
+
+def decode_token(token: str, expected_type: str = "access") -> TokenData:
     """Décode et valide un JWT"""
     try:
         payload = jwt.decode(

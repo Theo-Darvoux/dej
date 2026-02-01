@@ -79,9 +79,29 @@ const OrderPage = () => {
         navigateToStep('DELIVERY')
     }
 
-    // Step 5: Delivery confirmed -> Go to Verification
-    const handleDeliveryContinue = (info: DeliveryInfo) => {
+    // Step 5: Delivery confirmed -> Go to Verification or Checkout (if already logged in)
+    const handleDeliveryContinue = async (info: DeliveryInfo) => {
         setDeliveryInfo(info)
+        
+        // Check if user already has a valid access token
+        try {
+            const response = await fetch('/api/users/me', {
+                credentials: 'include'
+            })
+            
+            if (response.ok) {
+                const userData = await response.json()
+                // User is already authenticated, skip verification
+                setUserEmail(userData.email)
+                navigateToStep('CHECKOUT')
+                return
+            }
+        } catch (error) {
+            // Token invalid or expired, proceed to verification
+            console.log('No valid token, proceeding to verification')
+        }
+        
+        // No valid token, go to verification
         navigateToStep('VERIFICATION')
     }
 

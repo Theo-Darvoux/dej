@@ -158,9 +158,9 @@ async def create_reservation(
         import httpx
         try:
             async with httpx.AsyncClient() as client:
-                # Search for the address in BAN API
+                # Search for the address using Géoplateforme geocoding service (replaces deprecated BAN API)
                 response = await client.get(
-                    "https://api-adresse.data.gouv.fr/search/",
+                    "https://data.geopf.fr/geocodage/search",
                     params={"q": request.adresse, "limit": 1}
                 )
                 
@@ -342,9 +342,13 @@ async def create_reservation(
     if request.habite_residence:
         current_user.numero_if_maisel = int(request.numero_chambre)
         current_user.adresse = None
+        # Calculate building from room number (first digit)
+        building_number = request.numero_chambre[0]
+        current_user.adresse_if_maisel = schemas.BatimentMaisel(f"U{building_number}")
     else:
         current_user.adresse = request.adresse
         current_user.numero_if_maisel = None
+        current_user.adresse_if_maisel = None
     
     # Stocker les IDs des items
     current_user.menu_id = menu_item["id"] if menu_item else None

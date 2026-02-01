@@ -12,11 +12,9 @@ class UserUpdateRequest(BaseModel):
 
 class ReservationData(BaseModel):
     """Données de réservation avec choix de menu"""
-    date_reservation: str  # Format: YYYY-MM-DD
     heure_reservation: str  # Format: HH:MM
     habite_residence: bool
     numero_chambre: Optional[str] = None
-    numero_immeuble: Optional[str] = None
     adresse: Optional[str] = None
     phone: str
     menu_id: Optional[str] = None

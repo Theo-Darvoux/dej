@@ -212,11 +212,15 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
 
 
 async def get_tokens(user_id: int, email: str) -> TokenResponse:
-    """Génère access token JWT"""
+    """Génère access et refresh tokens JWT"""
+    from src.core.security import create_refresh_token
+    
     access_token = create_access_token(email, user_id)
+    refresh_token = create_refresh_token(email, user_id)
     
     return TokenResponse(
         access_token=access_token,
+        refresh_token=refresh_token,
         user_id=user_id,
         email=email
     )
@@ -224,11 +228,11 @@ async def get_tokens(user_id: int, email: str) -> TokenResponse:
 
 
 
-def get_user_by_token(token: str, db: Session) -> User:
+def get_user_by_token(token: str, db: Session, expected_type: str = "access") -> User:
     """Récupère l'utilisateur à partir d'un token JWT"""
     from src.core.security import decode_token
     
-    token_data = decode_token(token)
+    token_data = decode_token(token, expected_type=expected_type)
     user = db.query(User).filter(User.id == token_data.user_id).first()
     
     if not user:

@@ -19,7 +19,5 @@ class MenuItemResponse(BaseModel):
     item_type: str
     price: str
     image: str | None = None
-    remaining_quantity: int | None = None
-    low_stock_threshold: int | None = None
 
     model_config = {"from_attributes": True}

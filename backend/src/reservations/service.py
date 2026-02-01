@@ -11,7 +11,6 @@ def create_reservation(
     heure_reservation: str,
     habite_residence: bool,
     numero_chambre: str = None,
-    numero_immeuble: str = None,
     adresse: str = None,
     phone: str = None,
     menu: str = None,

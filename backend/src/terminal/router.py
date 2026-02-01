@@ -20,38 +20,43 @@ PARIS_TZ = ZoneInfo("Europe/Paris")
 def get_terminal_orders(
     auto_hour: bool = Query(True),  # Auto-detect current hour
     hour: int = Query(None, ge=8, le=17),  # Manual hour override
+    all_orders: bool = Query(False),  # Get all orders (not filtered by hour)
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_from_cookie)
 ):
-    """Get orders for terminal kitchen display - only paid orders for current hour"""
+    """Get orders for terminal kitchen display - only paid orders"""
     if current_user.user_type != "admin":
         raise AdminException()
 
-    # Determine hour to filter
-    if auto_hour or hour is None:
-        paris_now = datetime.now(PARIS_TZ)
-        current_hour = paris_now.hour
-    else:
-        current_hour = hour
-
+    # Determine current hour
+    paris_now = datetime.now(PARIS_TZ)
+    current_hour = paris_now.hour
+    
     # Clamp to valid range
     if current_hour < 8:
         current_hour = 8
     elif current_hour > 17:
         current_hour = 17
 
-    # Time range for this hour
-    t_start = time(hour=current_hour, minute=0)
-    t_end = time(hour=current_hour, minute=59)
-
-    # Query paid orders for this hour
-    reservations = db.query(User).filter(
-        and_(
-            User.payment_status == "completed",
-            User.heure_reservation >= t_start,
-            User.heure_reservation <= t_end
-        )
-    ).order_by(User.heure_reservation).all()
+    # Query paid orders
+    if all_orders:
+        # Get all paid orders, sorted by hour
+        reservations = db.query(User).filter(
+            User.payment_status == "completed"
+        ).order_by(User.heure_reservation).all()
+    else:
+        # Filter by specific hour
+        filter_hour = hour if hour is not None else current_hour
+        t_start = time(hour=filter_hour, minute=0)
+        t_end = time(hour=filter_hour, minute=59)
+        
+        reservations = db.query(User).filter(
+            and_(
+                User.payment_status == "completed",
+                User.heure_reservation >= t_start,
+                User.heure_reservation <= t_end
+            )
+        ).order_by(User.heure_reservation).all()
 
     # Helper to resolve item name
     from src.menu.utils import load_menu_data
@@ -82,9 +87,11 @@ def get_terminal_orders(
             nom=res.nom,
             is_maisel=res.adresse_if_maisel is not None,
             batiment=res.adresse_if_maisel.value if res.adresse_if_maisel else None,
+            chambre=res.numero_if_maisel,
             menu=get_item_name(res.menu_id),
             boisson=get_item_name(res.boisson_id),
-            extras=extras_names
+            extras=extras_names,
+            heure=res.heure_reservation.strftime("%H:%M") if res.heure_reservation else "00:00"
         ))
 
     return TerminalOrdersResponse(

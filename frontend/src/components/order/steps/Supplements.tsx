@@ -51,15 +51,12 @@ const Supplements = ({ initialSelectedItems = [], onBack, onContinue }: Suppleme
             setPendingItem(item)
             setModalInfo({ show: true, message: conditionMsg })
         } else {
-            // If it's a drink, replace any existing drink selection
             if (isDrink(item)) {
                 setSelectedSupplements(prev => {
-                    // Remove any existing drinks, keep extras
                     const withoutDrinks = prev.filter(i => !isDrink(i))
                     return [...withoutDrinks, item]
                 })
             } else {
-                // For extras, just add
                 setSelectedSupplements(prev => [...prev, item])
             }
         }
@@ -67,15 +64,7 @@ const Supplements = ({ initialSelectedItems = [], onBack, onContinue }: Suppleme
 
     const confirmModal = () => {
         if (pendingItem) {
-            // For drinks with conditions (though unlikely), also apply single-selection
-            if (isDrink(pendingItem)) {
-                setSelectedSupplements(prev => {
-                    const withoutDrinks = prev.filter(i => !isDrink(i))
-                    return [...withoutDrinks, pendingItem]
-                })
-            } else {
-                setSelectedSupplements(prev => [...prev, pendingItem])
-            }
+            setSelectedSupplements(prev => [...prev, pendingItem])
         }
         closeModal()
     }

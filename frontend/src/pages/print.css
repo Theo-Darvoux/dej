@@ -1,0 +1,219 @@
+.print-page {
+    display: flex;
+    min-height: 100vh;
+    background: #f5f5f5;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.print-sidebar {
+    width: 320px;
+    background: #1a1a2e;
+    color: white;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.print-sidebar h1 {
+    font-size: 20px;
+    margin: 0;
+}
+
+.filter-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.filter-section h3 {
+    margin: 0;
+    font-size: 14px;
+    color: #a0a0a0;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.print-sidebar select {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    background: #2d3a5c;
+    color: white;
+    font-size: 14px;
+}
+
+.print-page .stats {
+    padding: 16px;
+    background: #2d3a5c;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.print-page .stats .total {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.print-btn {
+    padding: 16px;
+    border: none;
+    border-radius: 8px;
+    background: #e63946;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: auto;
+}
+
+.print-btn:hover {
+    background: #c1121f;
+}
+
+.print-btn:disabled {
+    background: #666;
+    cursor: not-allowed;
+}
+
+.error-msg {
+    background: #e63946;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.print-content {
+    flex: 1;
+    padding: 24px;
+    overflow-x: auto;
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.table-header h2 {
+    margin: 0;
+    color: #333;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pagination button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #1a1a2e;
+    color: white;
+    cursor: pointer;
+}
+
+.pagination button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.print-page .loading {
+    text-align: center;
+    padding: 32px;
+    color: #666;
+}
+
+.print-page table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.print-page th,
+.print-page td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.print-page th {
+    background: #1a1a2e;
+    color: white;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+.print-page tr:hover {
+    background: #f9f9f9;
+}
+
+.print-page tr.paid {
+    background: #e8f5e9;
+}
+
+.print-page tr.pending {
+    background: #fff3e0;
+}
+
+.print-page td.maisel {
+    color: #1565c0;
+    font-weight: 600;
+}
+
+.print-page td.evry {
+    color: #e65100;
+    font-weight: 600;
+}
+
+.print-page .badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.print-page .badge.completed {
+    background: #4caf50;
+    color: white;
+}
+
+.print-page .badge.pending {
+    background: #ff9800;
+    color: white;
+}
+
+.print-page td.empty {
+    text-align: center;
+    color: #999;
+    padding: 48px;
+}
+
+@media (max-width: 1024px) {
+    .print-page {
+        flex-direction: column;
+    }
+
+    .print-sidebar {
+        width: 100%;
+    }
+}

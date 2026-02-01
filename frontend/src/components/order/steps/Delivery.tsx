@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 
 export type DeliveryInfo = {
     locationType: 'maisel' | 'external'
-    building?: string
     room?: string
     address?: string
     timeSlot: string
@@ -81,9 +80,8 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
         const timer = setTimeout(async () => {
             setIsLoadingAddresses(true)
             try {
-                // Use French government address API
                 const response = await fetch(
-                    `https://api-adresse.data.gouv.fr/search?q=${encodeURIComponent(addressQuery)}&postcode=91000&limit=5`
+                    `https://data.geopf.fr/geocodage/search?q=${encodeURIComponent(addressQuery)}&postcode=91000&limit=5`
                 )
                 const data = await response.json()
 
@@ -130,14 +128,6 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
 
         setRoomError('')
         return true
-    }
-
-    // Get building from room number (first digit)
-    const getBuildingFromRoom = (roomNum: string): string => {
-        if (roomNum.length >= 1 && roomNum[0] >= '1' && roomNum[0] <= '7') {
-            return `U${roomNum[0]}`
-        }
-        return ''
     }
 
     const handleRoomChange = (value: string) => {
@@ -201,11 +191,8 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
     const handleContinue = () => {
         if (!canContinue()) return
 
-        const building = locationType === 'maisel' ? getBuildingFromRoom(room) : undefined
-
         onContinue({
             locationType,
-            building,
             room: locationType === 'maisel' ? room : undefined,
             address: locationType === 'external' ? selectedAddress : undefined,
             timeSlot: selectedSlot
@@ -259,7 +246,7 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
                             {roomError && <span className="form-error">{roomError}</span>}
                             {room.length === 4 && !roomError && (
                                 <span className="form-hint form-hint--success">
-                                    ✓ Bâtiment {getBuildingFromRoom(room)}
+                                    ✓ Bâtiment U{room[0]}
                                 </span>
                             )}
                             {room.length < 4 && (

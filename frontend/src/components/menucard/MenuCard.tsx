@@ -7,8 +7,6 @@ type MenuCardProps = {
   accent?: string
   price: string
   image?: string
-  remaining_quantity?: number
-  low_stock_threshold?: number
   onAdd: () => void
 }
 
@@ -36,20 +34,12 @@ const MenuCard = ({
   tag,
   price,
   image,
-  remaining_quantity,
-  low_stock_threshold,
   onAdd
 }: MenuCardProps) => {
-  const isOutOfStock = remaining_quantity === 0
-  const isLowStock = remaining_quantity !== undefined &&
-    low_stock_threshold !== undefined &&
-    remaining_quantity <= low_stock_threshold &&
-    remaining_quantity > 0
-
   const emoji = getProductEmoji(title)
 
   return (
-    <article className={`menu-card ${isOutOfStock ? 'menu-card--disabled' : ''}`}>
+    <article className="menu-card">
       <div className="menu-card__image">
         {image ? (
           <img src={image} alt={title} />
@@ -59,16 +49,6 @@ const MenuCard = ({
 
         {tag && (
           <span className="menu-card__badge">{tag}</span>
-        )}
-
-        {isLowStock && (
-          <span className="menu-card__badge menu-card__badge--warning">
-            Plus que {remaining_quantity}!
-          </span>
-        )}
-
-        {isOutOfStock && (
-          <div className="menu-card__out-of-stock">Épuisé</div>
         )}
       </div>
 
@@ -81,9 +61,8 @@ const MenuCard = ({
           <button
             className="menu-card__btn"
             onClick={onAdd}
-            disabled={isOutOfStock}
           >
-            {isOutOfStock ? 'Épuisé' : 'Choisir'}
+            Choisir
           </button>
         </div>
       </div>

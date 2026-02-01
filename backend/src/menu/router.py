@@ -88,9 +88,7 @@ def get_menu_items(category_id: str | None = None):
             accent=item.get("accent_color"),
             item_type=item.get("item_type", "menu"),
             price=formatted_price,
-            image=item.get("image_url"),
-            remaining_quantity=None, # Infinite stock
-            low_stock_threshold=None
+            image=item.get("image_url")
         ))
         
     return response
