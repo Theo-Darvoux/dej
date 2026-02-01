@@ -220,7 +220,7 @@ def get_contact_section() -> str:
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 24px; background: #e3f2fd; border-radius: 12px; padding: 20px;">
         <tr>
             <td>
-                {get_section_title("📞", "Contacts des responsables")}
+                {get_section_title("·", "Contacts des responsables")}
                 <div style="font-size: 13px; color: {COLORS['gray']}; margin-bottom: 12px;">En cas de question concernant votre commande :</div>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                     <tr>
@@ -405,7 +405,7 @@ async def send_order_confirmation(user) -> bool:
     {get_time_section(time_str)}
 
     <!-- Section commande -->
-    {get_section_title("", "Ta commande")}
+    {get_section_title("·", "Ta commande")}
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
         {order_items_html}
     </table>
@@ -415,7 +415,7 @@ async def send_order_confirmation(user) -> bool:
     {get_separator()}
 
     <!-- Section informations -->
-    {get_section_title("", "Informations")}
+    {get_section_title("·", "Informations")}
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
         <tr>
             {get_info_item("Nom", f"{user.prenom or ''} {user.nom or ''}")}
@@ -440,7 +440,7 @@ async def send_order_confirmation(user) -> bool:
         <tr>
             <td>
                 <a href="{status_url}" style="display: inline-block; background: linear-gradient(135deg, {COLORS['green']}, {COLORS['green_dark']}); color: {COLORS['white']}; padding: 16px 32px; border-radius: 12px; font-size: 15px; font-weight: 700; text-decoration: none;">
-                    📊 Suivre ma commande
+                    · Suivre ma commande
                 </a>
                 <div style="font-size: 11px; color: {COLORS['gray']}; margin-top: 12px;">Conserve ce lien pour consulter le statut à tout moment</div>
             </td>
