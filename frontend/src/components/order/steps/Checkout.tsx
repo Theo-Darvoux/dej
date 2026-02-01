@@ -111,9 +111,9 @@ const Checkout = ({
 
     const handlePayWithHelloAsso = async () => {
         setError('')
-        let payerFirstName = 'Prenom'
-        let payerLastName = "Nom"
-        let payerEmail = userEmail || 'email@domain.fr'
+        let payerFirstName = ''
+        let payerLastName = ''
+        let payerEmail = userEmail || ''
 
         try {
             const userResponse = await fetch('/api/users/me', {
@@ -126,7 +126,33 @@ const Checkout = ({
                 if (userData.email) payerEmail = userData.email
             }
         } catch {
-            // Use default values if user info fetch fails
+            // Fallback: extract from email if user data fetch fails
+        }
+
+        // Fallback: If prenom/nom not available from user data, extract from email
+        if ((!payerFirstName || !payerLastName) && payerEmail) {
+            try {
+                const localPart = payerEmail.split('@')[0]
+                const parts = localPart.replace(/_/g, '.').replace(/-/g, '.').split('.').filter(p => p)
+                if (parts.length >= 2) {
+                    if (!payerFirstName) {
+                        payerFirstName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()
+                    }
+                    if (!payerLastName) {
+                        payerLastName = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()
+                    }
+                }
+            } catch {
+                // If extraction fails, throw error
+            }
+        }
+
+        // Final validation before sending to backend
+        if (!payerFirstName || payerFirstName.length < 2) {
+            throw new Error('Prénom invalide. Veuillez vous reconnecter.')
+        }
+        if (!payerLastName || payerLastName.length < 2) {
+            throw new Error('Nom invalide. Veuillez vous reconnecter.')
         }
 
         const menuItem = cartItems.find(item => item.item_type === 'menu')

@@ -217,12 +217,18 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
                     detail="Réservation introuvable"
                 )
 
-            print(f"[DEBUG] Found user by reservation_id: {user.id}")
+        # Validate that user has valid prenom/nom for HelloAsso
+        if not checkout_request.payer_first_name or len(checkout_request.payer_first_name) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="Le prénom est requis et doit contenir au moins 2 caractères"
+            )
+        if not checkout_request.payer_last_name or len(checkout_request.payer_last_name) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="Le nom est requis et doit contenir au moins 2 caractères"
+            )
 
-            user.payment_intent_id = checkout_intent_id
-            # Generate status_token if missing
-            if not user.status_token:
-                user.status_token = secrets.token_urlsafe(32)
             db.commit()
             print(f"[DEBUG] Stored checkout_intent_id {checkout_intent_id} for user {user.id}")
         finally:

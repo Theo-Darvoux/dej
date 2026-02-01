@@ -189,11 +189,23 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
         parts = [p for p in local_part.replace("_", ".").replace("-", ".").split(".") if p]
         if len(parts) >= 2:
             prenom_raw, nom_raw = parts[0], parts[1]
-            user.prenom = prenom_raw.strip().capitalize()
-            user.nom = nom_raw.strip().capitalize()
+            prenom = prenom_raw.strip().capitalize()
+            nom = nom_raw.strip().capitalize()
+            # Only set if they're valid (not empty and not just punctuation)
+            if prenom and len(prenom) > 1 and prenom.isalpha():
+                user.prenom = prenom
+            else:
+                user.prenom = None
+            if nom and len(nom) > 1 and nom.isalpha():
+                user.nom = nom
+            else:
+                user.nom = None
+        else:
+            user.prenom = None
+            user.nom = None
     except Exception:
-        user.prenom = ""
-        user.nom = ""
+        user.prenom = None
+        user.nom = None
 
     # Marquer email comme vérifié et log IP
     user.email_verified = True
