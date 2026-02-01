@@ -33,13 +33,21 @@ const OrderPage = () => {
     const [authError, setAuthError] = useState<string | null>(null)
 
     // Wizard State - initialize from localStorage
-    const [step, setStep] = useState<Step>(() => {
-        const saved = localStorage.getItem(STORAGE_KEYS.STEP)
-        return (saved as Step) || 'SELECTION'
-    })
     const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(() => {
         const saved = localStorage.getItem(STORAGE_KEYS.SELECTED_MENU)
         return saved ? JSON.parse(saved) : null
+    })
+    const [step, setStep] = useState<Step>(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.STEP)
+        const savedStep = (saved as Step) || 'SELECTION'
+        
+        // Validate step consistency: if no menu selected, can't be past SELECTION
+        const hasSelectedMenu = localStorage.getItem(STORAGE_KEYS.SELECTED_MENU)
+        if (!hasSelectedMenu && savedStep !== 'SELECTION') {
+            return 'SELECTION'
+        }
+        
+        return savedStep
     })
     const [cartItems, setCartItems] = useState<MenuItem[]>(() => {
         const saved = localStorage.getItem(STORAGE_KEYS.CART)
