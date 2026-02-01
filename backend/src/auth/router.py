@@ -21,7 +21,7 @@ async def request_code(
     - Crée/met à jour l'utilisateur en DB
     """
     # Rate limit by email: 3 requests per 15 minutes
-    rate_limiter.check(f"email:{request.email}", max_requests=3, window_seconds=900)
+    await rate_limiter.check(f"email:{request.email}", max_requests=3, window_seconds=900)
 
     await service.request_verification_code(request.email, db)
     
@@ -46,7 +46,7 @@ async def verify_code(
     - Retourne is_cotisant pour guider vers l'étape suivante
     """
     # Rate limit by email: 5 verification attempts per 15 minutes
-    rate_limiter.check(f"verify:{request_data.email}", max_requests=5, window_seconds=900)
+    await rate_limiter.check(f"verify:{request_data.email}", max_requests=5, window_seconds=900)
 
     user_id, is_cotisant = await service.verify_code(
         request_data.email,

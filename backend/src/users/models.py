@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Date, Integer, String, Boolean, DateTime, ForeignKey, Time, Enum as SAEnum, Float, JSON, Index
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from src.db.base import Base
 from datetime import datetime, timezone
@@ -61,7 +62,7 @@ class User(Base):
     # Choix de commande - IDs from JSON (Strings)
     menu_id = Column(String, nullable=True)
     boisson_id = Column(String, nullable=True)
-    bonus_ids = Column(JSON, nullable=True, default=list)  # Liste d'IDs d'extras (ex: ["extra_poulet", "extra_chouffe"])
+    bonus_ids = Column(JSONB, nullable=True, default=list)  # Liste d'IDs d'extras (ex: ["extra_poulet", "extra_chouffe"])
     
     # Relations removed as we interpret IDs from JSON now
 
