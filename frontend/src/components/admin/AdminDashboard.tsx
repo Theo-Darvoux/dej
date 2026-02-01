@@ -250,6 +250,26 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
         }
     }
 
+    const handleConfirmPayment = async (id: number) => {
+        if (!window.confirm("Confirmer le paiement manuel pour cette commande ?")) return
+
+        try {
+            const response = await fetch(`/api/admin/orders/${id}/confirm-payment`, {
+                method: 'POST',
+                credentials: 'include'
+            })
+            if (response.ok) {
+                fetchOrders()
+                alert("Paiement confirmé avec succès")
+            } else {
+                const data = await response.json().catch(() => ({}))
+                alert(data.detail || "Erreur lors de la confirmation du paiement")
+            }
+        } catch {
+            alert("Erreur réseau")
+        }
+    }
+
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!editingOrder) return
@@ -474,6 +494,11 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                         <button className="btn-icon btn-icon--edit" onClick={() => setEditingOrder({...order})} title="Modifier">
                                             ✏️
                                         </button>
+                                        {order.payment_status !== 'completed' && (
+                                            <button className="btn-icon btn-icon--confirm" onClick={() => handleConfirmPayment(order.id)} title="Confirmer paiement (espèces)">
+                                                ✅
+                                            </button>
+                                        )}
                                         <button className="btn-icon btn-icon--delete" onClick={() => handleDelete(order.id)} title="Supprimer">
                                             🗑️
                                         </button>

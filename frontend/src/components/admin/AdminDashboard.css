@@ -263,6 +263,14 @@
     background: rgba(33, 150, 243, 0.4);
 }
 
+.btn-icon--confirm {
+    background: rgba(76, 175, 80, 0.2);
+}
+
+.btn-icon--confirm:hover {
+    background: rgba(76, 175, 80, 0.4);
+}
+
 /* Empty State */
 .no-orders {
     padding: 60px 20px;

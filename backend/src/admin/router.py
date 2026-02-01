@@ -191,6 +191,34 @@ async def delete_order(
     return {"message": "Commande et compte utilisateur supprimés avec succès"}
 
 
+@router.post("/orders/{user_id}/confirm-payment")
+async def confirm_payment_manually(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_from_cookie)
+):
+    """Confirme manuellement le paiement d'une commande (pour paiements en espèces/liquide)"""
+    require_admin(current_user)
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+    
+    if user.payment_status == "completed":
+        raise HTTPException(status_code=400, detail="Le paiement est déjà confirmé")
+    
+    # Mark payment as completed manually
+    from datetime import datetime, timezone
+    user.payment_status = "completed"
+    user.payment_date = datetime.now(timezone.utc)
+    user.payment_intent_id = f"manual_{user_id}_{int(datetime.now(timezone.utc).timestamp())}"
+    
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": "Paiement confirmé manuellement", "order": enrich_order(user)}
+
+
 @router.get("/users/{email}", response_model=UserResponse)
 async def get_user_by_email(
     email: EmailStr,
