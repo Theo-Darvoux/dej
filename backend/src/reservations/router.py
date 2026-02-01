@@ -291,6 +291,21 @@ async def create_reservation(
             seen_ids.add(extra_item["id"])
             extra_items.append(extra_item)
 
+    # VALIDATION SPECIALE: Poulet rôti et créneaux horaires
+    # Le fournisseur de poulets rôtis ouvre à 9h00, donc impossible de servir avant 10h00
+    has_roasted_chicken = any(
+        'poulet' in extra_name.lower() 
+        for extra_name in (request.extras or [])
+    )
+    
+    if has_roasted_chicken:
+        # Vérifier que le créneau est >= 10:00
+        if reservation_time.hour < 10:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Le poulet rôti n'est pas disponible avant 10h00 (ouverture du fournisseur à 9h00). Veuillez choisir un créneau à partir de 10h00."
+            )
+
     # VALIDATION 5: Vérifier la disponibilité du créneau avec verrouillage
     # Utilise SELECT FOR UPDATE pour éviter les conditions de concurrence
     if not reserve_slot_with_lock(db, reservation_time):

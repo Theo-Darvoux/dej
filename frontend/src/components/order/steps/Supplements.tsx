@@ -50,7 +50,7 @@ const Supplements = ({ initialSelectedItems = [], onBack, onContinue }: Suppleme
         if (name.includes('chouffe')) {
             conditionMsg = "Condition requise : Être un ancien membre du club Absinthe.\n\nCette condition sera vérifiée par notre staff lors de la préparation."
         } else if (name.includes('poulet')) {
-            conditionMsg = "Condition requise : Être un 3A+.\n\nCette condition sera vérifiée par notre staff lors de la préparation."
+            conditionMsg = "Condition requise : Être un 3A+.\n\nCette condition sera vérifiée par notre staff lors de la préparation.\n\n⚠️ IMPORTANT : Notre fournisseur de poulets rôtis ouvre à 9h00. Les créneaux de livraison 8h00-9h00 et 9h00-10h00 seront automatiquement indisponibles si vous sélectionnez cet extra."
         }
 
         if (conditionMsg) {

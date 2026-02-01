@@ -21,13 +21,21 @@ type SlotData = {
     max_capacity: number
 }
 
+type MenuItem = {
+    id: string
+    title: string
+    price: string
+    item_type: string
+}
+
 type DeliveryProps = {
     onBack: () => void
     onContinue: (info: DeliveryInfo) => void
     initialDeliveryInfo?: DeliveryInfo | null
+    extraItems?: MenuItem[]
 }
 
-const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) => {
+const Delivery = ({ onBack, onContinue, initialDeliveryInfo, extraItems = [] }: DeliveryProps) => {
     const [locationType, setLocationType] = useState<'maisel' | 'external'>(
         initialDeliveryInfo?.locationType || 'maisel'
     )
@@ -48,6 +56,11 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
     const [slotsError, setSlotsError] = useState<string | null>(null)
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
 
+    // Check if roasted chicken is in extras
+    const hasRotisserie = extraItems.some(item => 
+        item.title.toLowerCase().includes('poulet')
+    )
+
     // Fetch slot availability from API
     const fetchSlots = async () => {
         setSlotsLoading(true)
@@ -58,7 +71,17 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
                 throw new Error('Erreur lors du chargement des créneaux')
             }
             const data = await response.json()
-            setSlots(data.slots || [])
+            let availableSlots = data.slots || []
+            
+            // Filter out 8:00-9:00 and 9:00-10:00 slots if roasted chicken is selected
+            if (hasRotisserie) {
+                availableSlots = availableSlots.filter((slot: SlotData) => {
+                    const startHour = parseInt(slot.start.split(':')[0])
+                    return startHour >= 10 // Only slots from 10:00 onwards
+                })
+            }
+            
+            setSlots(availableSlots)
             setLastRefresh(new Date())
         } catch (err) {
             setSlotsError(err instanceof Error ? err.message : 'Erreur inconnue')
@@ -68,10 +91,10 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
         }
     }
 
-    // Initial fetch
+    // Initial fetch and re-fetch when extraItems changes
     useEffect(() => {
         fetchSlots()
-    }, [])
+    }, [extraItems])
 
     // Auto-refresh every 60 seconds
     useEffect(() => {
@@ -319,6 +342,11 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
                         {slotsLoading ? '⏳' : '🔄'}
                     </button>
                 </div>
+                {hasRotisserie && (
+                    <div className="delivery-rotisserie-notice">
+                        🍗 <strong>Poulet rôti sélectionné :</strong> Les créneaux avant 10h00 ne sont pas disponibles (ouverture du fournisseur à 9h00).
+                    </div>
+                )}
                 <div className="delivery-last-refresh">
                     Dernière mise à jour : {lastRefresh.toLocaleTimeString('fr-FR')}
                 </div>

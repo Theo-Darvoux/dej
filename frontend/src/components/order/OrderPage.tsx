@@ -351,6 +351,7 @@ const OrderPage = () => {
                         onBack={handleBack}
                         onContinue={handleDeliveryContinue}
                         initialDeliveryInfo={deliveryInfo}
+                        extraItems={extraItems}
                     />
                 )}
 
