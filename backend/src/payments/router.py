@@ -164,6 +164,18 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
     from src.db.session import SessionLocal
     from src.users.models import User
 
+    # Validate that user has valid prenom/nom for HelloAsso
+    if not checkout_request.payer_first_name or len(checkout_request.payer_first_name) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Le prénom est requis et doit contenir au moins 2 caractères"
+        )
+    if not checkout_request.payer_last_name or len(checkout_request.payer_last_name) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Le nom est requis et doit contenir au moins 2 caractères"
+        )
+
     try:
         # Build URLs for HelloAsso redirects (must be HTTPS!)
         # Use HELLOASSO_REDIRECT_BASE_URL if set, otherwise fall back to FRONTEND_URL
@@ -217,17 +229,10 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
                     detail="Réservation introuvable"
                 )
 
-        # Validate that user has valid prenom/nom for HelloAsso
-        if not checkout_request.payer_first_name or len(checkout_request.payer_first_name) < 2:
-            raise HTTPException(
-                status_code=400,
-                detail="Le prénom est requis et doit contenir au moins 2 caractères"
-            )
-        if not checkout_request.payer_last_name or len(checkout_request.payer_last_name) < 2:
-            raise HTTPException(
-                status_code=400,
-                detail="Le nom est requis et doit contenir au moins 2 caractères"
-            )
+            print(f"[DEBUG] Found user by reservation_id: {user.id}")
+
+            # Store checkout_intent_id for later lookup
+            user.payment_intent_id = checkout_intent_id
 
             db.commit()
             print(f"[DEBUG] Stored checkout_intent_id {checkout_intent_id} for user {user.id}")
