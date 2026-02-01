@@ -88,7 +88,7 @@ const Supplements = ({ initialSelectedItems = [], onBack, onContinue }: Suppleme
             <div className="supplements-section">
                 <h3 className="supplements-section__title">
                     <span className="supplements-section__icon">🥤</span>
-                    Choisissez votre boisson
+                    Choisissez votre boisson gratuite
                     <span className="supplements-section__hint">(1 seule)</span>
                 </h3>
                 <div className="drinks-grid">
