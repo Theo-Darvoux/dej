@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # JWT
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # Token d'accès expire en 30 minutes
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 120  # Token d'accès expire en 2 heures (for long checkout flows)
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # Token de rafraîchissement expire en 7 jours
     
     # Code de vérification email

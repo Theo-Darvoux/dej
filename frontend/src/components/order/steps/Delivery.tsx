@@ -46,28 +46,37 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
     const [slots, setSlots] = useState<SlotData[]>([])
     const [slotsLoading, setSlotsLoading] = useState(true)
     const [slotsError, setSlotsError] = useState<string | null>(null)
+    const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
 
     // Fetch slot availability from API
-    useEffect(() => {
-        const fetchSlots = async () => {
-            setSlotsLoading(true)
-            setSlotsError(null)
-            try {
-                const response = await fetch('/api/reservations/availability')
-                if (!response.ok) {
-                    throw new Error('Erreur lors du chargement des créneaux')
-                }
-                const data = await response.json()
-                setSlots(data.slots || [])
-            } catch (err) {
-                setSlotsError(err instanceof Error ? err.message : 'Erreur inconnue')
-                setSlots([])
-            } finally {
-                setSlotsLoading(false)
+    const fetchSlots = async () => {
+        setSlotsLoading(true)
+        setSlotsError(null)
+        try {
+            const response = await fetch('/api/reservations/availability')
+            if (!response.ok) {
+                throw new Error('Erreur lors du chargement des créneaux')
             }
+            const data = await response.json()
+            setSlots(data.slots || [])
+            setLastRefresh(new Date())
+        } catch (err) {
+            setSlotsError(err instanceof Error ? err.message : 'Erreur inconnue')
+            setSlots([])
+        } finally {
+            setSlotsLoading(false)
         }
+    }
 
+    // Initial fetch
+    useEffect(() => {
         fetchSlots()
+    }, [])
+
+    // Auto-refresh every 60 seconds
+    useEffect(() => {
+        const interval = setInterval(fetchSlots, 60000)
+        return () => clearInterval(interval)
     }, [])
 
     // Debounced address search
@@ -299,7 +308,20 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo }: DeliveryProps) =>
 
             {/* Time Slots */}
             <div className="delivery-section">
-                <h3>Choisissez votre créneau</h3>
+                <div className="delivery-section__header">
+                    <h3>Choisissez votre créneau</h3>
+                    <button
+                        className="delivery-refresh-btn"
+                        onClick={fetchSlots}
+                        disabled={slotsLoading}
+                        title="Actualiser les créneaux"
+                    >
+                        {slotsLoading ? '⏳' : '🔄'}
+                    </button>
+                </div>
+                <div className="delivery-last-refresh">
+                    Dernière mise à jour : {lastRefresh.toLocaleTimeString('fr-FR')}
+                </div>
                 {slotsLoading ? (
                     <div className="time-slots-loading">Chargement des créneaux...</div>
                 ) : slotsError ? (

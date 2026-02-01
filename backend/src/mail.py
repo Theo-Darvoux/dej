@@ -324,9 +324,9 @@ async def send_order_confirmation(user) -> bool:
     if not user.status_token:
         user.status_token = secrets.token_urlsafe(32)
 
-    # Helper to resolve item name/price
-    from src.menu.utils import load_menu_data
-    menu_data = load_menu_data()
+    # Helper to resolve item name/price (using cached data)
+    from src.menu.utils import get_menu_data
+    menu_data = get_menu_data()
 
     def get_item_details(item_id):
         if not item_id:

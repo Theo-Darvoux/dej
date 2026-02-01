@@ -55,11 +55,21 @@ def decode_token(token: str, expected_type: str = "access") -> TokenData:
         )
         email: str = payload.get("sub")
         user_id: int = payload.get("user_id")
+        token_type: str = payload.get("type")
+
         if email is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token invalide"
             )
+
+        # Validate token type to prevent refresh tokens being used as access tokens
+        if token_type != expected_type:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Type de token invalide (attendu: {expected_type})"
+            )
+
         return TokenData(email=email, user_id=user_id)
     except JWTError:
         raise HTTPException(

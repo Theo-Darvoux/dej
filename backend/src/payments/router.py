@@ -1,6 +1,12 @@
 """
 Payment Router - HelloAsso Checkout endpoints
+
+Features:
+- Race condition protection for payment completion
+- Background email sending to avoid blocking responses
+- Idempotent payment completion
 """
+import asyncio
 from fastapi import APIRouter, HTTPException, Request
 from src.payments.schemas import (
     CheckoutRequest,
@@ -12,53 +18,139 @@ from src.payments.schemas import (
 from src.payments import helloasso_service
 from src.core.config import settings
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 from datetime import datetime, timezone
 import secrets
 import traceback
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
+# Lock for payment completion to prevent race conditions
+# Each entry stores (lock, last_used_timestamp)
+_payment_locks: dict[int, tuple[asyncio.Lock, float]] = {}
+_locks_lock = asyncio.Lock()
+_LOCK_TTL_SECONDS = 3600  # 1 hour
+
+
+async def _cleanup_old_locks():
+    """Remove locks older than TTL to prevent memory leaks."""
+    import time
+    current_time = time.time()
+    to_remove = []
+
+    for user_id, (lock, last_used) in _payment_locks.items():
+        if current_time - last_used > _LOCK_TTL_SECONDS and not lock.locked():
+            to_remove.append(user_id)
+
+    for user_id in to_remove:
+        del _payment_locks[user_id]
+
+    if to_remove:
+        print(f"[DEBUG] Cleaned up {len(to_remove)} expired payment locks")
+
+
+async def _get_user_lock(user_id: int) -> asyncio.Lock:
+    """Get or create a lock for a specific user."""
+    import time
+    async with _locks_lock:
+        # Cleanup old locks periodically (every time we access locks)
+        if len(_payment_locks) > 100:  # Only cleanup if we have many locks
+            await _cleanup_old_locks()
+
+        current_time = time.time()
+        if user_id not in _payment_locks:
+            _payment_locks[user_id] = (asyncio.Lock(), current_time)
+        else:
+            # Update last used time
+            lock, _ = _payment_locks[user_id]
+            _payment_locks[user_id] = (lock, current_time)
+        return _payment_locks[user_id][0]
+
+
+async def _send_confirmation_email_background(user_id: int, user_email: str):
+    """
+    Send confirmation email in background without blocking the response.
+
+    Args:
+        user_id: User ID to look up fresh data
+        user_email: Email for logging purposes
+    """
+    from src.db.session import SessionLocal
+    from src.users.models import User
+    from src.mail import send_order_confirmation
+
+    try:
+        print(f"[BACKGROUND_EMAIL] Sending confirmation to {user_email}")
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.id == user_id).first()
+            if user and user.payment_status == "completed":
+                email_sent = await send_order_confirmation(user)
+                if email_sent:
+                    user.email_delivery_status = "sent"
+                    print(f"[BACKGROUND_EMAIL] Email sent successfully to {user_email}")
+                else:
+                    user.email_delivery_status = "failed"
+                    print(f"[BACKGROUND_EMAIL] Email failed for {user_email}")
+                db.commit()  # Save email delivery status
+        finally:
+            db.close()
+
+    except Exception as e:
+        # Try to update delivery status even on exception
+        try:
+            db = SessionLocal()
+            user = db.query(User).filter(User.id == user_id).first()
+            if user:
+                user.email_delivery_status = "failed"
+                db.commit()
+            db.close()
+        except Exception:
+            pass
+        print(f"[BACKGROUND_EMAIL] Exception sending email to {user_email}: {e}")
+        traceback.print_exc()
+
 
 async def complete_payment(user, checkout_intent_id: str, db: Session) -> bool:
     """
-    Mark a payment as completed and send confirmation email.
+    Mark a payment as completed and send confirmation email in background.
     Returns True if this was a new completion, False if already completed.
 
     This function is used by:
     - /status/{checkout_intent_id} endpoint (frontend polling)
     - /verify/{checkout_intent_id} endpoint (legacy)
     - Background task (periodic checking)
+
+    Uses per-user locking to prevent race conditions.
     """
-    from src.mail import send_order_confirmation
+    # Get user-specific lock to prevent concurrent updates
+    user_lock = await _get_user_lock(user.id)
 
-    if user.payment_status == "completed":
-        print(f"[DEBUG] complete_payment: user {user.id} already completed, skipping")
-        return False  # Already done
+    async with user_lock:
+        # Re-check status inside the lock (double-checked locking pattern)
+        db.refresh(user)
 
-    print(f"[DEBUG] complete_payment: completing payment for user {user.id}")
+        if user.payment_status == "completed":
+            print(f"[DEBUG] complete_payment: user {user.id} already completed, skipping")
+            return False  # Already done
 
-    user.payment_status = "completed"
-    user.payment_intent_id = checkout_intent_id
-    user.payment_date = datetime.now(timezone.utc)
+        print(f"[DEBUG] complete_payment: completing payment for user {user.id}")
 
-    if not user.status_token:
-        user.status_token = secrets.token_urlsafe(32)
+        user.payment_status = "completed"
+        user.payment_intent_id = checkout_intent_id
+        user.payment_date = datetime.now(timezone.utc)
 
-    db.commit()
-    db.refresh(user)
+        if not user.status_token:
+            user.status_token = secrets.token_urlsafe(32)
 
-    # Send confirmation email
-    try:
-        print(f"[DEBUG] complete_payment: sending confirmation email to {user.email}")
-        email_sent = await send_order_confirmation(user)
-        if email_sent:
-            print(f"[DEBUG] complete_payment: email sent successfully to {user.email}")
-        else:
-            print(f"[WARNING] complete_payment: email failed for {user.email}")
-        # Save any changes from email (status_token if modified)
         db.commit()
-    except Exception as e:
-        print(f"[ERROR] complete_payment: exception during email send: {e}")
+        db.refresh(user)
+
+    # Send confirmation email in background (outside the lock)
+    asyncio.create_task(
+        _send_confirmation_email_background(user.id, user.email)
+    )
 
     return True
 
@@ -220,28 +312,27 @@ async def verify_payment(checkout_intent_id: str):
     """
     from src.db.session import SessionLocal
     from src.users.models import User
-    from src.mail import send_order_confirmation
 
     try:
         print(f"[DEBUG] Verifying payment for intent: {checkout_intent_id}")
         result = await helloasso_service.get_checkout_intent(checkout_intent_id)
-        
+
         print(f"[DEBUG] HelloAsso result keys: {list(result.keys())}")
         metadata = result.get('metadata', {})
         print(f"[DEBUG] Metadata: {metadata}")
-        
+
         # Check if we have an order (payment was successful)
         order = result.get("order")
         status_token = None
-        
+
         if order:
             order_id = order.get('id')
             payer_email = order.get("payer", {}).get("email")
             print(f"[DEBUG] Order found, ID: {order_id}, Payer: {payer_email}")
             res_id = metadata.get("reservation_id")
-            
+
             print(f"[DEBUG] reservation_id from metadata: {res_id} (type: {type(res_id)})")
-            
+
             db = SessionLocal()
             try:
                 user = None
@@ -264,41 +355,19 @@ async def verify_payment(checkout_intent_id: str):
                     print(f"[ERROR] No user found for payment (intent: {checkout_intent_id}, res_id: {res_id})")
 
                 if user:
-                    # Refresh to ensure we have the latest data from DB (in case of concurrent updates)
-                    db.refresh(user)
-
                     # Log what we found to debug empty emails
                     print(f"[DEBUG] User {user.id} data: total={user.total_amount}, menu={user.menu_id}, drink={user.boisson_id}, extras={user.bonus_ids}, payment_status={user.payment_status}")
 
-                    # Générer status_token si absent (CRITICAL for order tracking)
-                    if not user.status_token:
-                        print(f"[DEBUG] Generating new status_token for user {user.id}")
-                        user.status_token = secrets.token_urlsafe(32)
-                        db.commit()
-                    status_token = user.status_token
-
-                    if user.payment_status != "completed":
-                        print(f"[DEBUG] Updating payment status to completed for user {user.id}")
-                        user.payment_status = "completed"
-                        user.payment_intent_id = checkout_intent_id
-                        user.payment_date = datetime.now(timezone.utc)
-                        db.commit()
-                        db.refresh(user)
-
-                        # Envoyer l'email de confirmation
-                        try:
-                            print(f"[DEBUG] Sending order confirmation email to {user.email}")
-                            email_sent = await send_order_confirmation(user)
-                            if email_sent:
-                                print(f"[DEBUG] Confirmation email sent successfully to {user.email}")
-                            else:
-                                print(f"[WARNING] Confirmation email failed for {user.email}")
-                            # Sauvegarder le status_token si modifié par l'email
-                            db.commit()
-                        except Exception as e:
-                            print(f"[ERROR] Exception during envoi email: {e}")
+                    # Complete payment with race condition protection
+                    was_new = await complete_payment(user, checkout_intent_id, db)
+                    if was_new:
+                        print(f"[DEBUG] Payment completed for user {user.id}")
                     else:
-                        print(f"[DEBUG] Payment already completed for user {user.id}, skipping email")
+                        print(f"[DEBUG] Payment already completed for user {user.id}")
+
+                    # Refresh to get latest data including status_token
+                    db.refresh(user)
+                    status_token = user.status_token
                 else:
                     print(f"[ERROR] No user found for this payment (intent: {checkout_intent_id})")
 
@@ -321,7 +390,7 @@ async def verify_payment(checkout_intent_id: str):
                 success=False,
                 message="Paiement en attente ou non complété"
             )
-            
+
     except Exception as e:
         print(f"[ERROR] Exception in verify_payment: {e}")
         traceback.print_exc()
@@ -329,4 +398,3 @@ async def verify_payment(checkout_intent_id: str):
             success=False,
             message=str(e)
         )
-

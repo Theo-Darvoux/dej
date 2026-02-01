@@ -33,7 +33,7 @@ ALLOWED_UPDATE_FIELDS = {
     "bonus_ids",
 }
 
-from src.menu.utils import load_menu_data
+from src.menu.utils import get_menu_data
 
 def require_admin(current_user):
     """Vérifie que l'utilisateur est admin. Lève AdminException sinon."""
@@ -41,13 +41,10 @@ def require_admin(current_user):
         raise AdminException()
     return current_user
 
-_menu_data_cache = None
 
 def get_menu_data_cached():
-    global _menu_data_cache
-    if not _menu_data_cache:
-        _menu_data_cache = load_menu_data()
-    return _menu_data_cache
+    """Get cached menu data. Uses centralized cache from menu.utils."""
+    return get_menu_data()
 
 def get_item_details(item_id):
     if not item_id: return None
@@ -218,16 +215,22 @@ async def get_order_statistics(
     """
     Get order statistics for the admin dashboard.
     Returns stats on menus, drinks, extras, time slots, and order times.
+
+    Optimized to use database aggregation instead of loading all orders into memory.
     """
     require_admin(current_user)
 
-    # Get all completed orders
-    completed_orders = db.query(User).filter(
+    # Get total count and revenue with single query
+    base_stats = db.query(
+        func.count(User.id).label('total_orders'),
+        func.coalesce(func.sum(User.total_amount), 0).label('total_revenue')
+    ).filter(
         User.payment_status == "completed",
         User.menu_id.isnot(None)
-    ).all()
+    ).first()
 
-    total_orders = len(completed_orders)
+    total_orders = base_stats.total_orders or 0
+    total_revenue = float(base_stats.total_revenue or 0)
 
     if total_orders == 0:
         return {
@@ -243,82 +246,92 @@ async def get_order_statistics(
 
     menu_data = get_menu_data_cached()
 
-    # Helper to get item name from id
-    def get_item_name(item_id: str, category: str) -> str:
-        if not item_id:
-            return "Inconnu"
-        for item in menu_data.get(category, []):
-            if item["id"] == item_id:
-                return item["name"]
-        return item_id
+    # Build ID-to-name lookup maps once (instead of per-item lookups)
+    menu_names = {item["id"]: item["name"] for item in menu_data.get("menus", [])}
+    drink_names = {item["id"]: item["name"] for item in menu_data.get("boissons", [])}
+    extra_names = {item["id"]: item["name"] for item in menu_data.get("extras", [])}
 
-    # Menu distribution
-    menu_counts = Counter()
-    for order in completed_orders:
-        if order.menu_id:
-            menu_name = get_item_name(order.menu_id, "menus")
-            menu_counts[menu_name] += 1
+    # Menu distribution - database aggregation
+    menu_counts = db.query(
+        User.menu_id,
+        func.count(User.id).label('count')
+    ).filter(
+        User.payment_status == "completed",
+        User.menu_id.isnot(None)
+    ).group_by(User.menu_id).all()
 
-    menu_distribution = [
-        {"name": name, "count": count}
-        for name, count in menu_counts.most_common()
-    ]
+    menu_distribution = sorted(
+        [{"name": menu_names.get(row.menu_id, row.menu_id), "count": row.count}
+         for row in menu_counts if row.menu_id],
+        key=lambda x: -x["count"]
+    )
 
-    # Drink distribution
-    drink_counts = Counter()
-    for order in completed_orders:
-        if order.boisson_id:
-            drink_name = get_item_name(order.boisson_id, "boissons")
-            drink_counts[drink_name] += 1
+    # Drink distribution - database aggregation
+    drink_counts = db.query(
+        User.boisson_id,
+        func.count(User.id).label('count')
+    ).filter(
+        User.payment_status == "completed",
+        User.boisson_id.isnot(None)
+    ).group_by(User.boisson_id).all()
 
-    drink_distribution = [
-        {"name": name, "count": count}
-        for name, count in drink_counts.most_common()
-    ]
+    drink_distribution = sorted(
+        [{"name": drink_names.get(row.boisson_id, row.boisson_id), "count": row.count}
+         for row in drink_counts if row.boisson_id],
+        key=lambda x: -x["count"]
+    )
 
-    # Extras distribution
-    extras_counts = Counter()
-    total_extras = 0
-    for order in completed_orders:
-        if order.bonus_ids:
-            for extra_id in order.bonus_ids:
-                extra_name = get_item_name(extra_id, "extras")
-                extras_counts[extra_name] += 1
-                total_extras += 1
+    # Time slot distribution - database aggregation
+    time_slot_counts = db.query(
+        extract('hour', User.heure_reservation).label('hour'),
+        func.count(User.id).label('count')
+    ).filter(
+        User.payment_status == "completed",
+        User.menu_id.isnot(None),
+        User.heure_reservation.isnot(None)
+    ).group_by(extract('hour', User.heure_reservation)).all()
 
-    extras_distribution = [
-        {"name": name, "count": count}
-        for name, count in extras_counts.most_common()
-    ]
-
-    # Time slot distribution (reservation times)
-    slot_counts = Counter()
-    for order in completed_orders:
-        if order.heure_reservation:
-            hour = order.heure_reservation.hour
-            slot_label = f"{hour}h-{hour+1}h"
-            slot_counts[slot_label] += 1
-
-    # Sort by hour
     time_slot_distribution = sorted(
-        [{"slot": slot, "count": count} for slot, count in slot_counts.items()],
+        [{"slot": f"{int(row.hour)}h-{int(row.hour)+1}h", "count": row.count}
+         for row in time_slot_counts if row.hour is not None],
         key=lambda x: int(x["slot"].split("h")[0])
     )
 
-    # Order hour distribution (when customers placed orders)
-    order_hour_counts = Counter()
-    for order in completed_orders:
-        if order.created_at:
-            hour = order.created_at.hour
-            order_hour_counts[hour] += 1
+    # Order hour distribution - database aggregation
+    order_hour_counts = db.query(
+        extract('hour', User.created_at).label('hour'),
+        func.count(User.id).label('count')
+    ).filter(
+        User.payment_status == "completed",
+        User.menu_id.isnot(None),
+        User.created_at.isnot(None)
+    ).group_by(extract('hour', User.created_at)).all()
 
     order_hour_distribution = sorted(
-        [{"hour": hour, "count": count} for hour, count in order_hour_counts.items()],
+        [{"hour": int(row.hour), "count": row.count}
+         for row in order_hour_counts if row.hour is not None],
         key=lambda x: x["hour"]
     )
 
-    # Total revenue
-    total_revenue = sum(order.total_amount or 0 for order in completed_orders)
+    # Extras distribution - need to fetch bonus_ids and aggregate in Python
+    # (JSON array aggregation is complex across databases)
+    orders_with_extras = db.query(User.bonus_ids).filter(
+        User.payment_status == "completed",
+        User.bonus_ids.isnot(None)
+    ).all()
+
+    extras_counts = Counter()
+    for (bonus_ids,) in orders_with_extras:
+        if bonus_ids:
+            for extra_id in bonus_ids:
+                extras_counts[extra_id] += 1
+
+    total_extras = sum(extras_counts.values())
+    extras_distribution = sorted(
+        [{"name": extra_names.get(extra_id, extra_id), "count": count}
+         for extra_id, count in extras_counts.items()],
+        key=lambda x: -x["count"]
+    )
 
     return {
         "total_orders": total_orders,

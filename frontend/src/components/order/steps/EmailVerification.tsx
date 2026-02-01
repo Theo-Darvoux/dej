@@ -183,6 +183,8 @@ const EmailVerification = ({ onBack, onVerified, initialEmail = '' }: EmailVerif
                         onClick={() => {
                             setState('email_entry')
                             setCode('')
+                            setEmail('')  // Also clear email when changing
+                            setError('')
                         }}
                         disabled={isLoading}
                     >

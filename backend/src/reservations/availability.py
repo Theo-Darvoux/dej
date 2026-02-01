@@ -1,9 +1,12 @@
 """
 Module de gestion des disponibilités des créneaux horaires.
+
+Optimized to use efficient database queries instead of N+1 pattern.
 """
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import time
+from typing import Dict
 
 from src.users.models import User
 
@@ -30,6 +33,27 @@ TIME_SLOTS = [
 ]
 
 
+def get_all_slot_counts(db: Session) -> Dict[time, int]:
+    """
+    Get reservation counts for all time slots in a single query.
+
+    Returns:
+        Dictionary mapping slot start time to reservation count
+    """
+    # Single query with GROUP BY to get all counts at once
+    counts = db.query(
+        User.heure_reservation,
+        func.count(User.id).label('count')
+    ).filter(
+        User.menu_id.isnot(None),
+        User.payment_status.in_(["completed", "pending"]),
+        User.heure_reservation.isnot(None)
+    ).group_by(User.heure_reservation).all()
+
+    # Convert to dictionary
+    return {row.heure_reservation: row.count for row in counts}
+
+
 def count_reservations_for_slot(db: Session, slot_time: time) -> int:
     """
     Compte le nombre de réservations confirmées pour un créneau donné.
@@ -52,6 +76,8 @@ def get_available_slots(db: Session) -> list[dict]:
     """
     Retourne les créneaux avec leur disponibilité basée sur le nombre de commandes.
 
+    Optimized to use a single GROUP BY query instead of N sequential queries.
+
     Args:
         db: Session SQLAlchemy
 
@@ -68,10 +94,12 @@ def get_available_slots(db: Session) -> list[dict]:
             ...
         ]
     """
-    result = []
+    # Get all counts in a single query
+    slot_counts = get_all_slot_counts(db)
 
+    result = []
     for slot in TIME_SLOTS:
-        current_count = count_reservations_for_slot(db, slot["start"])
+        current_count = slot_counts.get(slot["start"], 0)
         remaining = MAX_ORDERS_PER_SLOT - current_count
 
         result.append({

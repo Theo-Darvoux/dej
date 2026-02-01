@@ -13,10 +13,16 @@ const Supplements = ({ initialSelectedItems = [], onBack, onContinue }: Suppleme
     const [modalInfo, setModalInfo] = useState<{ show: boolean, message: string }>({ show: false, message: '' })
     const [pendingItem, setPendingItem] = useState<MenuItem | null>(null)
 
-    // Find Drinks and Extras categories
-    // Note: Adjust IDs/Names based on your actual data
-    const drinkCategory = categories.find(c => c.title === 'BOISSONS')
-    const extraCategory = categories.find(c => c.title === 'Extra' || c.title === 'Option') // Fallback check
+    // Find Drinks and Extras categories (case-insensitive matching)
+    const drinkCategory = categories.find(c =>
+        c.title.toLowerCase() === 'boissons' || c.title.toLowerCase() === 'boisson'
+    )
+    const extraCategory = categories.find(c =>
+        c.title.toLowerCase() === 'extra' ||
+        c.title.toLowerCase() === 'extras' ||
+        c.title.toLowerCase() === 'option' ||
+        c.title.toLowerCase() === 'options'
+    )
 
     const drinks = drinkCategory ? (menuByCategory[drinkCategory.id] || []) : []
     const extras = extraCategory ? (menuByCategory[extraCategory.id] || []) : []

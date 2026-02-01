@@ -12,7 +12,9 @@ from src.print.router import router as print_router
 from src.payments.router import router as payments_router
 from src.terminal.router import router as terminal_router
 from src.payments.background_tasks import start_background_tasks
+from src.payments.helloasso_service import close_http_client
 from src.core.config import settings
+from src.core.rate_limit import rate_limiter
 from src.db.base import Base
 from src.db.session import engine
 from src.db.init_db import init_db
@@ -38,6 +40,10 @@ async def lifespan(app: FastAPI):
     print("[STARTUP] Starting background tasks...")
     background_task = await start_background_tasks()
 
+    # Start rate limiter cleanup task
+    print("[STARTUP] Starting rate limiter cleanup task...")
+    rate_limiter_task = rate_limiter.start_cleanup_task()
+
     yield
 
     # Shutdown: Cancel background tasks
@@ -47,6 +53,14 @@ async def lifespan(app: FastAPI):
         await background_task
     except asyncio.CancelledError:
         print("[SHUTDOWN] Background tasks cancelled")
+
+    # Stop rate limiter cleanup
+    print("[SHUTDOWN] Stopping rate limiter cleanup...")
+    await rate_limiter.stop_cleanup_task()
+
+    # Close HTTP client
+    print("[SHUTDOWN] Closing HTTP client...")
+    await close_http_client()
 
 
 app = FastAPI(

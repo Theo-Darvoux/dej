@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Cookie
 from sqlalchemy.orm import Session
 from typing import Optional, List
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, time, timedelta, timezone
 import re
 
 from src.db.session import get_db
@@ -336,8 +336,17 @@ async def create_reservation(
     else:
         current_user.phone = None
     
-    # Sauvegarder demandes spéciales
-    current_user.special_requests = request.special_requests.strip()[:500] if request.special_requests else None
+    # Sauvegarder demandes spéciales (max 500 caractères)
+    special_requests_truncated = False
+    if request.special_requests:
+        stripped = request.special_requests.strip()
+        if len(stripped) > 500:
+            special_requests_truncated = True
+            current_user.special_requests = stripped[:500]
+        else:
+            current_user.special_requests = stripped
+    else:
+        current_user.special_requests = None
     
     if request.habite_residence:
         current_user.numero_if_maisel = int(request.numero_chambre)
@@ -358,21 +367,48 @@ async def create_reservation(
     # Note: La disponibilité des créneaux est gérée par comptage SQL dans availability.py
     # (MAX_ORDERS_PER_SLOT commandes max par créneau)
 
-    # Calculer le montant total
+    # Calculer le montant total avec validation des prix
     total = 0.0
     if menu_item:
-        total += menu_item.get("price", 0)
+        menu_price = menu_item.get("price")
+        if menu_price is None or menu_price < 0:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Prix invalide pour le menu '{menu_item.get('name')}'"
+            )
+        total += menu_price
+
     if boisson_item:
-        total += boisson_item.get("price", 0)
+        drink_price = boisson_item.get("price")
+        if drink_price is None or drink_price < 0:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Prix invalide pour la boisson '{boisson_item.get('name')}'"
+            )
+        total += drink_price
+
     for extra in extra_items:
-        total += extra.get("price", 0)
+        extra_price = extra.get("price")
+        if extra_price is None or extra_price < 0:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Prix invalide pour l'extra '{extra.get('name')}'"
+            )
+        total += extra_price
+
+    # Validate total is positive (at least menu price)
+    if total <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Le montant total doit être positif"
+        )
     
     current_user.total_amount = total
     current_user.status = "confirmed"
     current_user.payment_status = "pending"
     current_user.payment_attempts = 0
-    current_user.reservation_expires_at = datetime.utcnow() + timedelta(hours=1)
-    current_user.updated_at = datetime.utcnow()
+    current_user.reservation_expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    current_user.updated_at = datetime.now(timezone.utc)
     
     try:
         db.commit()
@@ -384,7 +420,7 @@ async def create_reservation(
             detail=f"Erreur lors de la création de la réservation: {str(e)}"
         )
     
-    return {
+    response = {
         "message": "Réservation créée avec succès",
         "id": current_user.id,  # Frontend attend "id" pour localStorage
         "user_id": current_user.id,  # Gardé pour rétrocompatibilité
@@ -397,6 +433,12 @@ async def create_reservation(
         "extras": [extra["name"] for extra in extra_items],
         "total_amount": current_user.total_amount,
     }
+
+    # Add warning if special requests were truncated
+    if special_requests_truncated:
+        response["warning"] = "Vos demandes spéciales ont été tronquées à 500 caractères"
+
+    return response
 
 
 @router.post("/{reservation_id}/payment", response_model=schemas.PaymentConfirmResponse)
@@ -432,7 +474,6 @@ async def process_payment(
     # Let's assume Reservation IS User (logic-wise).
     
     from src.users.models import User as Reservation
-    from datetime import datetime, timezone
     import httpx
     
     reservation = db.query(Reservation).filter(
@@ -453,7 +494,7 @@ async def process_payment(
         )
     
     # Vérifier expiration
-    if reservation.reservation_expires_at and datetime.utcnow() > reservation.reservation_expires_at:
+    if reservation.reservation_expires_at and datetime.now(timezone.utc) > reservation.reservation_expires_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Votre réservation a expiré (délai de 1h dépassé). Veuillez recommencer."

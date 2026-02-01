@@ -8,6 +8,8 @@ import asyncio
 
 # Interval between payment checks (in seconds)
 PAYMENT_CHECK_INTERVAL = 300
+# Timeout per HelloAsso API call (in seconds)
+API_CALL_TIMEOUT = 10
 
 
 async def check_pending_payments():
@@ -40,7 +42,11 @@ async def check_pending_payments():
 
                 for user in pending_users:
                     try:
-                        result = await helloasso_service.get_checkout_intent(user.payment_intent_id)
+                        # Add timeout to prevent blocking if HelloAsso API is slow/down
+                        result = await asyncio.wait_for(
+                            helloasso_service.get_checkout_intent(user.payment_intent_id),
+                            timeout=API_CALL_TIMEOUT
+                        )
                         order = result.get("order")
 
                         if order:
@@ -50,6 +56,9 @@ async def check_pending_payments():
                             else:
                                 print(f"[BACKGROUND] User {user.id} was already completed (concurrent update)")
 
+                    except asyncio.TimeoutError:
+                        print(f"[BACKGROUND] Timeout checking user {user.id} - skipping to next")
+                        continue
                     except Exception as e:
                         print(f"[BACKGROUND] Error checking user {user.id}: {e}")
                         continue

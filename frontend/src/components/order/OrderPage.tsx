@@ -14,17 +14,100 @@ export type UserInfo = {
     phone: string
 }
 
+// localStorage keys for state persistence
+const STORAGE_KEYS = {
+    CART: 'mcint_cart',
+    EXTRAS: 'mcint_extras',
+    SELECTED_MENU: 'mcint_selected_menu',
+    USER_EMAIL: 'mcint_user_email',
+    USER_INFO: 'mcint_user_info',
+    DELIVERY_INFO: 'mcint_delivery_info',
+    STEP: 'mcint_step'
+}
+
 const OrderPage = () => {
     useMenu() // Initialize menu context
 
-    // Wizard State
-    const [step, setStep] = useState<Step>('SELECTION')
-    const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null)
-    const [cartItems, setCartItems] = useState<MenuItem[]>([])
-    const [extraItems, setExtraItems] = useState<MenuItem[]>([])
-    const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo | null>(null)
-    const [userEmail, setUserEmail] = useState('')
-    const [userInfo, setUserInfo] = useState<UserInfo>({ phone: '' })
+    // Loading and error states
+    const [isCheckingAuth, setIsCheckingAuth] = useState(false)
+    const [authError, setAuthError] = useState<string | null>(null)
+
+    // Wizard State - initialize from localStorage
+    const [step, setStep] = useState<Step>(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.STEP)
+        return (saved as Step) || 'SELECTION'
+    })
+    const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.SELECTED_MENU)
+        return saved ? JSON.parse(saved) : null
+    })
+    const [cartItems, setCartItems] = useState<MenuItem[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.CART)
+        return saved ? JSON.parse(saved) : []
+    })
+    const [extraItems, setExtraItems] = useState<MenuItem[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.EXTRAS)
+        return saved ? JSON.parse(saved) : []
+    })
+    const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo | null>(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.DELIVERY_INFO)
+        return saved ? JSON.parse(saved) : null
+    })
+    const [userEmail, setUserEmail] = useState(() => {
+        return localStorage.getItem(STORAGE_KEYS.USER_EMAIL) || ''
+    })
+    const [userInfo, setUserInfo] = useState<UserInfo>(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.USER_INFO)
+        return saved ? JSON.parse(saved) : { phone: '' }
+    })
+
+    // Persist state to localStorage on change
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.STEP, step)
+    }, [step])
+
+    useEffect(() => {
+        if (selectedMenu) {
+            localStorage.setItem(STORAGE_KEYS.SELECTED_MENU, JSON.stringify(selectedMenu))
+        } else {
+            localStorage.removeItem(STORAGE_KEYS.SELECTED_MENU)
+        }
+    }, [selectedMenu])
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(cartItems))
+    }, [cartItems])
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.EXTRAS, JSON.stringify(extraItems))
+    }, [extraItems])
+
+    useEffect(() => {
+        if (deliveryInfo) {
+            localStorage.setItem(STORAGE_KEYS.DELIVERY_INFO, JSON.stringify(deliveryInfo))
+        } else {
+            localStorage.removeItem(STORAGE_KEYS.DELIVERY_INFO)
+        }
+    }, [deliveryInfo])
+
+    useEffect(() => {
+        if (userEmail) {
+            localStorage.setItem(STORAGE_KEYS.USER_EMAIL, userEmail)
+        } else {
+            localStorage.removeItem(STORAGE_KEYS.USER_EMAIL)
+        }
+    }, [userEmail])
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo))
+    }, [userInfo])
+
+    // Clear all order state from localStorage (called on successful order)
+    const clearOrderState = useCallback(() => {
+        Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key))
+        localStorage.removeItem('pending_reservation_id')
+        localStorage.removeItem('checkout_intent_id')
+    }, [])
 
     // Navigate to step with history push
     const navigateToStep = useCallback((newStep: Step) => {
@@ -82,25 +165,37 @@ const OrderPage = () => {
     // Step 5: Delivery confirmed -> Go to Verification or Checkout (if already logged in)
     const handleDeliveryContinue = async (info: DeliveryInfo) => {
         setDeliveryInfo(info)
-        
+        setAuthError(null)
+        setIsCheckingAuth(true)
+
         // Check if user already has a valid access token
         try {
             const response = await fetch('/api/users/me', {
                 credentials: 'include'
             })
-            
+
             if (response.ok) {
                 const userData = await response.json()
                 // User is already authenticated, skip verification
                 setUserEmail(userData.email)
+                setIsCheckingAuth(false)
                 navigateToStep('CHECKOUT')
                 return
+            } else if (response.status === 401) {
+                // Token invalid or expired, proceed to verification
+                console.log('Token expired, proceeding to verification')
+            } else {
+                // Unexpected error
+                const errorData = await response.json().catch(() => ({}))
+                setAuthError(errorData.detail || 'Erreur de vérification du compte')
             }
         } catch (error) {
-            // Token invalid or expired, proceed to verification
-            console.log('No valid token, proceeding to verification')
+            // Network error
+            console.log('Network error checking auth:', error)
+            setAuthError('Erreur de connexion au serveur. Veuillez réessayer.')
         }
-        
+
+        setIsCheckingAuth(false)
         // No valid token, go to verification
         navigateToStep('VERIFICATION')
     }
@@ -116,6 +211,8 @@ const OrderPage = () => {
 
     // Step 7: Payment Success (legacy - now handled by /payment/success route)
     const handlePaymentSuccess = () => {
+        // Clear order state on successful payment
+        clearOrderState()
         // HelloAsso redirects to /payment/success, this is just a fallback
         window.location.href = '/payment/success'
     }
@@ -152,7 +249,23 @@ const OrderPage = () => {
             </header>
 
             <main className="order-wizard-content">
-                {step === 'SELECTION' && (
+                {/* Auth checking loading state */}
+                {isCheckingAuth && (
+                    <div className="order-loading">
+                        <div className="order-loading__spinner"></div>
+                        <p>Vérification de votre session...</p>
+                    </div>
+                )}
+
+                {/* Auth error display */}
+                {authError && (
+                    <div className="order-error">
+                        <p>{authError}</p>
+                        <button onClick={() => setAuthError(null)}>Fermer</button>
+                    </div>
+                )}
+
+                {step === 'SELECTION' && !isCheckingAuth && (
                     <MenuSelection onSelect={handleMenuSelect} />
                 )}
 

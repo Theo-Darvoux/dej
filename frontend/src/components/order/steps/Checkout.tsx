@@ -80,10 +80,16 @@ const Checkout = ({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // Validate phone before submitting
-        if (isInfoStep && formData.phone && !validatePhone(formData.phone)) {
-            setPhoneError('Numéro de téléphone invalide (ex: 06 12 34 56 78 ou +32 123 456 789)')
-            return
+        // Validate phone before submitting (required field)
+        if (isInfoStep) {
+            if (!formData.phone) {
+                setPhoneError('Le numéro de téléphone est requis')
+                return
+            }
+            if (!validatePhone(formData.phone)) {
+                setPhoneError('Numéro de téléphone invalide (ex: 06 12 34 56 78 ou +32 123 456 789)')
+                return
+            }
         }
 
         setIsSubmitting(true)

@@ -1,7 +1,7 @@
 """Remove low_stock_threshold from menu_items
 
 Revision ID: 004_remove_stock_fields
-Revises: 467833cc429e
+Revises: 003
 Create Date: 2026-02-01
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '004_remove_stock_fields'
-down_revision = '467833cc429e'
+down_revision = '003'
 branch_labels = None
 depends_on = None
 

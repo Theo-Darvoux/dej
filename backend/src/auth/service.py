@@ -156,7 +156,7 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
         raise InvalidCredentialsException("Utilisateur non trouvé")
     
     # Vérifier si l'utilisateur a déjà commandé (paiement complété)
-    # Exception: les admins peuvent toujours se connecter
+    # Exception: admins can always login regardless of order status
     if user.payment_status == "completed" and user.user_type != "admin":
         raise InvalidCredentialsException("Vous avez déjà passé une commande avec cet email. Contactez Solène ou Théo pour toute modification.")
     

@@ -29,6 +29,7 @@ interface Order {
     boisson_item?: OrderItem
     extras_items?: OrderItem[]
     created_at: string
+    special_requests?: string | null
 }
 
 interface StatsData {
@@ -263,7 +264,8 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                     nom: editingOrder.nom,
                     menu_id: editingOrder.menu_item?.id || null,
                     boisson_id: editingOrder.boisson_item?.id || null,
-                    bonus_ids: editingOrder.extras_items?.map(item => item.id) || []
+                    bonus_ids: editingOrder.extras_items?.map(item => item.id) || [],
+                    special_requests: editingOrder.special_requests || null
                 })
             })
 
@@ -635,6 +637,15 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                         })
                                     )}
                                 </div>
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Demandes spéciales / Notes</label>
+                                <textarea
+                                    rows={4}
+                                    value={editingOrder.special_requests || ''}
+                                    onChange={(e) => setEditingOrder({ ...editingOrder, special_requests: e.target.value })}
+                                    placeholder="Ajoutez des notes ou demandes spéciales..."
+                                />
                             </div>
                             <div className="admin-modal__actions">
                                 <button type="button" onClick={() => setEditingOrder(null)}>
