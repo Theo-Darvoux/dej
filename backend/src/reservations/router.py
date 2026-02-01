@@ -6,7 +6,7 @@ import re
 
 from src.db.session import get_db
 from src.reservations import schemas, service
-from src.reservations.availability import get_available_slots, is_slot_available, MAX_ORDERS_PER_SLOT
+from src.reservations.availability import get_available_slots, is_slot_available, reserve_slot_with_lock, MAX_ORDERS_PER_SLOT
 from src.auth.service import get_user_by_token
 from src.core.exceptions import UserNotVerifiedException
 from src.menu.utils import load_menu_data
@@ -142,10 +142,10 @@ async def create_reservation(
                 detail="Le numéro de chambre doit être un nombre"
             )
         
-        if not (1000 <= num_chambre <= 7999):
+        if not (1001 <= num_chambre <= 7999):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Le numéro de chambre doit être entre 1000 et 7999"
+                detail="Le numéro de chambre doit être entre 1001 et 7999"
             )
     else:
         # Si pas résident, adresse requise
@@ -291,8 +291,9 @@ async def create_reservation(
             seen_ids.add(extra_item["id"])
             extra_items.append(extra_item)
 
-    # VALIDATION 5: Vérifier la disponibilité du créneau
-    if not is_slot_available(db, reservation_time):
+    # VALIDATION 5: Vérifier la disponibilité du créneau avec verrouillage
+    # Utilise SELECT FOR UPDATE pour éviter les conditions de concurrence
+    if not reserve_slot_with_lock(db, reservation_time):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Ce créneau n'est plus disponible"

@@ -328,7 +328,10 @@ const Checkout = ({
                     maxLength={500}
                     className="checkout-special-textarea"
                 />
-                <span className="checkout-special-count">{specialRequests.length}/500</span>
+                <span className={`checkout-special-count ${specialRequests.length >= 480 ? 'checkout-special-count--warning' : ''}`}>
+                    {specialRequests.length}/500
+                    {specialRequests.length >= 480 && ' - Limite bientôt atteinte'}
+                </span>
             </div>
 
             {error && (

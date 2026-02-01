@@ -9,6 +9,7 @@ import RecapPage from './components/recap/RecapPage'
 import AdminPage from './components/admin/AdminPage'
 import PrintPage from './pages/print'
 import TerminalPage from './pages/terminal'
+import { preloadImages } from './utils/imagePreloader'
 import './App.css'
 
 type ViewState = 'landing' | 'order' | 'order-status' | 'payment-success' | 'payment-error' | 'recap' | 'admin' | 'admin-print' | 'admin-terminal'
@@ -27,6 +28,11 @@ function getViewFromPath(path: string): ViewState {
 
 function App() {
   const [view, setView] = useState<ViewState>(() => getViewFromPath(window.location.pathname))
+
+  // Preload images on app mount
+  useEffect(() => {
+    preloadImages()
+  }, [])
 
   // Initialize history state on mount (for proper back navigation)
   useEffect(() => {

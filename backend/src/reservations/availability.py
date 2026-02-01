@@ -126,3 +126,35 @@ def is_slot_available(db: Session, slot_time: time) -> bool:
     """
     current_count = count_reservations_for_slot(db, slot_time)
     return current_count < MAX_ORDERS_PER_SLOT
+
+
+def reserve_slot_with_lock(db: Session, slot_time: time) -> bool:
+    """
+    Atomically check slot availability with row-level locking to prevent race conditions.
+
+    Uses SELECT FOR UPDATE to lock rows while checking availability, preventing
+    two concurrent requests from overbooking the same time slot.
+
+    Args:
+        db: Session SQLAlchemy
+        slot_time: L'heure du créneau (ex: time(8, 0) pour 8h)
+
+    Returns:
+        True si le créneau est disponible et peut être réservé, False sinon
+    """
+    from sqlalchemy import text
+
+    # Lock rows for this time slot while we check availability
+    result = db.execute(
+        text("""
+            SELECT COUNT(*) as cnt FROM users
+            WHERE heure_reservation = :slot_time
+            AND menu_id IS NOT NULL
+            AND payment_status IN ('completed', 'pending')
+            FOR UPDATE
+        """),
+        {"slot_time": slot_time}
+    ).fetchone()
+
+    current_count = result.cnt if result else 0
+    return current_count < MAX_ORDERS_PER_SLOT

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useMenu, type MenuItem } from '../../context/MenuContext'
+import { safeJSONParse, safeGetItem } from '../../utils/storage'
 import MenuSelection from './steps/MenuSelection'
 import MenuDetail from './steps/MenuDetail'
 import Supplements from './steps/Supplements'
@@ -32,41 +33,36 @@ const OrderPage = () => {
     const [isCheckingAuth, setIsCheckingAuth] = useState(false)
     const [authError, setAuthError] = useState<string | null>(null)
 
-    // Wizard State - initialize from localStorage
+    // Wizard State - initialize from localStorage with safe parsing
     const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(() => {
-        const saved = localStorage.getItem(STORAGE_KEYS.SELECTED_MENU)
-        return saved ? JSON.parse(saved) : null
+        return safeJSONParse<MenuItem | null>(STORAGE_KEYS.SELECTED_MENU, null)
     })
     const [step, setStep] = useState<Step>(() => {
-        const saved = localStorage.getItem(STORAGE_KEYS.STEP)
+        const saved = safeGetItem(STORAGE_KEYS.STEP)
         const savedStep = (saved as Step) || 'SELECTION'
-        
+
         // Validate step consistency: if no menu selected, can't be past SELECTION
-        const hasSelectedMenu = localStorage.getItem(STORAGE_KEYS.SELECTED_MENU)
+        const hasSelectedMenu = safeJSONParse<MenuItem | null>(STORAGE_KEYS.SELECTED_MENU, null)
         if (!hasSelectedMenu && savedStep !== 'SELECTION') {
             return 'SELECTION'
         }
-        
+
         return savedStep
     })
     const [cartItems, setCartItems] = useState<MenuItem[]>(() => {
-        const saved = localStorage.getItem(STORAGE_KEYS.CART)
-        return saved ? JSON.parse(saved) : []
+        return safeJSONParse<MenuItem[]>(STORAGE_KEYS.CART, [])
     })
     const [extraItems, setExtraItems] = useState<MenuItem[]>(() => {
-        const saved = localStorage.getItem(STORAGE_KEYS.EXTRAS)
-        return saved ? JSON.parse(saved) : []
+        return safeJSONParse<MenuItem[]>(STORAGE_KEYS.EXTRAS, [])
     })
     const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo | null>(() => {
-        const saved = localStorage.getItem(STORAGE_KEYS.DELIVERY_INFO)
-        return saved ? JSON.parse(saved) : null
+        return safeJSONParse<DeliveryInfo | null>(STORAGE_KEYS.DELIVERY_INFO, null)
     })
     const [userEmail, setUserEmail] = useState(() => {
-        return localStorage.getItem(STORAGE_KEYS.USER_EMAIL) || ''
+        return safeGetItem(STORAGE_KEYS.USER_EMAIL, '')
     })
     const [userInfo, setUserInfo] = useState<UserInfo>(() => {
-        const saved = localStorage.getItem(STORAGE_KEYS.USER_INFO)
-        return saved ? JSON.parse(saved) : { phone: '' }
+        return safeJSONParse<UserInfo>(STORAGE_KEYS.USER_INFO, { phone: '' })
     })
 
     // Persist state to localStorage on change
@@ -128,7 +124,17 @@ const OrderPage = () => {
         const handlePopState = (event: PopStateEvent) => {
             // Check if this is an order step navigation
             if (event.state?.view === 'order' && event.state?.step) {
-                setStep(event.state.step)
+                const targetStep = event.state.step as Step
+
+                // Validate step consistency: reset to SELECTION if menu is lost
+                if (targetStep !== 'SELECTION' && !localStorage.getItem(STORAGE_KEYS.SELECTED_MENU)) {
+                    setStep('SELECTION')
+                    setSelectedMenu(null)
+                    window.history.replaceState({ step: 'SELECTION', view: 'order' }, '', '/order')
+                    return
+                }
+
+                setStep(targetStep)
             }
             // If navigating away from order view, App.tsx handles it via its own popstate listener
         }
@@ -160,7 +166,9 @@ const OrderPage = () => {
     // Step 3: Add Supplements -> Go to Info
     const handleSupplementsContinue = (supplements: MenuItem[]) => {
         setExtraItems(supplements)
-        setCartItems(prev => [...prev, ...supplements])
+        // Remove old supplements (upsells) from cart before adding new ones to prevent duplication
+        const withoutSupplements = cartItems.filter(item => item.item_type !== 'upsell')
+        setCartItems([...withoutSupplements, ...supplements])
         navigateToStep('INFO')
     }
 
@@ -231,6 +239,20 @@ const OrderPage = () => {
         window.history.back()
     }, [])
 
+    // Reset order state for error recovery
+    const handleResetOrder = useCallback(() => {
+        if (confirm('Voulez-vous recommencer votre commande ?')) {
+            clearOrderState()
+            setSelectedMenu(null)
+            setCartItems([])
+            setExtraItems([])
+            setDeliveryInfo(null)
+            setUserInfo({ phone: '' })
+            setStep('SELECTION')
+            window.history.replaceState({ step: 'SELECTION', view: 'order' }, '', '/order')
+        }
+    }, [clearOrderState])
+
     const getStepTitle = () => {
         switch (step) {
             case 'SELECTION': return 'Nos Menus'
@@ -253,7 +275,14 @@ const OrderPage = () => {
                     <h1>Mc'INT</h1>
                     <p>{getStepTitle()}</p>
                 </div>
-                <div className="order-header__logo">🍟</div>
+                <button
+                    className="order-header__reset"
+                    onClick={handleResetOrder}
+                    aria-label="Recommencer la commande"
+                    title="Recommencer la commande"
+                >
+                    ↻
+                </button>
             </header>
 
             <main className="order-wizard-content">
