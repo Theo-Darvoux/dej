@@ -37,7 +37,7 @@ export const preloadImages = (): void => {
  */
 export const preloadImagesAsync = (): Promise<void[]> => {
   const promises = IMAGES_TO_PRELOAD.map(src => {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       const img = new Image()
       img.onload = () => resolve()
       img.onerror = () => {
