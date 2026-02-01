@@ -144,17 +144,18 @@ def reserve_slot_with_lock(db: Session, slot_time: time) -> bool:
     """
     from sqlalchemy import text
 
-    # Lock rows for this time slot while we check availability
+    # Lock rows for this time slot and count them
+    # FOR UPDATE cannot be used with COUNT(*), so we select IDs and count in Python
     result = db.execute(
         text("""
-            SELECT COUNT(*) as cnt FROM users
+            SELECT id FROM users
             WHERE heure_reservation = :slot_time
             AND menu_id IS NOT NULL
             AND payment_status IN ('completed', 'pending')
             FOR UPDATE
         """),
         {"slot_time": slot_time}
-    ).fetchone()
+    ).fetchall()
 
-    current_count = result.cnt if result else 0
+    current_count = len(result) if result else 0
     return current_count < MAX_ORDERS_PER_SLOT

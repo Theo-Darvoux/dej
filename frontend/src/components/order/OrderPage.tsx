@@ -11,6 +11,9 @@ import './OrderPage.css'
 
 type Step = 'SELECTION' | 'DETAIL' | 'SUPPLEMENTS' | 'INFO' | 'DELIVERY' | 'VERIFICATION' | 'CHECKOUT'
 
+// Step order for back navigation
+const STEP_ORDER: Step[] = ['SELECTION', 'DETAIL', 'SUPPLEMENTS', 'INFO', 'DELIVERY', 'VERIFICATION', 'CHECKOUT']
+
 export type UserInfo = {
     phone: string
 }
@@ -166,8 +169,8 @@ const OrderPage = () => {
     // Step 3: Add Supplements -> Go to Info
     const handleSupplementsContinue = (supplements: MenuItem[]) => {
         setExtraItems(supplements)
-        // Remove old supplements (upsells) from cart before adding new ones to prevent duplication
-        const withoutSupplements = cartItems.filter(item => item.item_type !== 'upsell')
+        // Remove old supplements (upsells AND boissons) from cart before adding new ones to prevent duplication
+        const withoutSupplements = cartItems.filter(item => item.item_type !== 'upsell' && item.item_type !== 'boisson')
         setCartItems([...withoutSupplements, ...supplements])
         navigateToStep('INFO')
     }
@@ -235,9 +238,19 @@ const OrderPage = () => {
 
     // Back handlers (called by UI back buttons)
     const handleBack = useCallback(() => {
-        // Use browser history to go back (triggers popstate)
-        window.history.back()
-    }, [])
+        const currentIndex = STEP_ORDER.indexOf(step)
+
+        if (currentIndex <= 0) {
+            // At SELECTION, go back to landing page
+            window.history.back()
+            return
+        }
+
+        // Go to previous step directly (works even without browser history)
+        const previousStep = STEP_ORDER[currentIndex - 1]
+        setStep(previousStep)
+        window.history.replaceState({ step: previousStep, view: 'order' }, '', '/order')
+    }, [step])
 
     // Reset order state for error recovery
     const handleResetOrder = useCallback(() => {

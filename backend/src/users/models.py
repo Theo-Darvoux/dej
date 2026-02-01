@@ -41,6 +41,8 @@ class User(Base):
     # Paiement - indexes for admin, terminal, background task queries
     payment_status = Column(String, default="pending", index=True)  # pending, completed, failed
     payment_intent_id = Column(String, nullable=True, index=True)  # For concurrent payment lookups
+    checkout_redirect_url = Column(String, nullable=True)  # HelloAsso redirect URL for reuse
+    checkout_created_at = Column(DateTime, nullable=True)  # When checkout was created
     payment_date = Column(DateTime, nullable=True)
     payment_attempts = Column(Integer, default=0)
     reservation_expires_at = Column(DateTime, nullable=True)

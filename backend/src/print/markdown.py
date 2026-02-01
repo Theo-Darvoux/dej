@@ -10,10 +10,30 @@ import os
 
 # Dimensions des tickets (en mm)
 TICKET_WIDTH = 95
-TICKET_HEIGHT = 75
+TICKET_HEIGHT_MIN = 65  # Minimum height
+TICKET_HEIGHT_BASE = 50  # Base height without products
+PRODUCT_HEIGHT = 5  # Height per product line
 MARGIN = 5
 TICKETS_PER_ROW = 2
-TICKETS_PER_COL = 3  # 6 tickets par page pour plus d'espace
+PAGE_HEIGHT = 297  # A4 height
+
+
+def _calculate_ticket_height(num_products: int, has_email: bool, has_phone: bool, has_special_requests: bool) -> float:
+    """Calculate dynamic ticket height based on content."""
+    # Base: header(12) + time_banner(8) + name(5) + address(4) + separator(5) + footer(10) + padding(6)
+    height = TICKET_HEIGHT_BASE
+
+    if has_email:
+        height += 3.5
+    if has_phone:
+        height += 3
+    if has_special_requests:
+        height += 4
+
+    # Add space for each product
+    height += num_products * PRODUCT_HEIGHT
+
+    return max(height, TICKET_HEIGHT_MIN)
 
 
 class TicketPDF(FPDF):
@@ -22,11 +42,9 @@ class TicketPDF(FPDF):
 
 
 def generate_pdf_for_all_clients(reservations: List[Any]) -> bytes:
-    """Génère un PDF avec plusieurs tickets par page (grille 2x3)."""
+    """Génère un PDF avec tickets de taille dynamique (2 colonnes)."""
     pdf = TicketPDF(orientation='P', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=False)
-
-    ticket_count = 0
 
     # Helper to resolve item name/price
     from src.menu.utils import load_menu_data
@@ -40,6 +58,10 @@ def generate_pdf_for_all_clients(reservations: List[Any]) -> bytes:
                 if item["id"] == item_id:
                     return item
         return None
+
+    # Track Y position for each column
+    col_y = [MARGIN, MARGIN]  # [left_col_y, right_col_y]
+    current_page = 0
 
     for user in reservations:
         # Préparation des produits
@@ -79,26 +101,45 @@ def generate_pdf_for_all_clients(reservations: List[Any]) -> bytes:
             adresse = user.adresse or "Non renseignée"
             chambre = ""
 
-        # Calculer la position du ticket dans la grille
-        tickets_per_page = TICKETS_PER_ROW * TICKETS_PER_COL
-        position_on_page = ticket_count % tickets_per_page
+        # Calculate dynamic ticket height
+        ticket_height = _calculate_ticket_height(
+            num_products=len(produits),
+            has_email=bool(user.email),
+            has_phone=bool(user.phone),
+            has_special_requests=bool(user.special_requests and user.special_requests.strip())
+        )
 
-        # Nouvelle page si nécessaire
-        if position_on_page == 0:
+        # Choose column with less height (balances columns)
+        col = 0 if col_y[0] <= col_y[1] else 1
+
+        # Check if ticket fits on current page
+        if col_y[col] + ticket_height > PAGE_HEIGHT - MARGIN:
+            # Try other column
+            other_col = 1 - col
+            if col_y[other_col] + ticket_height <= PAGE_HEIGHT - MARGIN:
+                col = other_col
+            else:
+                # Both columns full, new page
+                pdf.add_page()
+                current_page += 1
+                col_y = [MARGIN, MARGIN]
+                col = 0
+
+        # First page needs to be added
+        if current_page == 0 and col_y[0] == MARGIN and col_y[1] == MARGIN:
             pdf.add_page()
+            current_page = 1
 
-        # Calculer X et Y
-        col = position_on_page % TICKETS_PER_ROW
-        row = position_on_page // TICKETS_PER_ROW
-
+        # Calculate X position
         x = MARGIN + col * (TICKET_WIDTH + MARGIN)
-        y = MARGIN + row * (TICKET_HEIGHT + MARGIN * 2)
+        y = col_y[col]
 
         # Dessiner le ticket
         _draw_beautiful_ticket(
             pdf=pdf,
             x=x,
             y=y,
+            ticket_height=ticket_height,
             numero_commande=user.id,
             prenom=user.prenom or "",
             nom=user.nom or "",
@@ -113,7 +154,8 @@ def generate_pdf_for_all_clients(reservations: List[Any]) -> bytes:
             is_maisel=user.habite_residence
         )
 
-        ticket_count += 1
+        # Update column Y position
+        col_y[col] += ticket_height + MARGIN
 
     return bytes(pdf.output())
 
@@ -122,6 +164,7 @@ def _draw_beautiful_ticket(
     pdf: FPDF,
     x: float,
     y: float,
+    ticket_height: float,
     numero_commande: int,
     prenom: str,
     nom: str,
@@ -135,12 +178,12 @@ def _draw_beautiful_ticket(
     special_requests: str = None,
     is_maisel: bool = False
 ):
-    """Dessine un ticket de caisse élégant."""
+    """Dessine un ticket de caisse élégant avec hauteur dynamique."""
 
     # === CADRE PRINCIPAL ===
     pdf.set_draw_color(60, 60, 60)
     pdf.set_line_width(0.4)
-    pdf.rect(x, y, TICKET_WIDTH, TICKET_HEIGHT)
+    pdf.rect(x, y, TICKET_WIDTH, ticket_height)
 
     # === EN-TÊTE AVEC FOND ===
     pdf.set_fill_color(45, 45, 45)
@@ -244,13 +287,11 @@ def _draw_beautiful_ticket(
     # === PRODUITS ===
     pdf.set_font("Helvetica", "", 8)
 
-    for p in produits[:3]:
+    for p in produits:
         pdf.set_xy(x + 3, current_y)
 
         # Icône selon le type
         if p["type"] == "menu":
-            icon = ">"
-        elif p["type"] == "boisson":
             icon = ">"
         else:
             icon = "+"
@@ -284,9 +325,9 @@ def _draw_beautiful_ticket(
 
     # === TOTAL ===
     pdf.set_fill_color(45, 45, 45)
-    pdf.rect(x, y + TICKET_HEIGHT - 10, TICKET_WIDTH, 10, 'F')
+    pdf.rect(x, y + ticket_height - 10, TICKET_WIDTH, 10, 'F')
 
-    pdf.set_xy(x + 3, y + TICKET_HEIGHT - 8)
+    pdf.set_xy(x + 3, y + ticket_height - 8)
     pdf.set_font("Helvetica", "B", 11)
     pdf.set_text_color(255, 255, 255)
     pdf.cell(TICKET_WIDTH - 6, 6, f"TOTAL: {total:.2f} EUR", align="R")

@@ -160,9 +160,15 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
     """
     Create a HelloAsso Checkout Intent.
     Returns a redirect URL to send the user to HelloAsso payment page.
+
+    If an existing pending checkout was created recently (within 15 minutes),
+    it will be reused to prevent duplicate checkouts from multiple browser tabs.
     """
     from src.db.session import SessionLocal
     from src.users.models import User
+    from datetime import timedelta
+
+    CHECKOUT_REUSE_WINDOW = timedelta(minutes=15)
 
     # Validate that user has valid prenom/nom for HelloAsso
     if not checkout_request.payer_first_name or len(checkout_request.payer_first_name) < 2:
@@ -176,7 +182,49 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
             detail="Le nom est requis et doit contenir au moins 2 caractères"
         )
 
+    db = SessionLocal()
     try:
+        # Find user by reservation_id (required, no email fallback for security)
+        user = db.query(User).filter(User.id == checkout_request.reservation_id).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="Réservation introuvable"
+            )
+
+        print(f"[DEBUG] Found user by reservation_id: {user.id}")
+
+        # Check for existing recent checkout that can be reused
+        if (user.payment_intent_id and
+            user.checkout_redirect_url and
+            user.checkout_created_at and
+            user.payment_status != "completed"):
+
+            checkout_age = datetime.now(timezone.utc) - user.checkout_created_at.replace(tzinfo=timezone.utc)
+
+            if checkout_age < CHECKOUT_REUSE_WINDOW:
+                # Verify checkout is still pending with HelloAsso
+                try:
+                    result = await helloasso_service.get_checkout_intent(user.payment_intent_id)
+                    order = result.get("order")
+
+                    if not order:
+                        # Checkout still pending, reuse it
+                        print(f"[DEBUG] Reusing existing checkout {user.payment_intent_id} for user {user.id}")
+                        return CheckoutResponse(
+                            redirect_url=user.checkout_redirect_url,
+                            checkout_intent_id=user.payment_intent_id
+                        )
+                    else:
+                        # Checkout was paid, complete the payment
+                        print(f"[DEBUG] Existing checkout {user.payment_intent_id} already paid, completing")
+                        await complete_payment(user, user.payment_intent_id, db)
+
+                except Exception as e:
+                    print(f"[DEBUG] Error checking existing checkout: {e}, creating new one")
+                    # Continue to create new checkout
+
         # Build URLs for HelloAsso redirects (must be HTTPS!)
         # Use HELLOASSO_REDIRECT_BASE_URL if set, otherwise fall back to FRONTEND_URL
         redirect_base = settings.HELLOASSO_REDIRECT_BASE_URL
@@ -215,37 +263,27 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
         )
 
         checkout_intent_id = result["id"]
+        redirect_url = result["redirectUrl"]
 
-        # Store checkout_intent_id on user for later retrieval
-        # This is crucial since HelloAsso may not return metadata in GET requests
-        db = SessionLocal()
-        try:
-            # Find user by reservation_id (required, no email fallback for security)
-            user = db.query(User).filter(User.id == checkout_request.reservation_id).first()
+        # Store checkout details for later lookup and reuse
+        user.payment_intent_id = checkout_intent_id
+        user.checkout_redirect_url = redirect_url
+        user.checkout_created_at = datetime.now(timezone.utc)
 
-            if not user:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Réservation introuvable"
-                )
-
-            print(f"[DEBUG] Found user by reservation_id: {user.id}")
-
-            # Store checkout_intent_id for later lookup
-            user.payment_intent_id = checkout_intent_id
-
-            db.commit()
-            print(f"[DEBUG] Stored checkout_intent_id {checkout_intent_id} for user {user.id}")
-        finally:
-            db.close()
+        db.commit()
+        print(f"[DEBUG] Stored checkout {checkout_intent_id} for user {user.id}")
 
         return CheckoutResponse(
-            redirect_url=result["redirectUrl"],
+            redirect_url=redirect_url,
             checkout_intent_id=checkout_intent_id
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
 
 
 @router.get("/status/{checkout_intent_id}", response_model=PaymentStatusResponse)
