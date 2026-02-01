@@ -405,7 +405,7 @@ async def send_order_confirmation(user) -> bool:
     {get_time_section(time_str)}
 
     <!-- Section commande -->
-    {get_section_title("🛒", "Ta commande")}
+    {get_section_title("", "Ta commande")}
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
         {order_items_html}
     </table>
@@ -415,7 +415,7 @@ async def send_order_confirmation(user) -> bool:
     {get_separator()}
 
     <!-- Section informations -->
-    {get_section_title("👤", "Informations")}
+    {get_section_title("", "Informations")}
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
         <tr>
             {get_info_item("Nom", f"{user.prenom or ''} {user.nom or ''}")}
