@@ -7,7 +7,7 @@ pending payments against the HelloAsso API.
 import asyncio
 
 # Interval between payment checks (in seconds)
-PAYMENT_CHECK_INTERVAL = 300
+PAYMENT_CHECK_INTERVAL = 180
 # Timeout per HelloAsso API call (in seconds)
 API_CALL_TIMEOUT = 10
 
@@ -15,7 +15,7 @@ API_CALL_TIMEOUT = 10
 async def check_pending_payments():
     """
     Background task that checks HelloAsso API for all pending payments.
-    Runs every 5 minutes (300 seconds).
+    Runs every 3 minutes (180 seconds).
 
     This provides a safety net for payments that:
     - User closed browser before returning from payment
