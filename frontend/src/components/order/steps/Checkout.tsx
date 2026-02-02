@@ -294,12 +294,12 @@ const Checkout = ({
                     <div className="delivery-info-card">
                         {deliveryInfo.locationType === 'maisel' ? (
                             <p>
-                                <strong>📍 Résidence Maisel</strong><br />
+                                <strong>Maisel</strong><br />
                                 Bâtiment U{deliveryInfo.room?.[0]}, Chambre {deliveryInfo.room}
                             </p>
                         ) : (
                             <p>
-                                <strong>📍 Adresse externe</strong><br />
+                                <strong>Adresse externe</strong><br />
                                 {deliveryInfo.address}
                             </p>
                         )}

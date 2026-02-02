@@ -17,6 +17,7 @@ from src.payments.schemas import (
 )
 from src.payments import helloasso_service
 from src.core.config import settings
+from src.auth.service import is_user_blacklisted
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from datetime import datetime, timezone
@@ -191,6 +192,13 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
             raise HTTPException(
                 status_code=404,
                 detail="Réservation introuvable"
+            )
+        
+        # Vérifier la blacklist
+        if is_user_blacklisted(user.normalized_email):
+            raise HTTPException(
+                status_code=403,
+                detail="Vous n'avez pas le droit de commander"
             )
 
         print(f"[DEBUG] Found user by reservation_id: {user.id}")

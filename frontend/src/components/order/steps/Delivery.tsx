@@ -237,7 +237,7 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo, extraItems = [] }: 
             <h2 className="delivery-step__title">Livraison</h2>
 
             <div className="delivery-date-notice">
-                📅 Livraison le <strong>7 février 2026</strong>
+                Livraison le <strong>7 février 2026</strong>
             </div>
 
             {/* Location Type Toggle */}
@@ -248,13 +248,13 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo, extraItems = [] }: 
                         className={`delivery-toggle__btn ${locationType === 'maisel' ? 'active' : ''}`}
                         onClick={() => setLocationType('maisel')}
                     >
-                        🏠 Résidence Maisel
+                        Maisel
                     </button>
                     <button
                         className={`delivery-toggle__btn ${locationType === 'external' ? 'active' : ''}`}
                         onClick={() => setLocationType('external')}
                     >
-                        📍 Évry-Courcouronnes
+                        Évry
                     </button>
                 </div>
             </div>
@@ -289,7 +289,7 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo, extraItems = [] }: 
                 ) : (
                     <div className="delivery-external-form">
                         <div className="form-group">
-                            <label>Adresse à Évry-Courcouronnes</label>
+                            <label>Adresse à Évry</label>
                             <div className="address-autocomplete">
                                 <input
                                     type="text"

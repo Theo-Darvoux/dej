@@ -27,8 +27,16 @@ const MenuSelection = ({ onSelect }: MenuSelectionProps) => {
                         onClick={() => onSelect(item)}
                     >
                         <div className="menu-card-large__image">
-                            {/* Placeholder or actual image */}
-                            <span className="menu-card-large__emoji">🍔</span>
+                            {/* Dynamic menu image */}
+                            {item.id === 'menu_boulanger' && (
+                                <img src="/images/focaccia.webp" alt="Focaccia" className="menu-card-large__emoji" />
+                            )}
+                            {item.id === 'menu_gourmand' && (
+                                <img src="/images/sandwich.webp" alt="Sandwich" className="menu-card-large__emoji" />
+                            )}
+                            {item.id === 'menu_veget' && (
+                                <img src="/images/risotto.webp" alt="Risotto" className="menu-card-large__emoji" />
+                            )}
                         </div>
                         <div className="menu-card-large__content">
                             <h3 className="menu-card-large__title">{item.title.replace(/^Menu\s+/i, '')}</h3>

@@ -87,7 +87,6 @@ const Supplements = ({ initialSelectedItems = [], onBack, onContinue }: Suppleme
 
             <div className="supplements-section">
                 <h3 className="supplements-section__title">
-                    <span className="supplements-section__icon">🥤</span>
                     Choisissez votre boisson gratuite
                     <span className="supplements-section__hint">(1 seule)</span>
                 </h3>
@@ -103,20 +102,31 @@ const Supplements = ({ initialSelectedItems = [], onBack, onContinue }: Suppleme
                             {!selectedDrink && <span className="drink-card__radio-dot"></span>}
                         </div>
                     </div>
-                    {drinks.map(item => (
-                        <div
-                            key={item.id}
-                            className={`drink-card ${selectedDrink?.id === item.id ? 'selected' : ''}`}
-                            onClick={() => toggleItem(item)}
-                        >
-                            <div className="drink-card__icon">🥤</div>
-                            <span className="drink-card__name">{item.title}</span>
-                            {item.subtitle && <span className="drink-card__size">{item.subtitle}</span>}
-                            <div className="drink-card__radio">
-                                {selectedDrink?.id === item.id && <span className="drink-card__radio-dot"></span>}
+                    {drinks.map(item => {
+                        // Map drink names to images
+                        let drinkImage = '/images/Coca.webp' // default
+                        const name = item.title.toLowerCase()
+                        if (name.includes('coca')) drinkImage = '/images/Coca.webp'
+                        else if (name.includes('ice') || name.includes('tea')) drinkImage = '/images/IceTea.webp'
+                        else if (name.includes('eau')) drinkImage = '/images/Eau.webp'
+
+                        return (
+                            <div
+                                key={item.id}
+                                className={`drink-card ${selectedDrink?.id === item.id ? 'selected' : ''}`}
+                                onClick={() => toggleItem(item)}
+                            >
+                                <div className="drink-card__icon">
+                                    <img src={drinkImage} alt={item.title} />
+                                </div>
+                                <span className="drink-card__name">{item.title}</span>
+                                {item.subtitle && <span className="drink-card__size">{item.subtitle}</span>}
+                                <div className="drink-card__radio">
+                                    {selectedDrink?.id === item.id && <span className="drink-card__radio-dot"></span>}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
             </div>
 

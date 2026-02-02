@@ -69,13 +69,13 @@
             "id": "menu_veget",
             "category": "cat_veget",
             "name": "Menu Végét'INT",
-            "description": "Le menu végétalien",
+            "description": "Le menu végétarien",
             "items": [
-                "Risotto végétalien.",
+                "Risotto végétarien.",
                 "Donut au chocolat."
             ],
             "price": 1.00,
-            "tag": "Végétalien",
+            "tag": "Végétarien",
             "accent_color": "#22c55e",
             "item_type": "menu",
             "display_order": 1,

@@ -133,7 +133,7 @@ const EmailVerification = ({ onBack, onVerified, initialEmail = '' }: EmailVerif
                         onClick={handleRequestCode}
                         disabled={isLoading || !email}
                     >
-                        {isLoading ? 'Envoi en cours...' : '📧 Envoyer le code de vérification'}
+                        {isLoading ? 'Envoi en cours...' : 'Envoyer le code de vérification'}
                     </button>
                     {error && <div className="verification-error">{error}</div>}
                 </div>
@@ -147,7 +147,7 @@ const EmailVerification = ({ onBack, onVerified, initialEmail = '' }: EmailVerif
                         <span className="verification-email-value">{email}</span>
                     </div>
                     <div className="verification-success-msg">
-                        ✅ Code envoyé ! Vérifiez votre boîte mail.
+                        Code envoyé ! Vérifiez votre boîte mail.
                     </div>
                     <a
                         href="https://cerbere.imt.fr/zimbra"
@@ -155,7 +155,7 @@ const EmailVerification = ({ onBack, onVerified, initialEmail = '' }: EmailVerif
                         rel="noopener noreferrer"
                         className="verification-webmail-link"
                     >
-                        📬 Ouvrir ma boîte mail IMT
+                        Ouvrir ma boîte mail Zimbra
                     </a>
                     <p className="verification-info">
                         Entrez le code à 6 caractères reçu par email :

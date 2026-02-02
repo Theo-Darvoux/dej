@@ -7,7 +7,7 @@ import re
 from src.db.session import get_db
 from src.reservations import schemas, service
 from src.reservations.availability import get_available_slots, is_slot_available, reserve_slot_with_lock, MAX_ORDERS_PER_SLOT
-from src.auth.service import get_user_by_token
+from src.auth.service import get_user_by_token, is_user_blacklisted
 from src.core.exceptions import UserNotVerifiedException
 from src.menu.utils import load_menu_data
 
@@ -81,6 +81,13 @@ async def create_reservation(
     - Pas de doublon de réservation
     - Créneau disponible
     """
+
+    # VALIDATION -1: Vérifier la blacklist
+    if is_user_blacklisted(current_user.normalized_email):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous n'avez pas le droit de commander"
+        )
 
     # VALIDATION 0: Vérifier que l'utilisateur n'a pas déjà une réservation payée
     # Si l'utilisateur a déjà payé
@@ -469,6 +476,14 @@ async def process_payment(
     - Appelle Stripe Mock pour créer le payment intent
     - Met à jour le payment_status
     """
+    
+    # Vérifier la blacklist
+    if is_user_blacklisted(current_user.normalized_email):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous n'avez pas le droit de commander"
+        )
+    
     from src.reservations.models import Reservation
     # Note: Reservation might be an alias for User still or separated?
     # Original code imported Reservation from src.reservations.models
