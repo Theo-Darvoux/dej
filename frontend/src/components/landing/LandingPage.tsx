@@ -42,7 +42,7 @@ const LandingPage = ({ onStart, onViewRecap }: LandingPageProps) => {
                     </button>
                 ) : hasCompletedOrder ? (
                     <button className="landing__btn landing__btn--order" onClick={onViewRecap}>
-                        Voir mon récap 🍟
+                        Voir mon récap
                     </button>
                 ) : (
                     <button className="landing__btn" onClick={onStart}>
