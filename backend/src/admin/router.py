@@ -257,6 +257,24 @@ async def get_order_statistics(
         User.menu_id.isnot(None)
     ).first()
 
+    # Location distribution (MAISEL vs Evry)
+    maisel_count = db.query(func.count(User.id)).filter(
+        User.payment_status == "completed",
+        User.menu_id.isnot(None),
+        User.adresse_if_maisel.isnot(None)
+    ).scalar() or 0
+    
+    evry_count = db.query(func.count(User.id)).filter(
+        User.payment_status == "completed",
+        User.menu_id.isnot(None),
+        User.adresse_if_maisel.is_(None)
+    ).scalar() or 0
+    
+    location_distribution = [
+        {"name": "MAISEL", "count": maisel_count},
+        {"name": "Evry", "count": evry_count}
+    ]
+
     total_orders = base_stats.total_orders or 0
     total_revenue = float(base_stats.total_revenue or 0)
 
@@ -268,6 +286,7 @@ async def get_order_statistics(
             "extras_distribution": [],
             "time_slot_distribution": [],
             "order_hour_distribution": [],
+            "location_distribution": [],
             "total_extras": 0,
             "total_revenue": 0.0
         }
@@ -368,6 +387,7 @@ async def get_order_statistics(
         "extras_distribution": extras_distribution,
         "time_slot_distribution": time_slot_distribution,
         "order_hour_distribution": order_hour_distribution,
+        "location_distribution": location_distribution,
         "total_extras": total_extras,
         "total_revenue": round(total_revenue, 2)
     }

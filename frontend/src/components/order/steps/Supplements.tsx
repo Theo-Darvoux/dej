@@ -108,7 +108,7 @@ const Supplements = ({ initialSelectedItems = [], onBack, onContinue }: Suppleme
                         const name = item.title.toLowerCase()
                         if (name.includes('coca')) drinkImage = '/images/Coca.webp'
                         else if (name.includes('ice') || name.includes('tea')) drinkImage = '/images/IceTea.webp'
-                        else if (name.includes('eau')) drinkImage = '/images/Eau.webp'
+                        else if (name.includes('orangina')) drinkImage = '/images/orangina.webp'
 
                         return (
                             <div

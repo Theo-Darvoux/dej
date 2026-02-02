@@ -115,12 +115,13 @@
             "display_order": 2
         },
         {
-            "id": "drink_eau",
-            "name": "Eau",
-            "description": "50cl",
+            "id": "drink_orangina",
+            "name": "Orangina",
+            "description": "33cl",
             "price": 0,
             "tag": "Froid",
-            "accent_color": "#3b82f6",
+            "accent_color": "#f97316",
+            "image_url": "/images/orangina.webp",
             "display_order": 3
         }
     ],

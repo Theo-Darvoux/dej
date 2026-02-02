@@ -39,6 +39,7 @@ interface StatsData {
     extras_distribution: { name: string; count: number }[]
     time_slot_distribution: { slot: string; count: number }[]
     order_hour_distribution: { hour: number; count: number }[]
+    location_distribution: { name: string; count: number }[]
     total_extras: number
     total_revenue: number
 }
@@ -553,6 +554,10 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                 <PieChart
                                     data={statsData.extras_distribution}
                                     title="Extras les plus commandés"
+                                />
+                                <PieChart
+                                    data={statsData.location_distribution}
+                                    title="Répartition par lieu de livraison"
                                 />
                                 <BarChart
                                     data={statsData.time_slot_distribution}
