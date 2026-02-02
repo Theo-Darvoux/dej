@@ -64,7 +64,7 @@
             ],
             "allergens": {
                 "Sandwich": ["Lait", "Oeufs", "Blé"],
-                "Tartelette citron": ["Oeufs", "Lait", "Blé", "Fruits à coque"],
+                "Tartelettes": ["Oeufs", "Lait", "Blé", "Fruits à coque"],
                 "Chouquettes": ["Oeufs", "Lait", "Blé"]
             },
             "price": 1.00,

@@ -84,6 +84,7 @@ def get_menu_items(category_id: str | None = None):
             title=item["name"],
             subtitle=item.get("description", "") or "",
             items=item.get("items"),
+            allergens=item.get("allergens"),
             tag=item.get("tag"),
             accent=item.get("accent_color"),
             item_type=item.get("item_type", "menu"),

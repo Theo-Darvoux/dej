@@ -1153,10 +1153,16 @@
 .menu-detail__list-item {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
     font-size: 1rem;
     color: #444;
     font-weight: 500;
+}
+
+.menu-detail__list-item > span:not(.menu-detail__list-check):not(.menu-detail__allergen-badge) {
+    flex: 1;
+    min-width: 0;
 }
 
 .menu-detail__list-check {
@@ -1172,6 +1178,82 @@
     font-weight: 700;
     flex-shrink: 0;
 }
+
+/* Allergen Badge & Tooltip */
+.menu-detail__allergen-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    cursor: help;
+    flex-shrink: 0;
+}
+
+.menu-detail__allergen-btn {
+    background: linear-gradient(135deg, var(--mcdo-yellow, #ffbc0d) 0%, #ffd54f 100%);
+    color: #1a1a1a;
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 0.75rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 188, 13, 0.4);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.menu-detail__allergen-badge:hover .menu-detail__allergen-btn {
+    background: linear-gradient(135deg, var(--mcdo-red, #db0007) 0%, #ff4444 100%);
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(219, 0, 7, 0.4);
+}
+
+.menu-detail__allergen-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: rgba(41, 41, 41, 0.95);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.menu-detail__allergen-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(41, 41, 41, 0.95);
+}
+
+.menu-detail__allergen-badge:hover .menu-detail__allergen-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-12px);
+}
+
+.menu-detail__allergen-tooltip strong {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 700;
+    color: #ffcc00;
+}
+
 
 /* CTA Section */
 .menu-detail__cta {
@@ -1317,6 +1399,20 @@
         height: 20px;
         font-size: 0.65rem;
     }
+
+    .menu-detail__allergen-btn {
+        font-size: 0.7rem;
+        padding: 5px 12px;
+    }
+
+    .menu-detail__allergen-tooltip {
+        font-size: 0.75rem;
+        padding: 8px 12px;
+        white-space: normal;
+        max-width: 200px;
+        text-align: center;
+    }
+
 
     .menu-detail__confirm-btn {
         padding: 16px 20px;

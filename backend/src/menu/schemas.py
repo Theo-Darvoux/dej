@@ -14,6 +14,7 @@ class MenuItemResponse(BaseModel):
     title: str
     subtitle: str
     items: list[str] | None = None
+    allergens: dict[str, list[str]] | None = None
     tag: str | None = None
     accent: str | None = None
     item_type: str

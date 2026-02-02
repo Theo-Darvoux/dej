@@ -10,6 +10,45 @@ const MenuDetail = ({ menu, onBack, onConfirm }: MenuDetailProps) => {
     // Extract items from menu for display
     const menuItems = menu.items || []
 
+    // Helper function to find allergens for a specific item
+    const getAllergensForItem = (itemName: string): string[] | null => {
+        if (!menu.allergens) {
+            console.log('No allergens data for menu:', menu.id)
+            return null
+        }
+        
+        console.log('Looking for allergens for item:', itemName)
+        console.log('Available allergen keys:', Object.keys(menu.allergens))
+        
+        // Normalize: lowercase, remove dots, trim, remove common filler words
+        const normalizeText = (text: string) => 
+            text.toLowerCase()
+                .replace(/\./g, '')
+                .replace(/\s+(au|aux|à la|à l'|de|du|des|le|la|les)\s+/g, ' ')
+                .replace(/s\b/g, '') // Remove trailing 's' from words (handle plural)
+                .trim()
+        
+        const normalizedItem = normalizeText(itemName)
+        
+        // Try to find matching allergens
+        for (const [key, allergens] of Object.entries(menu.allergens)) {
+            const normalizedKey = normalizeText(key)
+            
+            console.log(`Comparing "${normalizedItem}" with "${normalizedKey}"`)
+            
+            // Check if item contains the key or key contains part of item
+            if (normalizedItem.includes(normalizedKey) || 
+                normalizedItem.startsWith(normalizedKey) ||
+                normalizedKey.split(' ').every(word => normalizedItem.includes(word))) {
+                console.log('✓ Match found!', allergens)
+                return allergens
+            }
+        }
+        
+        console.log('✗ No match found for:', itemName)
+        return null
+    }
+
     return (
         <div className="menu-detail">
             {/* Back Button */}
@@ -100,32 +139,27 @@ const MenuDetail = ({ menu, onBack, onConfirm }: MenuDetailProps) => {
                             Ce menu contient
                         </h3>
                         <ul className="menu-detail__list">
-                            {menuItems.map((item: string, idx: number) => (
-                                <li key={idx} className="menu-detail__list-item">
-                                    <span className="menu-detail__list-check">✓</span>
-                                    <span>{item}</span>
-                                </li>
-                            ))}
+                            {menuItems.map((item: string, idx: number) => {
+                                const allergens = getAllergensForItem(item)
+                                return (
+                                    <li key={idx} className="menu-detail__list-item">
+                                        <span className="menu-detail__list-check">✓</span>
+                                        <span>{item}</span>
+                                        {allergens && allergens.length > 0 && (
+                                            <span className="menu-detail__allergen-badge">
+                                                <span className="menu-detail__allergen-btn">Allergènes</span>
+                                                <span className="menu-detail__allergen-tooltip">
+                                                    <strong>Allergènes:</strong>
+                                                    <br />
+                                                    {allergens.join(', ')}
+                                                </span>
+                                            </span>
+                                        )}
+                                    </li>
+                                )
+                            })}
                         </ul>
                     </div>
-
-                    {/* Allergens Section */}
-                    {menu.allergens && Object.keys(menu.allergens).length > 0 && (
-                        <div className="menu-detail__allergens">
-                            <h3 className="menu-detail__allergens-title">
-                                <span className="menu-detail__allergens-icon">⚠️</span>
-                                Allergènes
-                            </h3>
-                            <ul className="menu-detail__allergens-list">
-                                {Object.entries(menu.allergens).map(([itemName, allergenList], idx) => (
-                                    <li key={idx} className="menu-detail__allergens-item">
-                                        <strong>{itemName} :</strong>{' '}
-                                        {allergenList.join(', ')}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
 
                     {/* CTA Section */}
                     <div className="menu-detail__cta">
