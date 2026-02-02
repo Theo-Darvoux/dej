@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import type { MenuItem } from '../../../context/MenuContext'
 
 export type DeliveryInfo = {
     locationType: 'maisel' | 'external'
@@ -19,13 +20,6 @@ type SlotData = {
     available: boolean
     current_count: number
     max_capacity: number
-}
-
-type MenuItem = {
-    id: string
-    title: string
-    price: string
-    item_type: string
 }
 
 type DeliveryProps = {
