@@ -109,6 +109,24 @@ const MenuDetail = ({ menu, onBack, onConfirm }: MenuDetailProps) => {
                         </ul>
                     </div>
 
+                    {/* Allergens Section */}
+                    {menu.allergens && Object.keys(menu.allergens).length > 0 && (
+                        <div className="menu-detail__allergens">
+                            <h3 className="menu-detail__allergens-title">
+                                <span className="menu-detail__allergens-icon">⚠️</span>
+                                Allergènes
+                            </h3>
+                            <ul className="menu-detail__allergens-list">
+                                {Object.entries(menu.allergens).map(([itemName, allergenList], idx) => (
+                                    <li key={idx} className="menu-detail__allergens-item">
+                                        <strong>{itemName} :</strong>{' '}
+                                        {allergenList.join(', ')}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
                     {/* CTA Section */}
                     <div className="menu-detail__cta">
                         <button className="menu-detail__confirm-btn" onClick={onConfirm}>

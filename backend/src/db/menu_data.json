@@ -41,6 +41,10 @@
                 "Focaccia au poulet (halal).",
                 "Tiramisu maison."
             ],
+            "allergens": {
+                "Focaccia poulet": ["Blé", "Lait"],
+                "Tiramisu": ["Lait", "Oeufs", "Poissons", "Blé"]
+            },
             "price": 1.00,
             "tag": "Classique",
             "accent_color": "#eab308",
@@ -58,6 +62,11 @@
                 "Tartelettes au citron.",
                 "Chouquettes."
             ],
+            "allergens": {
+                "Sandwich": ["Lait", "Oeufs", "Blé"],
+                "Tartelette citron": ["Oeufs", "Lait", "Blé", "Fruits à coque"],
+                "Chouquettes": ["Oeufs", "Lait", "Blé"]
+            },
             "price": 1.00,
             "tag": "Gourmand",
             "accent_color": "#ef4444",
@@ -74,6 +83,10 @@
                 "Risotto végétarien.",
                 "Donut au chocolat."
             ],
+            "allergens": {
+                "Risotto": ["Lait"],
+                "Donut": ["Lait", "Oeufs", "Blé"]
+            },
             "price": 1.00,
             "tag": "Végétarien",
             "accent_color": "#22c55e",

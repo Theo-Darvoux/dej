@@ -11,6 +11,7 @@ export type MenuItem = {
     title: string
     subtitle: string
     items?: string[] 
+    allergens?: Record<string, string[]>
     tag?: string
     accent?: string
     price: string
