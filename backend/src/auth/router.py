@@ -45,8 +45,8 @@ async def verify_code(
     - Émet JWT httpOnly + refresh token
     - Retourne is_cotisant pour guider vers l'étape suivante
     """
-    # Rate limit by email: 5 verification attempts per 15 minutes
-    await rate_limiter.check(f"verify:{request_data.email}", max_requests=5, window_seconds=900)
+    # Rate limit by email: 5 verification attempts per 1 minutes
+    await rate_limiter.check(f"verify:{request_data.email}", max_requests=5, window_seconds=60)
 
     user_id, is_cotisant = await service.verify_code(
         request_data.email,

@@ -3,6 +3,7 @@ import string
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 
 from src.users.models import User
 from src.core.config import settings
@@ -116,13 +117,32 @@ async def request_verification_code(email: str, db: Session) -> bool:
     else:
         # Mettre à jour l'email de livraison si nécessaire (le dernier utilisé)
         user.email = delivery_email
-    
+
     # Stocker le code avec timestamp
     user.verification_code = code
     user.code_created_at = datetime.now(timezone.utc)
-    
+
     try:
         db.commit()
+    except IntegrityError:
+        # Race condition: another request created the user between our check and insert
+        db.rollback()
+        # Retry by fetching the existing user and updating
+        user = db.query(User).filter(User.normalized_email == identity).first()
+        if not user:
+            # Try by email as fallback
+            user = db.query(User).filter(User.email == delivery_email).first()
+        if not user:
+            raise EmailSendFailedException("Erreur base de données")
+        user.email = delivery_email
+        user.normalized_email = identity  # Sync normalized_email
+        user.verification_code = code
+        user.code_created_at = datetime.now(timezone.utc)
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise EmailSendFailedException("Erreur base de données")
     except Exception:
         db.rollback()
         raise EmailSendFailedException("Erreur base de données")
@@ -148,10 +168,13 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
     """
     
     # Valider et normaliser
-    _, identity = normalize_email(email)
-    
+    delivery_email, identity = normalize_email(email)
+
     # Chercher utilisateur par normalized_email (identité unique)
     user = db.query(User).filter(User.normalized_email == identity).first()
+    if not user:
+        # Fallback: chercher par email
+        user = db.query(User).filter(User.email == delivery_email).first()
     if not user:
         raise InvalidCredentialsException("Utilisateur non trouvé")
     
