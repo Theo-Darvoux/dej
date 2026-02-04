@@ -60,12 +60,12 @@
             "items": [
                 "Sandwich au chèvre et aux fruits sur pain d'épices.",
                 "Tartelettes au citron.",
-                "Chouquettes."
+                "Choux sucrés."
             ],
             "allergens": {
                 "Sandwich": ["Lait", "Oeufs", "Blé"],
                 "Tartelettes": ["Oeufs", "Lait", "Blé", "Fruits à coque"],
-                "Chouquettes": ["Oeufs", "Lait", "Blé"]
+                "Choux": ["Oeufs", "Lait", "Blé"]
             },
             "price": 1.00,
             "tag": "Gourmand",
