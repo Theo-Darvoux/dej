@@ -69,6 +69,32 @@ def normalize_email(email: str) -> tuple[str, str]:
     return delivery_email, identity
 
 
+def is_user_whitelisted(identity: str) -> bool:
+    """
+    Vérifie si l'utilisateur (prenom.nom) est dans la whitelist.
+    Les utilisateurs whitelistés peuvent commander même sans être cotisant BDE.
+    Normalise les _ en . pour la comparaison.
+    """
+    import json
+    import os
+
+    if not identity or not identity.strip():
+        return False
+
+    whitelist_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "whitelist.json")
+
+    normalized_identity = identity.lower().replace("_", ".")
+
+    try:
+        with open(whitelist_path, "r") as f:
+            data = json.load(f)
+            allowed_users = data.get("allowed_users", [])
+            normalized_allowed = [u.lower().replace("_", ".") for u in allowed_users]
+            return normalized_identity in normalized_allowed
+    except (FileNotFoundError, json.JSONDecodeError):
+        return False
+
+
 def is_user_blacklisted(identity: str) -> bool:
     """
     Vérifie si l'utilisateur (prenom.nom) est dans la blacklist.
@@ -208,6 +234,10 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
         raise CodeExpiredException()
 
     is_cotisant = await verify_with_bde(email)
+
+    # Whitelist override: allow non-cotisants to order if whitelisted
+    if not is_cotisant and is_user_whitelisted(identity):
+        is_cotisant = True
 
     # Extraire prénom/nom depuis l'email (format prenom.nom@...)
     try:
