@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { fetchWithAuth } from '../../utils/api'
 import AdminDashboard from './AdminDashboard'
 import AdminLogin from './AdminLogin'
 import './AdminPage.css'
@@ -15,11 +16,12 @@ const AdminPage = ({ onGoHome }: AdminPageProps) => {
     const checkAdminStatus = async () => {
         setAuthState('loading')
         try {
-            const response = await fetch('/api/admin/orders?limit=1')
+            const response = await fetchWithAuth('/api/admin/orders?limit=1')
 
             if (response.ok) {
                 setAuthState('admin')
             } else if (response.status === 401) {
+                // Token refresh also failed, need to log in
                 setAuthState('not_logged_in')
             } else if (response.status === 403) {
                 setAuthState('not_admin')
@@ -43,7 +45,7 @@ const AdminPage = ({ onGoHome }: AdminPageProps) => {
 
     const handleLogout = async () => {
         try {
-            await fetch('/api/auth/logout', { method: 'POST' })
+            await fetchWithAuth('/api/auth/logout', { method: 'POST' })
         } catch {
             // Ignore errors
         }

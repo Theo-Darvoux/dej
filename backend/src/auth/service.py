@@ -77,6 +77,11 @@ def is_user_blacklisted(identity: str) -> bool:
     import json
     import os
     
+    # CRITICAL: If identity is None or empty, reject to be safe
+    # This prevents bypassing the blacklist with empty/None normalized_email
+    if not identity or not identity.strip():
+        return True  # Treat as blacklisted for security
+    
     blacklist_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "blacklist.json")
     
     # Normaliser l'identité (remplacer _ par .)
@@ -90,25 +95,28 @@ def is_user_blacklisted(identity: str) -> bool:
             normalized_blocked = [u.lower().replace("_", ".") for u in blocked_users]
             return normalized_identity in normalized_blocked
     except (FileNotFoundError, json.JSONDecodeError):
+        # If blacklist file is missing/corrupt, be permissive (return False)
+        # This maintains backward compatibility
         return False
 
 
-async def request_verification_code(email: str, db: Session) -> bool:
+async def request_verification_code(email: str, db: Session) -> tuple[str, str]:
     """
-    Génère et envoie un code de vérification par email.
-    Retourne True si succès, lance exception sinon.
+    Génère un code de vérification et le sauvegarde en base.
+    Retourne (delivery_email, code) pour envoi ultérieur en background.
+    Lance exception si erreur.
     """
     # Valider et normaliser l'email
     delivery_email, identity = normalize_email(email)
-    
+
     # Vérifier la blacklist
     if is_user_blacklisted(identity):
         raise InvalidCredentialsException("Vous n'avez pas le droit de commander")
-    
+
     # Générer code à 6 caractères alphanumériques
     chars = string.ascii_letters + string.digits
     code = ''.join(random.choices(chars, k=settings.EMAIL_CODE_LENGTH))
-    
+
     # Trouver ou créer utilisateur par normalized_email (qui contient maintenant l'identité prenom.nom)
     user = db.query(User).filter(User.normalized_email == identity).first()
     if not user:
@@ -146,18 +154,9 @@ async def request_verification_code(email: str, db: Session) -> bool:
     except Exception:
         db.rollback()
         raise EmailSendFailedException("Erreur base de données")
-    
-    # Envoyer email (utiliser delivery_email)
-    try:
-        await send_verification_email(delivery_email, code)
-    except Exception as e:
-        # Nettoyer le code si l'envoi échoue
-        user.verification_code = None
-        user.code_created_at = None
-        db.commit()
-        raise EmailSendFailedException(f"Impossible d'envoyer l'email: {str(e)}")
-    
-    return True
+
+    # Return email and code for background sending
+    return delivery_email, code
 
 
 async def verify_code(email: str, code: str, db: Session, client_ip: str = None) -> tuple[int, bool]:
@@ -175,6 +174,10 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
     if not user:
         # Fallback: chercher par email
         user = db.query(User).filter(User.email == delivery_email).first()
+        # CRITICAL: Sync normalized_email if found by email fallback
+        # This ensures old users get their normalized_email updated
+        if user:
+            user.normalized_email = identity
     if not user:
         raise InvalidCredentialsException("Utilisateur non trouvé")
     
@@ -275,5 +278,17 @@ def get_user_by_token(token: str, db: Session, expected_type: str = "access") ->
     
     if not user.email_verified:
         raise UserNotVerifiedException()
+    
+    # CRITICAL: Fix normalized_email if missing (for old users)
+    # This ensures blacklist checks work properly
+    if not user.normalized_email or not user.normalized_email.strip():
+        try:
+            _, identity = normalize_email(token_data.email)
+            user.normalized_email = identity
+            db.commit()
+        except Exception:
+            # If normalization fails, keep the user but log it
+            # The blacklist check will treat empty normalized_email as blacklisted
+            pass
     
     return user

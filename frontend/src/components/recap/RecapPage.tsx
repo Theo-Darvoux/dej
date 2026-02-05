@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { fetchWithAuth } from '../../utils/api'
 import './RecapPage.css'
 
 type OrderData = {
@@ -39,9 +40,7 @@ const RecapPage = ({ onBackToHome }: RecapPageProps) => {
     useEffect(() => {
         const fetchUserData = async () => {
             try {
-                const response = await fetch('/api/users/me', {
-                    credentials: 'include'
-                })
+                const response = await fetchWithAuth('/api/users/me')
                 if (!response.ok) {
                     throw new Error('Non connecté')
                 }

@@ -18,6 +18,52 @@ TICKETS_PER_ROW = 2
 PAGE_HEIGHT = 297  # A4 height
 
 
+def _sanitize_text_for_pdf(text: str) -> str:
+    """
+    Sanitize text for FPDF by replacing Unicode characters with ASCII equivalents.
+
+    FPDF's core fonts (Helvetica, Times, etc.) only support Latin-1 encoding.
+    This function replaces common Unicode characters with ASCII equivalents.
+    """
+    if not text:
+        return text
+
+    # Mapping of Unicode characters to ASCII equivalents
+    replacements = {
+        # Smart quotes
+        '\u2018': "'",  # Left single quotation mark
+        '\u2019': "'",  # Right single quotation mark
+        '\u201C': '"',  # Left double quotation mark
+        '\u201D': '"',  # Right double quotation mark
+        # Dashes
+        '\u2013': '-',  # En dash
+        '\u2014': '--', # Em dash
+        '\u2015': '--', # Horizontal bar
+        # Spaces
+        '\u00A0': ' ',  # Non-breaking space
+        '\u2009': ' ',  # Thin space
+        '\u200A': ' ',  # Hair space
+        # Other common characters
+        '\u2026': '...', # Horizontal ellipsis
+        '\u2022': '*',   # Bullet
+        '\u00B0': 'deg', # Degree sign
+    }
+
+    # Replace Unicode characters
+    for unicode_char, ascii_char in replacements.items():
+        text = text.replace(unicode_char, ascii_char)
+
+    # Remove any remaining non-Latin-1 characters
+    # Replace with '?' or remove them
+    try:
+        text.encode('latin-1')
+    except UnicodeEncodeError:
+        # Replace any remaining problematic characters
+        text = text.encode('latin-1', errors='replace').decode('latin-1')
+
+    return text
+
+
 def _calculate_ticket_height(num_products: int, has_email: bool, has_phone: bool, has_special_requests: bool) -> float:
     """Calculate dynamic ticket height based on content."""
     # Base: header(12) + time_banner(8) + name(5) + address(4) + separator(5) + footer(10) + padding(6)
@@ -241,7 +287,7 @@ def _draw_beautiful_ticket(
     nom_complet = f"{prenom} {nom}".strip()
     if len(nom_complet) > 25:
         nom_complet = nom_complet[:24] + "."
-    pdf.cell(TICKET_WIDTH - 6, 5, nom_complet, align="L")
+    pdf.cell(TICKET_WIDTH - 6, 5, _sanitize_text_for_pdf(nom_complet), align="L")
     current_y += 5
 
     # Email
@@ -250,7 +296,7 @@ def _draw_beautiful_ticket(
         pdf.set_font("Helvetica", "", 6)
         pdf.set_text_color(100, 100, 100)
         email_display = email if len(email) <= 35 else email[:34] + "."
-        pdf.cell(TICKET_WIDTH - 6, 3, email_display, align="L")
+        pdf.cell(TICKET_WIDTH - 6, 3, _sanitize_text_for_pdf(email_display), align="L")
         current_y += 3.5
 
     # Adresse et chambre
@@ -265,14 +311,14 @@ def _draw_beautiful_ticket(
 
     if len(info_lieu) > 40:
         info_lieu = info_lieu[:39] + "."
-    pdf.cell(TICKET_WIDTH - 6, 4, info_lieu, align="L")
+    pdf.cell(TICKET_WIDTH - 6, 4, _sanitize_text_for_pdf(info_lieu), align="L")
     current_y += 4
 
     # Téléphone
     if telephone:
         pdf.set_xy(x + 3, current_y)
         pdf.set_font("Helvetica", "", 6)
-        pdf.cell(TICKET_WIDTH - 6, 3, f"Tel: {telephone}", align="L")
+        pdf.cell(TICKET_WIDTH - 6, 3, _sanitize_text_for_pdf(f"Tel: {telephone}"), align="L")
         current_y += 3
 
     pdf.set_text_color(0, 0, 0)
@@ -303,7 +349,7 @@ def _draw_beautiful_ticket(
 
         pdf.set_font("Helvetica", "", 8)
         pdf.cell(5, 4, icon, align="L")
-        pdf.cell(55, 4, nom_produit, align="L")
+        pdf.cell(55, 4, _sanitize_text_for_pdf(nom_produit), align="L")
 
         # Prix
         pdf.set_font("Helvetica", "B", 8)
@@ -320,7 +366,7 @@ def _draw_beautiful_ticket(
         note = special_requests.strip()
         if len(note) > 45:
             note = note[:44] + "..."
-        pdf.cell(TICKET_WIDTH - 6, 3, f"Note: {note}", align="L")
+        pdf.cell(TICKET_WIDTH - 6, 3, _sanitize_text_for_pdf(f"Note: {note}"), align="L")
         pdf.set_text_color(0, 0, 0)
 
     # === TOTAL ===

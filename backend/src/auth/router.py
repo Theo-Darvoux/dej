@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Request, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from src.db.session import get_db
 from src.auth import schemas, service
 from src.core.exceptions import UserNotVerifiedException
 from src.core.rate_limit import rate_limiter
+from src.mail import send_verification_email
 
 router = APIRouter()
 
@@ -12,19 +13,24 @@ router = APIRouter()
 @router.post("/request-code", response_model=schemas.RequestCodeResponse)
 async def request_code(
     request: schemas.RequestCodeRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
     Étape 1: L'utilisateur rentre son email
     - Génère un code à 6 chiffres/lettres
-    - Envoie l'email avec code et lien
+    - Envoie l'email avec code et lien (en background)
     - Crée/met à jour l'utilisateur en DB
     """
     # Rate limit by email: 3 requests per 15 minutes
     await rate_limiter.check(f"email:{request.email}", max_requests=3, window_seconds=900)
 
-    await service.request_verification_code(request.email, db)
-    
+    # Generate code and save to DB (returns immediately)
+    delivery_email, code = await service.request_verification_code(request.email, db)
+
+    # Send email in background to avoid blocking the response
+    background_tasks.add_task(send_verification_email, delivery_email, code)
+
     return schemas.RequestCodeResponse(
         message=f"Code de vérification envoyé à {request.email}",
         email=request.email

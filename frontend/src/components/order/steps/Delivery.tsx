@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { fetchWithAuth } from '../../../utils/api'
 import type { MenuItem } from '../../../context/MenuContext'
 
 export type DeliveryInfo = {
@@ -55,12 +56,12 @@ const Delivery = ({ onBack, onContinue, initialDeliveryInfo, extraItems = [] }: 
         item.title.toLowerCase().includes('poulet')
     )
 
-    // Fetch slot availability from API
+    // Fetch slot availability from API (with auto-refresh)
     const fetchSlots = async () => {
         setSlotsLoading(true)
         setSlotsError(null)
         try {
-            const response = await fetch('/api/reservations/availability')
+            const response = await fetchWithAuth('/api/reservations/availability')
             if (!response.ok) {
                 throw new Error('Erreur lors du chargement des créneaux')
             }

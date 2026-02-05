@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { fetchWithAuth } from '../../utils/api'
 import './LandingPage.css'
 
 type LandingPageProps = {
@@ -13,9 +14,7 @@ const LandingPage = ({ onStart, onViewRecap }: LandingPageProps) => {
     useEffect(() => {
         const checkUserStatus = async () => {
             try {
-                const response = await fetch('/api/users/me', {
-                    credentials: 'include'
-                })
+                const response = await fetchWithAuth('/api/users/me')
                 if (response.ok) {
                     const data = await response.json()
                     // Afficher "Voir mon recap" seulement si paiement complété

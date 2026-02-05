@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useMenu, type MenuItem } from '../../context/MenuContext'
 import { safeJSONParse, safeGetItem } from '../../utils/storage'
+import { fetchWithAuth } from '../../utils/api'
 import MenuSelection from './steps/MenuSelection'
 import MenuDetail from './steps/MenuDetail'
 import Supplements from './steps/Supplements'
@@ -187,11 +188,9 @@ const OrderPage = () => {
         setAuthError(null)
         setIsCheckingAuth(true)
 
-        // Check if user already has a valid access token
+        // Check if user already has a valid access token (with auto-refresh)
         try {
-            const response = await fetch('/api/users/me', {
-                credentials: 'include'
-            })
+            const response = await fetchWithAuth('/api/users/me')
 
             if (response.ok) {
                 const userData = await response.json()
@@ -201,8 +200,8 @@ const OrderPage = () => {
                 navigateToStep('CHECKOUT')
                 return
             } else if (response.status === 401) {
-                // Token invalid or expired, proceed to verification
-                console.log('Token expired, proceeding to verification')
+                // Token invalid or expired (refresh also failed), proceed to verification
+                console.log('Token expired and refresh failed, proceeding to verification')
             } else {
                 // Unexpected error
                 const errorData = await response.json().catch(() => ({}))

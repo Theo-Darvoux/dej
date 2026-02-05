@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { fetchWithAuth } from '../../../utils/api'
 import type { MenuItem } from '../../../context/MenuContext'
 import type { DeliveryInfo } from './Delivery'
 
@@ -116,9 +117,7 @@ const Checkout = ({
         let payerEmail = userEmail || ''
 
         try {
-            const userResponse = await fetch('/api/users/me', {
-                credentials: 'include'
-            })
+            const userResponse = await fetchWithAuth('/api/users/me')
             if (userResponse.ok) {
                 const userData = await userResponse.json()
                 if (userData.prenom) payerFirstName = userData.prenom
@@ -172,10 +171,9 @@ const Checkout = ({
             extras: extraItems.map(item => item.title),
         }
 
-        const reservationResponse = await fetch('/api/reservations/', {
+        const reservationResponse = await fetchWithAuth('/api/reservations/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify(reservationData),
         })
 
@@ -188,10 +186,9 @@ const Checkout = ({
 
         localStorage.setItem('pending_reservation_id', reservation.id?.toString() || '')
 
-        const response = await fetch('/api/payments/checkout', {
+        const response = await fetchWithAuth('/api/payments/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({
                 payer_email: payerEmail,
                 payer_first_name: payerFirstName,

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { fetchWithAuth } from '../../utils/api'
 import './AdminDashboard.css'
 
 interface OrderItem {
@@ -195,7 +196,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
 
     const fetchMenuItems = async () => {
         try {
-            const response = await fetch('/api/menu/items', { credentials: 'include' })
+            const response = await fetchWithAuth('/api/menu/items')
             if (response.ok) {
                 const data = await response.json()
                 setMenuItems(data)
@@ -208,7 +209,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
     const fetchStats = async () => {
         setStatsLoading(true)
         try {
-            const response = await fetch('/api/admin/stats', { credentials: 'include' })
+            const response = await fetchWithAuth('/api/admin/stats')
             if (response.ok) {
                 const data = await response.json()
                 setStatsData(data)
@@ -321,9 +322,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
     const handlePrintAllTickets = async () => {
         setPrintingPdf(true)
         try {
-            const response = await fetch('/api/print/get_printPDF?start_time=00:00&end_time=23:59', {
-                credentials: 'include'
-            })
+            const response = await fetchWithAuth('/api/print/get_printPDF?start_time=00:00&end_time=23:59')
             if (!response.ok) {
                 if (response.status === 404) {
                     alert('Aucune commande payée à imprimer')

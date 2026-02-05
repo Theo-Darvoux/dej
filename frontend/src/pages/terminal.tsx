@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { fetchWithAuth } from '../utils/api';
 import './terminal.css';
 
 interface TerminalOrder {
@@ -32,9 +33,7 @@ function TerminalPage() {
     const fetchOrders = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await fetch('/api/terminal/orders?all_orders=true', {
-                credentials: 'include',
-            });
+            const response = await fetchWithAuth('/api/terminal/orders?all_orders=true');
 
             if (!response.ok) {
                 if (response.status === 403) {
