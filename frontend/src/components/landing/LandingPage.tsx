@@ -65,6 +65,11 @@ const LandingPage = ({ onStart, onViewRecap }: LandingPageProps) => {
                     </a>
                 </div>
             </div>
+
+            {/* Credits */}
+            <div className="landing__credits">
+                Site créé par Timothé CORMIER & Théo DARVOUX
+            </div>
         </div>
     )
 }
