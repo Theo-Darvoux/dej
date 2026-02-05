@@ -17,7 +17,7 @@ from src.payments.schemas import (
 )
 from src.payments import helloasso_service
 from src.core.config import settings
-from src.auth.service import is_user_blacklisted
+from src.auth.service import is_user_blacklisted, is_ordering_open
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from datetime import datetime, timezone
@@ -170,6 +170,12 @@ async def create_checkout(request: Request, checkout_request: CheckoutRequest):
     from datetime import timedelta
 
     CHECKOUT_REUSE_WINDOW = timedelta(minutes=15)
+
+    if not is_ordering_open():
+        raise HTTPException(
+            status_code=403,
+            detail="Les réservations sont fermées"
+        )
 
     # Validate that user has valid prenom/nom for HelloAsso
     if not checkout_request.payer_first_name or len(checkout_request.payer_first_name) < 2:

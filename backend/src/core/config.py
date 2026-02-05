@@ -58,7 +58,10 @@ class Settings(BaseSettings):
 
     HELLOASSO_URL_TOKEN: str = os.getenv("HELLOASSO_URL_TOKEN", "https://api.helloasso.com/oauth2")
     HELLOASSO_API: str = os.getenv("HELLOASSO_API", "https://api.helloasso.com/v5")
-    
+
+    # Ordering cutoff (ISO 8601 with timezone)
+    ORDERING_CUTOFF: str = os.getenv("ORDERING_CUTOFF", "2026-02-06T00:01:00+01:00")
+
     class Config:
         env_file = ".env"
         case_sensitive = True

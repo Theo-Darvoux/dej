@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from src.db.session import get_db
 from src.auth import schemas, service
+from src.auth.service import is_ordering_open
 from src.core.exceptions import UserNotVerifiedException
 from src.core.rate_limit import rate_limiter
 from src.mail import send_verification_email
@@ -22,6 +23,12 @@ async def request_code(
     - Envoie l'email avec code et lien (en background)
     - Crée/met à jour l'utilisateur en DB
     """
+    if not is_ordering_open():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Les réservations sont fermées"
+        )
+
     # Rate limit by email: 3 requests per 15 minutes
     await rate_limiter.check(f"email:{request.email}", max_requests=3, window_seconds=900)
 

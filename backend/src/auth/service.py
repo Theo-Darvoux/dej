@@ -21,6 +21,12 @@ from src.auth.schemas import TokenResponse
 
 
 
+def is_ordering_open() -> bool:
+    """Vérifie si les réservations sont encore ouvertes (avant le cutoff)."""
+    cutoff = datetime.fromisoformat(settings.ORDERING_CUTOFF)
+    return datetime.now(timezone.utc) < cutoff.astimezone(timezone.utc)
+
+
 ALLOWED_DOMAINS = [
     "imt-bs.eu",
     "telecom-sudparis.eu"

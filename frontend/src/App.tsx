@@ -9,8 +9,11 @@ import RecapPage from './components/recap/RecapPage'
 import AdminPage from './components/admin/AdminPage'
 import PrintPage from './pages/print'
 import TerminalPage from './pages/terminal'
+import ReservationsClosed from './components/closed/ReservationsClosed'
 import { preloadImages } from './utils/imagePreloader'
 import './App.css'
+
+const ORDERING_CUTOFF = new Date('2026-02-06T00:01:00+01:00')
 
 type ViewState = 'landing' | 'order' | 'order-status' | 'payment-success' | 'payment-error' | 'recap' | 'admin' | 'admin-print' | 'admin-terminal'
 
@@ -28,6 +31,7 @@ function getViewFromPath(path: string): ViewState {
 
 function App() {
   const [view, setView] = useState<ViewState>(() => getViewFromPath(window.location.pathname))
+  const isOrderingClosed = Date.now() >= ORDERING_CUTOFF.getTime()
 
   // Preload images on app mount
   useEffect(() => {
@@ -79,14 +83,22 @@ function App() {
   return (
     <MenuProvider>
       {view === 'landing' && (
-        <LandingPage
-          onStart={handleStartOrder}
-          onViewRecap={handleViewRecap}
-        />
+        isOrderingClosed ? (
+          <ReservationsClosed />
+        ) : (
+          <LandingPage
+            onStart={handleStartOrder}
+            onViewRecap={handleViewRecap}
+          />
+        )
       )}
 
       {view === 'order' && (
-        <OrderPage />
+        isOrderingClosed ? (
+          <ReservationsClosed />
+        ) : (
+          <OrderPage />
+        )
       )}
 
       {view === 'order-status' && (

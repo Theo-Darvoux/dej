@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 import asyncio
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from src.auth.router import router as auth_router
 from src.users.router import router as users_router
@@ -16,7 +18,7 @@ from src.payments.helloasso_service import close_http_client
 from src.core.config import settings
 from src.core.rate_limit import rate_limiter
 from src.db.base import Base
-from src.db.session import engine
+from src.db.session import engine, get_db
 from src.db.init_db import init_db
 # Importer les modèles pour que SQLAlchemy les enregistre
 from src.users.models import User
@@ -108,4 +110,20 @@ app.include_router(terminal_router, prefix="/terminal", tags=["terminal"])
 async def root():
     """Health check"""
     return {"status": "ok", "message": "MC INT API running"}
+
+
+@app.get("/status")
+def get_ordering_status(db: Session = Depends(get_db)):
+    """Public endpoint: ordering status and total completed orders."""
+    from src.auth.service import is_ordering_open
+
+    total_orders = db.query(func.count(User.id)).filter(
+        User.payment_status == "completed",
+        User.menu_id.isnot(None)
+    ).scalar()
+
+    return {
+        "ordering_open": is_ordering_open(),
+        "total_orders": total_orders or 0
+    }
 

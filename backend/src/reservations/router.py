@@ -7,7 +7,7 @@ import re
 from src.db.session import get_db
 from src.reservations import schemas, service
 from src.reservations.availability import get_available_slots, is_slot_available, reserve_slot_with_lock, MAX_ORDERS_PER_SLOT
-from src.auth.service import get_user_by_token, is_user_blacklisted
+from src.auth.service import get_user_by_token, is_user_blacklisted, is_ordering_open
 from src.core.exceptions import UserNotVerifiedException
 from src.menu.utils import load_menu_data
 
@@ -81,6 +81,13 @@ async def create_reservation(
     - Pas de doublon de réservation
     - Créneau disponible
     """
+
+    # VALIDATION -2: Vérifier que les réservations sont ouvertes
+    if not is_ordering_open():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Les réservations sont fermées"
+        )
 
     # VALIDATION -1: Vérifier la blacklist
     if is_user_blacklisted(current_user.normalized_email):
