@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, date, time
 from src.reservations.schemas import BatimentMaisel
@@ -52,3 +52,19 @@ class AdminOrderUpdate(BaseModel):
     menu_id: Optional[str] = None
     boisson_id: Optional[str] = None
     bonus_ids: Optional[List[str]] = None
+
+
+class AdminCreateOrder(BaseModel):
+    email: str
+    menu: str
+    boisson: Optional[str] = None
+    extras: Optional[List[str]] = None
+    heure_reservation: str  # "HH:MM"
+    habite_residence: bool = False
+    numero_chambre: Optional[str] = None
+    adresse_if_maisel: Optional[BatimentMaisel] = None
+    adresse: Optional[str] = None
+    phone: Optional[str] = None
+    special_requests: Optional[str] = None
+    prenom: Optional[str] = None
+    nom: Optional[str] = None

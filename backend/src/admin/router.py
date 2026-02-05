@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from pydantic import EmailStr
 from typing import List, Optional
 from collections import Counter
+from datetime import date, time, datetime, timezone
 
 from src.reservations import schemas as res_schemas
 from src.admin import schemas as admin_schemas
@@ -53,6 +54,24 @@ def get_item_details(item_id):
         for item in data.get(cat, []):
             if item["id"] == item_id:
                 # Add item_type if missing, based on category
+                item_copy = item.copy()
+                if "item_type" not in item_copy:
+                    if cat == "menus": item_copy["item_type"] = "menu"
+                    elif cat == "boissons": item_copy["item_type"] = "boisson"
+                    elif cat == "extras": item_copy["item_type"] = "upsell"
+                return item_copy
+    return None
+
+
+def get_item_by_name(name: str, category: str = None):
+    """Find a menu item by name. Optionally filter by category (menus, boissons, extras)."""
+    if not name:
+        return None
+    data = get_menu_data_cached()
+    categories = [category] if category else ["menus", "boissons", "extras"]
+    for cat in categories:
+        for item in data.get(cat, []):
+            if item["name"].lower() == name.lower():
                 item_copy = item.copy()
                 if "item_type" not in item_copy:
                     if cat == "menus": item_copy["item_type"] = "menu"
@@ -391,3 +410,166 @@ async def get_order_statistics(
         "total_extras": total_extras,
         "total_revenue": round(total_revenue, 2)
     }
+
+
+@router.post("/orders/create", response_model=admin_schemas.AdminOrderResponse)
+async def create_order(
+    order_data: admin_schemas.AdminCreateOrder,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_from_cookie)
+):
+    """Crée manuellement une commande (admin uniquement, aucune validation)"""
+    require_admin(current_user)
+
+    # Look up menu item by name
+    menu_item = get_item_by_name(order_data.menu, "menus")
+    if not menu_item:
+        raise HTTPException(status_code=400, detail=f"Menu introuvable: {order_data.menu}")
+
+    # Look up drink by name (optional)
+    boisson_item = None
+    if order_data.boisson:
+        boisson_item = get_item_by_name(order_data.boisson, "boissons")
+        if not boisson_item:
+            raise HTTPException(status_code=400, detail=f"Boisson introuvable: {order_data.boisson}")
+
+    # Look up extras by name (optional)
+    bonus_ids = []
+    if order_data.extras:
+        for extra_name in order_data.extras:
+            extra_item = get_item_by_name(extra_name, "extras")
+            if not extra_item:
+                raise HTTPException(status_code=400, detail=f"Extra introuvable: {extra_name}")
+            bonus_ids.append(extra_item["id"])
+
+    # Calculate total
+    total = float(menu_item.get("price", 0))
+    if boisson_item:
+        total += float(boisson_item.get("price", 0))
+    for bid in bonus_ids:
+        details = get_item_details(bid)
+        if details:
+            total += float(details.get("price", 0))
+
+    # Normalize email
+    email = order_data.email.strip().lower()
+    local_part = email.split("@")[0] if "@" in email else email
+    normalized = local_part.replace("_", ".") + ("@" + email.split("@")[1] if "@" in email else "")
+
+    # Parse time
+    try:
+        h, m = order_data.heure_reservation.split(":")
+        heure = time(int(h), int(m))
+    except (ValueError, IndexError):
+        raise HTTPException(status_code=400, detail="Format heure invalide (HH:MM attendu)")
+
+    # Check if user with same email exists - update instead of duplicate
+    existing_user = db.query(User).filter(User.email == email).first()
+
+    if existing_user:
+        existing_user.menu_id = menu_item["id"]
+        existing_user.boisson_id = boisson_item["id"] if boisson_item else None
+        existing_user.bonus_ids = bonus_ids if bonus_ids else []
+        existing_user.heure_reservation = heure
+        existing_user.date_reservation = date(2026, 2, 7)
+        existing_user.habite_residence = order_data.habite_residence
+        existing_user.adresse_if_maisel = order_data.adresse_if_maisel if order_data.habite_residence else None
+        existing_user.numero_if_maisel = int(order_data.numero_chambre) if order_data.numero_chambre and order_data.habite_residence else None
+        existing_user.adresse = order_data.adresse if not order_data.habite_residence else None
+        existing_user.phone = order_data.phone
+        existing_user.special_requests = order_data.special_requests
+        existing_user.prenom = order_data.prenom
+        existing_user.nom = order_data.nom
+        existing_user.total_amount = total
+        existing_user.email_verified = True
+        existing_user.is_cotisant = True
+        existing_user.status = "confirmed"
+        db.commit()
+        db.refresh(existing_user)
+        return enrich_order(existing_user)
+
+    # Create new user
+    new_user = User(
+        email=email,
+        normalized_email=normalized,
+        prenom=order_data.prenom,
+        nom=order_data.nom,
+        email_verified=True,
+        is_cotisant=True,
+        menu_id=menu_item["id"],
+        boisson_id=boisson_item["id"] if boisson_item else None,
+        bonus_ids=bonus_ids if bonus_ids else [],
+        heure_reservation=heure,
+        date_reservation=date(2026, 2, 7),
+        habite_residence=order_data.habite_residence,
+        adresse_if_maisel=order_data.adresse_if_maisel if order_data.habite_residence else None,
+        numero_if_maisel=int(order_data.numero_chambre) if order_data.numero_chambre and order_data.habite_residence else None,
+        adresse=order_data.adresse if not order_data.habite_residence else None,
+        phone=order_data.phone,
+        special_requests=order_data.special_requests,
+        total_amount=total,
+        payment_status="pending",
+        status="confirmed",
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return enrich_order(new_user)
+
+
+@router.post("/orders/{user_id}/checkout-link")
+async def generate_checkout_link(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_from_cookie)
+):
+    """Génère un lien de paiement HelloAsso pour une commande (admin uniquement)"""
+    require_admin(current_user)
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+
+    if user.payment_status == "completed":
+        raise HTTPException(status_code=400, detail="Le paiement est déjà confirmé")
+
+    from src.payments import helloasso_service
+    from src.core.config import settings
+
+    # Build redirect URLs
+    redirect_base = settings.HELLOASSO_REDIRECT_BASE_URL
+    if not redirect_base:
+        redirect_base = settings.FRONTEND_URL or "http://localhost:5173"
+    redirect_base = redirect_base.rstrip('/')
+
+    return_url = f"{redirect_base}/payment/success"
+    error_url = f"{redirect_base}/payment/error"
+    back_url = f"{redirect_base}/order"
+
+    payer_first = user.prenom if user.prenom and len(user.prenom) >= 2 else "Admin"
+    payer_last = user.nom if user.nom and len(user.nom) >= 2 else "Order"
+
+    metadata = {"reservation_id": user.id}
+
+    result = await helloasso_service.create_checkout_intent(
+        payer_email=user.email,
+        payer_first_name=payer_first,
+        payer_last_name=payer_last,
+        return_url=return_url,
+        error_url=error_url,
+        back_url=back_url,
+        metadata=metadata,
+        contains_donation=False
+    )
+
+    checkout_intent_id = result["id"]
+    redirect_url = result["redirectUrl"]
+
+    # Store on user
+    user.payment_intent_id = checkout_intent_id
+    user.checkout_redirect_url = redirect_url
+    user.checkout_created_at = datetime.now(timezone.utc)
+    db.commit()
+
+    return {"redirect_url": redirect_url, "checkout_intent_id": checkout_intent_id}

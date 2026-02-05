@@ -47,6 +47,9 @@ services:
       dockerfile: Dockerfile.prod
     env_file:
       - .env
+    volumes:
+      - ./blacklist.json:/blacklist.json:ro
+      - ./whitelist.json:/whitelist.json:ro
     depends_on:
       - db
     restart: unless-stopped

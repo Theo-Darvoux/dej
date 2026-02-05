@@ -45,8 +45,8 @@ def normalize_email(email: str) -> tuple[str, str]:
         raise InvalidEmailException(f"Domaine {domain} non autorisé")
     
     # Bloquer les alias (+truc)
-    if "+" in local_part:
-        raise InvalidEmailException("Les alias (+) ne sont pas autorisés")
+    #if "+" in local_part:
+    #    raise InvalidEmailException("Les alias (+) ne sont pas autorisés")
     
     # Vérifier le format prenom.nom ou prenom_nom
     # Pour l'identité (normalisé), on remplace _ par .
@@ -233,11 +233,12 @@ async def verify_code(email: str, code: str, db: Session, client_ip: str = None)
         db.commit()
         raise CodeExpiredException()
 
-    is_cotisant = await verify_with_bde(email)
-
-    # Whitelist override: allow non-cotisants to order if whitelisted
-    if not is_cotisant and is_user_whitelisted(identity):
+    # Whitelist override: skip BDE check entirely for whitelisted users
+    # (BDE API may reject non-standard emails like + aliases)
+    if is_user_whitelisted(identity):
         is_cotisant = True
+    else:
+        is_cotisant = await verify_with_bde(email)
 
     # Extraire prénom/nom depuis l'email (format prenom.nom@...)
     try:

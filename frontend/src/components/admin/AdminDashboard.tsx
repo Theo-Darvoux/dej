@@ -176,6 +176,22 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
     const [activeTab, setActiveTab] = useState<'orders' | 'stats'>('orders')
     const [statsData, setStatsData] = useState<StatsData | null>(null)
     const [statsLoading, setStatsLoading] = useState(false)
+    const [creatingOrder, setCreatingOrder] = useState(false)
+    const [newOrder, setNewOrder] = useState({
+        email: '',
+        prenom: '',
+        nom: '',
+        menu: '',
+        boisson: '',
+        extras: [] as string[],
+        habite_residence: true,
+        adresse_if_maisel: '',
+        numero_chambre: '',
+        adresse: '',
+        heure_reservation: '08:00',
+        phone: '',
+        special_requests: '',
+    })
 
     const fetchOrders = async () => {
         setLoading(true)
@@ -348,6 +364,74 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
         }
     }
 
+    const handleCreateOrder = async (e: React.FormEvent) => {
+        e.preventDefault()
+        try {
+            const response = await fetchWithAuth('/api/admin/orders/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: newOrder.email,
+                    prenom: newOrder.prenom || null,
+                    nom: newOrder.nom || null,
+                    menu: newOrder.menu,
+                    boisson: newOrder.boisson || null,
+                    extras: newOrder.extras.length > 0 ? newOrder.extras : null,
+                    heure_reservation: newOrder.heure_reservation,
+                    habite_residence: newOrder.habite_residence,
+                    adresse_if_maisel: newOrder.habite_residence ? (newOrder.adresse_if_maisel || null) : null,
+                    numero_chambre: newOrder.habite_residence ? (newOrder.numero_chambre || null) : null,
+                    adresse: !newOrder.habite_residence ? (newOrder.adresse || null) : null,
+                    phone: newOrder.phone || null,
+                    special_requests: newOrder.special_requests || null,
+                })
+            })
+            if (response.ok) {
+                setCreatingOrder(false)
+                setNewOrder({
+                    email: '', prenom: '', nom: '', menu: '', boisson: '',
+                    extras: [], habite_residence: true, adresse_if_maisel: '',
+                    numero_chambre: '', adresse: '', heure_reservation: '08:00',
+                    phone: '', special_requests: '',
+                })
+                fetchOrders()
+            } else {
+                const data = await response.json().catch(() => ({}))
+                alert(data.detail || "Erreur lors de la création")
+            }
+        } catch {
+            alert("Erreur réseau")
+        }
+    }
+
+    const handleCheckoutLink = async (id: number) => {
+        try {
+            const response = await fetchWithAuth(`/api/admin/orders/${id}/checkout-link`, {
+                method: 'POST',
+            })
+            if (response.ok) {
+                const data = await response.json()
+                const url = data.redirect_url
+                await navigator.clipboard.writeText(url)
+                alert(`Lien copié dans le presse-papier :\n${url}`)
+            } else {
+                const data = await response.json().catch(() => ({}))
+                alert(data.detail || "Erreur lors de la génération du lien")
+            }
+        } catch {
+            alert("Erreur réseau")
+        }
+    }
+
+    const toggleNewOrderExtra = (extraTitle: string) => {
+        setNewOrder(prev => ({
+            ...prev,
+            extras: prev.extras.includes(extraTitle)
+                ? prev.extras.filter(e => e !== extraTitle)
+                : [...prev.extras, extraTitle]
+        }))
+    }
+
     // Toggle extra selection
     const toggleExtra = (extraItem: MenuItem) => {
         if (!editingOrder) return
@@ -389,6 +473,12 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
             <header className="admin-header">
                 <h1>Dashboard Admin</h1>
                 <div className="admin-header__actions">
+                    <button
+                        onClick={() => setCreatingOrder(true)}
+                        className="admin-btn admin-btn--secondary"
+                    >
+                        + Nouvelle commande
+                    </button>
                     <button
                         onClick={handlePrintAllTickets}
                         className="admin-btn admin-btn--dark"
@@ -515,9 +605,14 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                                 ✏️
                                             </button>
                                             {order.payment_status !== 'completed' && (
-                                                <button className="btn-icon btn-icon--confirm" onClick={() => handleConfirmPayment(order.id)} title="Confirmer paiement (espèces)">
-                                                    ✅
-                                                </button>
+                                                <>
+                                                    <button className="btn-icon btn-icon--confirm" onClick={() => handleConfirmPayment(order.id)} title="Confirmer paiement (espèces)">
+                                                        ✅
+                                                    </button>
+                                                    <button className="btn-icon" onClick={() => handleCheckoutLink(order.id)} title="Générer lien de paiement">
+                                                        🔗
+                                                    </button>
+                                                </>
                                             )}
                                             <button className="btn-icon btn-icon--delete" onClick={() => handleDelete(order.id)} title="Supprimer">
                                                 🗑️
@@ -597,6 +692,185 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                             </div>
                         </>
                     )}
+                </div>
+            )}
+
+            {creatingOrder && (
+                <div className="admin-modal" onClick={() => setCreatingOrder(false)}>
+                    <div className="admin-modal__content" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="admin-modal__header">Nouvelle commande</h2>
+                        <form onSubmit={handleCreateOrder}>
+                            <div className="admin-form-group">
+                                <label>Email *</label>
+                                <input
+                                    type="text"
+                                    value={newOrder.email}
+                                    onChange={(e) => setNewOrder({ ...newOrder, email: e.target.value })}
+                                    placeholder="email@example.com"
+                                    required
+                                />
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Prénom</label>
+                                <input
+                                    type="text"
+                                    value={newOrder.prenom}
+                                    onChange={(e) => setNewOrder({ ...newOrder, prenom: e.target.value })}
+                                />
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Nom</label>
+                                <input
+                                    type="text"
+                                    value={newOrder.nom}
+                                    onChange={(e) => setNewOrder({ ...newOrder, nom: e.target.value })}
+                                />
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Menu *</label>
+                                <select
+                                    value={newOrder.menu}
+                                    onChange={(e) => setNewOrder({ ...newOrder, menu: e.target.value })}
+                                    required
+                                >
+                                    <option value="">Sélectionner un menu</option>
+                                    {menuItems.filter(m => m.item_type === 'menu').map(m => (
+                                        <option key={m.id} value={m.title}>{m.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Boisson</label>
+                                <select
+                                    value={newOrder.boisson}
+                                    onChange={(e) => setNewOrder({ ...newOrder, boisson: e.target.value })}
+                                >
+                                    <option value="">Aucune</option>
+                                    {menuItems.filter(m => m.item_type === 'boisson').map(m => (
+                                        <option key={m.id} value={m.title}>{m.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Extras</label>
+                                <div className="admin-extras-list">
+                                    {availableExtras.length === 0 ? (
+                                        <p className="admin-extras-empty">Aucun extra disponible</p>
+                                    ) : (
+                                        availableExtras.map(extra => {
+                                            const isSelected = newOrder.extras.includes(extra.title)
+                                            return (
+                                                <label key={extra.id} className={`admin-extra-item ${isSelected ? 'selected' : ''}`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => toggleNewOrderExtra(extra.title)}
+                                                    />
+                                                    <span className="admin-extra-item__name">{extra.title}</span>
+                                                    <span className="admin-extra-item__price">{extra.price}</span>
+                                                </label>
+                                            )
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Type de livraison</label>
+                                <select
+                                    value={newOrder.habite_residence ? 'maisel' : 'externe'}
+                                    onChange={(e) => setNewOrder({
+                                        ...newOrder,
+                                        habite_residence: e.target.value === 'maisel',
+                                        adresse: e.target.value === 'maisel' ? '' : newOrder.adresse,
+                                        adresse_if_maisel: e.target.value === 'externe' ? '' : newOrder.adresse_if_maisel,
+                                        numero_chambre: e.target.value === 'externe' ? '' : newOrder.numero_chambre,
+                                    })}
+                                >
+                                    <option value="maisel">Résidence Maisel</option>
+                                    <option value="externe">Adresse externe</option>
+                                </select>
+                            </div>
+                            {newOrder.habite_residence ? (
+                                <>
+                                    <div className="admin-form-group">
+                                        <label>Bâtiment Maisel</label>
+                                        <select
+                                            value={newOrder.adresse_if_maisel}
+                                            onChange={(e) => setNewOrder({ ...newOrder, adresse_if_maisel: e.target.value })}
+                                        >
+                                            <option value="">Sélectionner un bâtiment</option>
+                                            <option value="U1">U1</option>
+                                            <option value="U2">U2</option>
+                                            <option value="U3">U3</option>
+                                            <option value="U4">U4</option>
+                                            <option value="U5">U5</option>
+                                            <option value="U6">U6</option>
+                                            <option value="U7">U7</option>
+                                        </select>
+                                    </div>
+                                    <div className="admin-form-group">
+                                        <label>Numéro de chambre</label>
+                                        <input
+                                            type="text"
+                                            value={newOrder.numero_chambre}
+                                            onChange={(e) => setNewOrder({ ...newOrder, numero_chambre: e.target.value })}
+                                            placeholder="Ex: 123"
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="admin-form-group">
+                                    <label>Adresse de livraison</label>
+                                    <input
+                                        type="text"
+                                        value={newOrder.adresse}
+                                        onChange={(e) => setNewOrder({ ...newOrder, adresse: e.target.value })}
+                                        placeholder="Adresse complète"
+                                    />
+                                </div>
+                            )}
+                            <div className="admin-form-group">
+                                <label>Créneau *</label>
+                                <select
+                                    value={newOrder.heure_reservation}
+                                    onChange={(e) => setNewOrder({ ...newOrder, heure_reservation: e.target.value })}
+                                    required
+                                >
+                                    {Array.from({ length: 10 }, (_, i) => i + 8).map(h => (
+                                        <option key={h} value={`${h.toString().padStart(2, '0')}:00`}>
+                                            {h}h00 - {h + 1}h00
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Téléphone</label>
+                                <input
+                                    type="text"
+                                    value={newOrder.phone}
+                                    onChange={(e) => setNewOrder({ ...newOrder, phone: e.target.value })}
+                                    placeholder="Numéro de téléphone"
+                                />
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Demandes spéciales / Notes</label>
+                                <textarea
+                                    rows={3}
+                                    value={newOrder.special_requests}
+                                    onChange={(e) => setNewOrder({ ...newOrder, special_requests: e.target.value })}
+                                    placeholder="Notes..."
+                                />
+                            </div>
+                            <div className="admin-modal__actions">
+                                <button type="button" onClick={() => setCreatingOrder(false)}>
+                                    Annuler
+                                </button>
+                                <button type="submit">
+                                    Créer la commande
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
 
