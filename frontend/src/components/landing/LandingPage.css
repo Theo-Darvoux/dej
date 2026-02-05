@@ -136,6 +136,18 @@
     margin-bottom: 4px;
 }
 
+/* Credits */
+.landing__credits {
+    margin-top: 16px;
+    padding: 12px 20px;
+    color: #666;
+    font-size: 0.75rem;
+    text-align: center;
+    opacity: 0.8;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
 /* Responsive */
 @media (min-width: 768px) {
     .landing {
@@ -161,6 +173,10 @@
 
     .landing__contact-people strong {
         font-size: 0.95rem;
+    }
+
+    .landing__credits {
+        font-size: 0.8rem;
     }
 }
 
