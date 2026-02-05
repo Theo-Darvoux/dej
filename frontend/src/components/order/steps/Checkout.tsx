@@ -320,7 +320,7 @@ const Checkout = ({
                 <textarea
                     value={specialRequests}
                     onChange={(e) => setSpecialRequests(e.target.value)}
-                    placeholder="Allergies, livreur, bien cuit... (optionnel)"
+                    placeholder="Allergies, livreur, livrer à un local / GS... (optionnel)"
                     rows={3}
                     maxLength={500}
                     className="checkout-special-textarea"

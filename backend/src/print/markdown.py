@@ -64,7 +64,7 @@ def _sanitize_text_for_pdf(text: str) -> str:
     return text
 
 
-def _calculate_ticket_height(num_products: int, has_email: bool, has_phone: bool, has_special_requests: bool) -> float:
+def _calculate_ticket_height(num_products: int, has_email: bool, has_phone: bool, special_requests_lines: int) -> float:
     """Calculate dynamic ticket height based on content."""
     # Base: header(12) + time_banner(8) + name(5) + address(4) + separator(5) + footer(10) + padding(6)
     height = TICKET_HEIGHT_BASE
@@ -73,13 +73,40 @@ def _calculate_ticket_height(num_products: int, has_email: bool, has_phone: bool
         height += 3.5
     if has_phone:
         height += 3
-    if has_special_requests:
-        height += 4
+    if special_requests_lines > 0:
+        # 1 line for "Note:" label + (3mm per line of text) + 1mm padding
+        height += 1 + (special_requests_lines * 3) + 1
 
     # Add space for each product
     height += num_products * PRODUCT_HEIGHT
 
     return max(height, TICKET_HEIGHT_MIN)
+
+
+def _calculate_special_requests_lines(text: str, max_lines: int = 6, max_chars_per_line: int = 45) -> int:
+    """Calculate how many lines the special requests will take (max 6 lines)."""
+    if not text:
+        return 0
+    
+    words = text.split()
+    lines = []
+    current_line = ""
+    
+    for word in words:
+        test_line = f"{current_line} {word}".strip()
+        if len(test_line) <= max_chars_per_line:
+            current_line = test_line
+        else:
+            if current_line:
+                lines.append(current_line)
+                if len(lines) >= max_lines:
+                    break
+            current_line = word
+    
+    if current_line and len(lines) < max_lines:
+        lines.append(current_line)
+    
+    return min(len(lines), max_lines)
 
 
 class TicketPDF(FPDF):
@@ -147,12 +174,19 @@ def generate_pdf_for_all_clients(reservations: List[Any]) -> bytes:
             adresse = user.adresse or "Non renseignée"
             chambre = ""
 
+        # Calculate number of special request lines (max 6)
+        special_requests_lines = 0
+        if user.special_requests and user.special_requests.strip():
+            special_requests_lines = _calculate_special_requests_lines(
+                user.special_requests.strip(), max_lines=6, max_chars_per_line=45
+            )
+        
         # Calculate dynamic ticket height
         ticket_height = _calculate_ticket_height(
             num_products=len(produits),
             has_email=bool(user.email),
             has_phone=bool(user.phone),
-            has_special_requests=bool(user.special_requests and user.special_requests.strip())
+            special_requests_lines=special_requests_lines
         )
 
         # Choose column with less height (balances columns)
@@ -363,11 +397,50 @@ def _draw_beautiful_ticket(
         pdf.set_xy(x + 3, current_y)
         pdf.set_font("Helvetica", "I", 6)
         pdf.set_text_color(100, 100, 100)
+        
+        # Split text into lines (max 6 lines, ~45 chars per line)
         note = special_requests.strip()
-        if len(note) > 45:
-            note = note[:44] + "..."
-        pdf.cell(TICKET_WIDTH - 6, 3, _sanitize_text_for_pdf(f"Note: {note}"), align="L")
+        max_lines = 6
+        max_chars_per_line = 45
+        
+        words = note.split()
+        lines = []
+        current_line = ""
+        
+        for word in words:
+            test_line = f"{current_line} {word}".strip()
+            if len(test_line) <= max_chars_per_line:
+                current_line = test_line
+            else:
+                if current_line:
+                    lines.append(current_line)
+                    if len(lines) >= max_lines:
+                        break
+                current_line = word
+        
+        if current_line and len(lines) < max_lines:
+            lines.append(current_line)
+        
+        # Add "..." if text was truncated
+        remaining_text = " ".join(words[len(" ".join(lines).split()):])
+        if remaining_text.strip():
+            if lines:
+                lines[-1] = lines[-1].rstrip() + "..."
+            else:
+                lines = [note[:max_chars_per_line-3] + "..."]
+        
+        # Render "Note:" label
+        pdf.cell(TICKET_WIDTH - 6, 3, "Note:", align="L")
+        current_y += 3
+        
+        # Render each line
+        for line in lines:
+            pdf.set_xy(x + 5, current_y)
+            pdf.cell(TICKET_WIDTH - 8, 3, _sanitize_text_for_pdf(line), align="L")
+            current_y += 3
+        
         pdf.set_text_color(0, 0, 0)
+        current_y -= 3  # Adjust back since we incremented in the loop
 
     # === TOTAL ===
     pdf.set_fill_color(45, 45, 45)
