@@ -31,6 +31,10 @@ interface Order {
     extras_items?: OrderItem[]
     created_at: string
     special_requests?: string | null
+    habite_residence?: boolean
+    adresse_if_maisel?: string | null
+    numero_if_maisel?: number | null
+    adresse?: string | null
 }
 
 interface StatsData {
@@ -277,13 +281,17 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
         if (!editingOrder) return
 
         try {
-            const response = await fetch(`/api/admin/orders/${editingOrder.id}`, {
+            const response = await fetchWithAuth(`/api/admin/orders/${editingOrder.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
                 body: JSON.stringify({
                     prenom: editingOrder.prenom,
                     nom: editingOrder.nom,
+                    phone: editingOrder.phone,
+                    habite_residence: editingOrder.habite_residence,
+                    adresse_if_maisel: editingOrder.adresse_if_maisel || null,
+                    numero_if_maisel: editingOrder.numero_if_maisel || null,
+                    adresse: editingOrder.adresse || null,
                     menu_id: editingOrder.menu_item?.id || null,
                     boisson_id: editingOrder.boisson_item?.id || null,
                     bonus_ids: editingOrder.extras_items?.map(item => item.id) || [],
@@ -457,6 +465,7 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                             <tr>
                                 <th>Client</th>
                                 <th>Contact</th>
+                                <th>Adresse</th>
                                 <th>Commande</th>
                                 <th>Créneau</th>
                                 <th>Total</th>
@@ -466,22 +475,33 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {orders.map(order => (
-                                <tr key={order.id}>
-                                    <td>
-                                        <strong>{order.prenom} {order.nom}</strong><br />
-                                        <small>{order.email}</small>
-                                    </td>
-                                    <td>{order.phone || 'N/A'}</td>
-                                    <td>
-                                        <div className="order-items">
-                                            {order.menu_item?.name && <div>🍔 {order.menu_item.name}</div>}
-                                            {order.boisson_item?.name && <div>🥤 {order.boisson_item.name}</div>}
-                                            {order.extras_items?.map((extra, idx) => (
-                                                <div key={idx}>🍟 {extra.name}</div>
-                                            ))}
-                                        </div>
-                                    </td>
+                            {orders.map(order => {
+                                const formatAddress = (order: Order) => {
+                                    if (order.habite_residence) {
+                                        const building = order.adresse_if_maisel || 'Maisel'
+                                        const room = order.numero_if_maisel ? ` Ch.${order.numero_if_maisel}` : ''
+                                        return `${building}${room}`
+                                    }
+                                    return order.adresse || 'Non renseignée'
+                                }
+
+                                return (
+                                    <tr key={order.id}>
+                                        <td>
+                                            <strong>{order.prenom} {order.nom}</strong><br />
+                                            <small>{order.email}</small>
+                                        </td>
+                                        <td>{order.phone || 'N/A'}</td>
+                                        <td><small>{formatAddress(order)}</small></td>
+                                        <td>
+                                            <div className="order-items">
+                                                {order.menu_item?.name && <div>🍔 {order.menu_item.name}</div>}
+                                                {order.boisson_item?.name && <div>🥤 {order.boisson_item.name}</div>}
+                                                {order.extras_items?.map((extra, idx) => (
+                                                    <div key={idx}>🍟 {extra.name}</div>
+                                                ))}
+                                            </div>
+                                        </td>
                                     <td>{formatTimeSlot(order.heure_reservation)}</td>
                                     <td>{order.total_amount.toFixed(2)}€</td>
                                     <td>
@@ -490,21 +510,22 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                         </span>
                                     </td>
                                     <td><small>{formatDate(order.created_at)}</small></td>
-                                    <td>
-                                        <button className="btn-icon btn-icon--edit" onClick={() => setEditingOrder({...order})} title="Modifier">
-                                            ✏️
-                                        </button>
-                                        {order.payment_status !== 'completed' && (
-                                            <button className="btn-icon btn-icon--confirm" onClick={() => handleConfirmPayment(order.id)} title="Confirmer paiement (espèces)">
-                                                ✅
+                                        <td>
+                                            <button className="btn-icon btn-icon--edit" onClick={() => setEditingOrder({...order})} title="Modifier">
+                                                ✏️
                                             </button>
-                                        )}
-                                        <button className="btn-icon btn-icon--delete" onClick={() => handleDelete(order.id)} title="Supprimer">
-                                            🗑️
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                                            {order.payment_status !== 'completed' && (
+                                                <button className="btn-icon btn-icon--confirm" onClick={() => handleConfirmPayment(order.id)} title="Confirmer paiement (espèces)">
+                                                    ✅
+                                                </button>
+                                            )}
+                                            <button className="btn-icon btn-icon--delete" onClick={() => handleDelete(order.id)} title="Supprimer">
+                                                🗑️
+                                            </button>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
                         </tbody>
                     </table>
                 )}
@@ -600,6 +621,71 @@ const AdminDashboard = ({ onGoHome }: AdminDashboardProps) => {
                                     onChange={(e) => setEditingOrder({ ...editingOrder, nom: e.target.value })}
                                 />
                             </div>
+                            <div className="admin-form-group">
+                                <label>Téléphone</label>
+                                <input
+                                    type="text"
+                                    value={editingOrder.phone || ''}
+                                    onChange={(e) => setEditingOrder({ ...editingOrder, phone: e.target.value })}
+                                    placeholder="Numéro de téléphone"
+                                />
+                            </div>
+                            <div className="admin-form-group">
+                                <label>Type de livraison</label>
+                                <select
+                                    value={editingOrder.habite_residence ? 'maisel' : 'externe'}
+                                    onChange={(e) => setEditingOrder({
+                                        ...editingOrder,
+                                        habite_residence: e.target.value === 'maisel',
+                                        // Clear opposite fields when switching
+                                        adresse: e.target.value === 'maisel' ? null : editingOrder.adresse,
+                                        adresse_if_maisel: e.target.value === 'externe' ? null : editingOrder.adresse_if_maisel,
+                                        numero_if_maisel: e.target.value === 'externe' ? null : editingOrder.numero_if_maisel,
+                                    })}
+                                >
+                                    <option value="maisel">Résidence Maisel</option>
+                                    <option value="externe">Adresse externe</option>
+                                </select>
+                            </div>
+                            {editingOrder.habite_residence ? (
+                                <>
+                                    <div className="admin-form-group">
+                                        <label>Bâtiment Maisel</label>
+                                        <select
+                                            value={editingOrder.adresse_if_maisel || ''}
+                                            onChange={(e) => setEditingOrder({ ...editingOrder, adresse_if_maisel: e.target.value })}
+                                        >
+                                            <option value="">Sélectionner un bâtiment</option>
+                                            <option value="U1">U1</option>
+                                            <option value="U2">U2</option>
+                                            <option value="U3">U3</option>
+                                            <option value="U4">U4</option>
+                                            <option value="U5">U5</option>
+                                            <option value="U6">U6</option>
+                                            <option value="U7">U7</option>
+                                        </select>
+                                    </div>
+                                    <div className="admin-form-group">
+                                        <label>Numéro de chambre</label>
+                                        <input
+                                            type="number"
+                                            value={editingOrder.numero_if_maisel || ''}
+                                            onChange={(e) => setEditingOrder({ ...editingOrder, numero_if_maisel: parseInt(e.target.value) || null })}
+                                            placeholder="Ex: 123"
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="admin-form-group">
+                                    <label>Adresse de livraison</label>
+                                    <input
+                                        type="text"
+                                        value={editingOrder.adresse || ''}
+                                        onChange={(e) => setEditingOrder({ ...editingOrder, adresse: e.target.value })}
+                                        placeholder="Adresse complète"
+                                    />
+                                </div>
+                            )}
                             <div className="admin-form-group">
                                 <label>Menu</label>
                                 <select
